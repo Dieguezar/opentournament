@@ -10,7 +10,7 @@
 ## 2. Instalación rápida
 
 ```bash
-git clone https://github.com/opentournament/opentournament.git
+git clone https://github.com/Dieguezar/opentournament.git
 cd opentournament
 cp .env.example .env
 # editar .env (generar secretos con: openssl rand -hex 32)
