@@ -40,9 +40,17 @@ export default async function DashboardPage() {
                 </li>
               ))}
             </ul>
-            <Link className="button button-secondary" href="/wizard">
-              Crear otra organización
-            </Link>
+            <p>
+              <Link className="button" href="/tournaments/new">
+                Crear torneo
+              </Link>{' '}
+              <Link className="button button-secondary" href="/teams/new">
+                Crear equipo
+              </Link>{' '}
+              <Link className="button button-secondary" href="/wizard">
+                Crear otra organización
+              </Link>
+            </p>
           </>
         )}
       </div>

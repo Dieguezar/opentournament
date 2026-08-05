@@ -58,8 +58,8 @@ OpenTournament permite a comunidades, cibercafés, universidades, streamers y or
 | Fase | Estado |
 | --- | --- |
 | 0 — Definición y documentación | Completada |
-| 1 — Base técnica | Pendiente de aprobación |
-| 2 — MVP de torneos | Pendiente |
+| 1 — Base técnica | Completada (pendiente smoke en CI) |
+| 2 — MVP de torneos | En progreso |
 | 3 — Resultados y arbitraje | Pendiente |
 | 4 — Discord y tiempo real | Pendiente |
 | 5 — Preparación open source | Pendiente |

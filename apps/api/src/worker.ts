@@ -1,12 +1,17 @@
 import { and, eq, lt, or, sql } from 'drizzle-orm';
 import { jobs, type Db } from '@opentournament/database';
+import { db } from './db.js';
+import { closeCheckIn } from './services/tournaments.js';
 
 type JobHandler = (payload: Record<string, unknown>) => Promise<void>;
 
 const handlers: Record<string, JobHandler> = {
-  'system.heartbeat': async () => {
-    // Job de ejemplo: se registra en logs. Los jobs de dominio
-    // (check-in, walkover, notificaciones) llegan con la Fase 2.
+  'tournament.checkin_close': async (payload) => {
+    const tournamentId = payload.tournamentId;
+    if (typeof tournamentId !== 'string') {
+      throw new Error('tournamentId ausente en el job');
+    }
+    await closeCheckIn(db, tournamentId);
   },
 };
 

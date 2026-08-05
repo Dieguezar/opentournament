@@ -54,7 +54,9 @@ label {
   color: var(--muted);
 }
 
-input {
+input,
+select,
+textarea {
   width: 100%;
   padding: 0.6rem 0.75rem;
   margin-bottom: 1rem;
@@ -64,9 +66,20 @@ input {
   color: var(--text);
 }
 
-input:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: 2px solid var(--primary);
   outline-offset: 1px;
+}
+
+select {
+  appearance: auto;
+}
+
+input[type='checkbox'] {
+  width: auto;
+  margin: 0 0.35rem 0 0;
 }
 
 button,

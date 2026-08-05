@@ -5,6 +5,12 @@ import { registerAuthPlugins } from './plugins/auth.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerOrganizationRoutes } from './routes/organizations.js';
 import { registerHealthRoutes } from './routes/health.js';
+import { registerTeamRoutes } from './routes/teams.js';
+import { registerTournamentRoutes } from './routes/tournaments.js';
+import { registerRegistrationRoutes } from './routes/registrations.js';
+import { registerCheckInRoutes } from './routes/checkin.js';
+import { registerBracketRoutes } from './routes/bracket.js';
+import { registerMatchRoutes } from './routes/matches.js';
 
 export function buildServer(options: { logger?: boolean } = {}) {
   const app = Fastify({
@@ -21,5 +27,11 @@ export async function initServer(logger = true) {
   await registerHealthRoutes(app);
   await registerAuthRoutes(app);
   await registerOrganizationRoutes(app);
+  await registerTeamRoutes(app);
+  await registerTournamentRoutes(app);
+  await registerRegistrationRoutes(app);
+  await registerCheckInRoutes(app);
+  await registerBracketRoutes(app);
+  await registerMatchRoutes(app);
   return app;
 }

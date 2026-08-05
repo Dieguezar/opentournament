@@ -68,6 +68,9 @@ importers:
       '@opentournament/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@opentournament/tournament-engine':
+        specifier: workspace:*
+        version: link:../../packages/tournament-engine
       '@opentournament/validation':
         specifier: workspace:*
         version: link:../../packages/validation
