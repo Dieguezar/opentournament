@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 11.9.0
       - uses: actions/setup-node@v4
@@ -50,7 +50,7 @@ jobs:
       TEST_DATABASE_URL: postgres://opentournament:opentournament@localhost:5432/opentournament
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 11.9.0
       - uses: actions/setup-node@v4
@@ -81,7 +81,7 @@ jobs:
       DATABASE_URL: postgres://opentournament:opentournament@localhost:5432/opentournament
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
         with:
           version: 11.9.0
       - uses: actions/setup-node@v4
