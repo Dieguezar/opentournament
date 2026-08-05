@@ -14,7 +14,7 @@ jobs:
     name: Lint, typecheck, unit tests y build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0
@@ -49,7 +49,7 @@ jobs:
     env:
       TEST_DATABASE_URL: postgres://opentournament:opentournament@localhost:5432/opentournament
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0
@@ -80,7 +80,7 @@ jobs:
     env:
       DATABASE_URL: postgres://opentournament:opentournament@localhost:5432/opentournament
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v4
         with:
           version: 11.9.0
