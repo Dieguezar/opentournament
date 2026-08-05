@@ -1,0 +1,13 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+onlyBuiltDependencies:
+  - argon2
+  - esbuild
+allowBuilds:
+  argon2: true
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@types/pg@8.20.4'
+  - tsx@4.23.8

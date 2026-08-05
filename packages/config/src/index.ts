@@ -1,0 +1,65 @@
+import { z } from 'zod';
+import { config as loadDotenv } from 'dotenv';
+
+loadDotenv();
+
+const boolFromString = z
+  .enum(['true', 'false'])
+  .default('false')
+  .transform((v) => v === 'true');
+
+const devSecret = 'dev-only-session-secret-change-me-32chars';
+
+export const apiEnvSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  HOST: z.string().default('0.0.0.0'),
+  PORT: z.coerce.number().int().positive().default(4000),
+  API_URL: z.string().url().default('http://localhost:4000'),
+  APP_URL: z.string().url().default('http://localhost:3000'),
+  DATABASE_URL: z
+    .string()
+    .min(1)
+    .default('postgres://opentournament:opentournament@localhost:5432/opentournament'),
+  SESSION_SECRET: z
+    .string()
+    .min(32, 'SESSION_SECRET debe tener al menos 32 caracteres')
+    .default(devSecret),
+  SESSION_TTL_HOURS: z.coerce.number().int().positive().default(168),
+  LOG_LEVEL: z
+    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+    .default('info'),
+  ALLOW_UNVERIFIED_EMAILS: boolFromString,
+  SEED_DEMO_DATA: boolFromString,
+  DISCORD_CLIENT_ID: z.string().optional(),
+  DISCORD_CLIENT_SECRET: z.string().optional(),
+  DISCORD_REDIRECT_URI: z.string().url().optional(),
+  DISCORD_BOT_TOKEN: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('OpenTournament <no-reply@example.com>'),
+  SMTP_SECURE: boolFromString,
+});
+
+export type ApiEnv = z.infer<typeof apiEnvSchema>;
+
+export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
+  const parsed = apiEnvSchema.parse(env);
+  if (parsed.NODE_ENV === 'production' && parsed.SESSION_SECRET === devSecret) {
+    throw new Error('En producción, SESSION_SECRET debe configurarse con un valor único.');
+  }
+  return parsed;
+}
+
+export const webEnvSchema = z.object({
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  APP_URL: z.string().url().default('http://localhost:3000'),
+  API_URL: z.string().url().default('http://localhost:4000'),
+});
+
+export type WebEnv = z.infer<typeof webEnvSchema>;
+
+export function loadWebEnv(env: NodeJS.ProcessEnv = process.env): WebEnv {
+  return webEnvSchema.parse(env);
+}

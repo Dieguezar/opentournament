@@ -1,0 +1,22 @@
+{
+  "name": "@opentournament/shared-types",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tipos TypeScript compartidos entre apps y paquetes de OpenTournament.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vitest": "^4.1.10"
+  }
+}
