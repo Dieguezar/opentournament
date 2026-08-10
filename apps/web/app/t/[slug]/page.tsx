@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { RegisterPanel } from '@/components/register-panel';
 import { ReportPanel } from '@/components/report-panel';
+import { LiveTournament } from '@/components/live-tournament';
 import { serverFetch } from '@/lib/server-api';
 
 export const dynamic = 'force-dynamic';
@@ -67,7 +68,9 @@ export default async function PublicTournamentPage({
       )}
 
       <div className="card">
-        <h2>Bracket</h2>
+        <h2>
+          Bracket <LiveTournament tournamentId={tournament.id} />
+        </h2>
         {brackets.length === 0 ? (
           <p className="muted">El bracket se publicará cuando el organizador lo genere.</p>
         ) : (

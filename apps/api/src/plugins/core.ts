@@ -8,6 +8,17 @@ import { ZodError } from 'zod';
 import { env } from '../config.js';
 
 export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
+  // Parser JSON que conserva el cuerpo crudo (necesario para verificar
+  // firmas de Discord sobre el payload exacto).
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (request, body, done) => {
+    try {
+      request.rawBody = body as string;
+      done(null, body ? JSON.parse(body as string) : {});
+    } catch (error) {
+      done(error as Error);
+    }
+  });
+
   await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {

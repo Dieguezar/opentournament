@@ -34,6 +34,8 @@ export const apiEnvSchema = z.object({
   DISCORD_CLIENT_SECRET: z.string().optional(),
   DISCORD_REDIRECT_URI: z.string().url().optional(),
   DISCORD_BOT_TOKEN: z.string().optional(),
+  DISCORD_PUBLIC_KEY: z.string().optional(),
+  DISCORD_NOTIFY_WEBHOOK_URL: z.string().url().optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: z.string().optional(),

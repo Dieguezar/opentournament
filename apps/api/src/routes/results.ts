@@ -1,4 +1,4 @@
-import { and, eq, ne } from 'drizzle-orm';
+import { and, eq, inArray, ne } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import {
   auditLogs,
@@ -6,6 +6,7 @@ import {
   jobs,
   matches,
   resultSubmissions,
+  teams,
   tournamentParticipants,
   tournaments,
 } from '@opentournament/database';
@@ -18,6 +19,10 @@ import {
   loadMatchContext,
   type MatchContext,
 } from '../services/tournaments.js';
+import { notify } from '../services/notifications.js';
+import { tournamentAdminIds } from '../services/checkin.js';
+import { emitTournamentEvent } from '../services/realtime.js';
+import { sendDiscordWebhook } from '../services/discord.js';
 
 interface SubmissionResult {
   winnerId?: string;
@@ -171,6 +176,9 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
             .update(tournamentParticipants)
             .set({ status: 'winner' })
             .where(eq(tournamentParticipants.id, champion));
+          emitTournamentEvent(ctx.tournament.id, 'tournament.updated', {
+            status: 'finalized',
+          });
         }
       }
       await db.insert(auditLogs).values({
@@ -181,6 +189,25 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         resourceId: matchId,
         after: { winnerId },
       });
+      emitTournamentEvent(ctx.tournament.id, 'result.confirmed', {
+        matchId,
+        winnerId,
+      });
+      const teamIds = [ctx.home?.teamId, ctx.away?.teamId].filter(
+        (id): id is string => Boolean(id),
+      );
+      const captainRows = teamIds.length
+        ? await db.select({ captainId: teams.captainId }).from(teams).where(inArray(teams.id, teamIds))
+        : [];
+      await notify(
+        db,
+        captainRows.map((r) => r.captainId),
+        'result.confirmed',
+        { matchId, tournamentId: ctx.tournament.id, winnerTeamId: body.winnerTeamId },
+      );
+      void sendDiscordWebhook(
+        `✅ Resultado confirmado en **${ctx.tournament.name}** (partida ${matchId.slice(0, 8)}).`,
+      );
       return reply.send({ submission, confirmed: true });
     }
 
@@ -205,6 +232,13 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       resourceId: matchId,
       after: { reason: 'result_conflict' },
     });
+    emitTournamentEvent(ctx.tournament.id, 'dispute.opened', { matchId });
+    await notify(
+      db,
+      await tournamentAdminIds(db, ctx.tournament.id),
+      'dispute.opened',
+      { matchId, tournamentId: ctx.tournament.id },
+    );
     return reply.status(201).send({
       submission,
       confirmed: false,

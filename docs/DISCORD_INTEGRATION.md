@@ -32,12 +32,13 @@ Reglas:
 
 ## 3. Bot
 
-- Módulo dentro del proceso de la API (ADR-030); usa el gateway de Discord con reconnect automático.
+- Módulo dentro del proceso de la API (ADR-030); en el MVP se implementa con **interacciones HTTP** (sin gateway): los comandos slash llegan a `POST /api/v1/discord/interactions`, la firma Ed25519 se verifica con `DISCORD_PUBLIC_KEY` y las respuestas usan la API REST de Discord. Esto evita una conexión persistente y simplifica el despliegue.
 - Se registran comandos globales de aplicación:
   - `/checkin <código-torneo>`: el usuario (capitán) hace check-in de su equipo.
   - `/status <código-torneo>`: estado del torneo, próximas partidas del equipo y check-in pendiente.
 - Interacciones verificadas por firma (cabeceras `X-Signature-Ed25519`, `X-Signature-Timestamp`).
-- Rate limits de Discord respetados (colas por servidor de aplicación).
+- Rate limits de Discord respetados.
+- Notificaciones salientes vía webhook (`DISCORD_NOTIFY_WEBHOOK_URL`) o DM por el token del bot; sin datos sensibles en los mensajes.
 
 ## 4. Notificaciones
 
@@ -59,7 +60,7 @@ El bot envía mensajes al canal configurado por el organizador o DM a usuarios q
 
 1. Crear una aplicación en el [Developer Portal](https://discord.com/developers/applications).
 2. OAuth2: redirect URI `${API_URL}/api/v1/auth/discord/callback`, scopes `identify` + `email`.
-3. Bot: generar token y habilitar el bot en el servidor con permisos mínimos (enviar mensajes).
+3. Bot: generar token (`DISCORD_BOT_TOKEN`), copiar la clave pública (`DISCORD_PUBLIC_KEY`) y habilitar el bot en el servidor con permisos mínimos (enviar mensajes).
 4. Configurar `.env` (`DISCORD_*`) y reiniciar la API.
 
 La documentación de instalación está en [SELF_HOSTING.md](SELF_HOSTING.md).

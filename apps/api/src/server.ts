@@ -3,7 +3,7 @@ import { env } from './config.js';
 import { db, pool } from './db.js';
 import { initServer } from './app.js';
 import { startScheduler } from './worker.js';
-import { startDiscordBot } from './bot.js';
+import { startDiscordBot } from './services/discord.js';
 
 async function main() {
   console.log('Aplicando migraciones…');

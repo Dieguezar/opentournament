@@ -4,5 +4,6 @@ declare module 'fastify' {
   interface FastifyRequest {
     user?: SessionUser;
     sessionToken?: string;
+    rawBody?: string;
   }
 }

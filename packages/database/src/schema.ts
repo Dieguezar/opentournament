@@ -491,6 +491,23 @@ export const streamLinks = pgTable(
   (table) => [index('stream_links_tournament_id_idx').on(table.tournamentId)],
 );
 
+export const notifications = pgTable(
+  'notifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull().default({}),
+    readAt: timestamp('read_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('notifications_user_read_idx').on(table.userId, table.readAt)],
+);
+
+export type NotificationRow = typeof notifications.$inferSelect;
+
 export const resultSubmissions = pgTable(
   'result_submissions',
   {

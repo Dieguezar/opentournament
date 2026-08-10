@@ -24,7 +24,7 @@ flowchart TB
   B -->|HTTP/SSE| Web
   Web -->|API| F
   B -->|API| F
-  D -->|Gateway WS| Bot
+  D -->|Interacciones HTTP| Bot
   F --> PG
   W --> PG
   Bot --> PG

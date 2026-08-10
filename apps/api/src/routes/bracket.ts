@@ -14,6 +14,7 @@ import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { getTournament, isTournamentAdmin } from '../services/permissions.js';
 import { generateTournamentBracket } from '../services/tournaments.js';
+import { emitTournamentEvent } from '../services/realtime.js';
 
 export async function registerBracketRoutes(app: FastifyInstance): Promise<void> {
   app.post('/tournaments/:id/bracket/generate', async (request, reply) => {
@@ -41,6 +42,7 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
       resourceType: 'tournament',
       resourceId: id,
     });
+    emitTournamentEvent(id, 'bracket.updated', { stageId: stage.id });
     return reply.send({ stageId: stage.id });
   });
 

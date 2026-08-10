@@ -18,6 +18,8 @@ import {
   isOrgMember,
   isTournamentAdmin,
 } from '../services/permissions.js';
+import { emitTournamentEvent } from '../services/realtime.js';
+import { sendDiscordWebhook } from '../services/discord.js';
 
 export async function registerTournamentRoutes(app: FastifyInstance): Promise<void> {
   app.post('/tournaments', async (request, reply) => {
@@ -187,6 +189,8 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       resourceType: 'tournament',
       resourceId: id,
     });
+    emitTournamentEvent(id, 'tournament.updated', { status: 'open' });
+    void sendDiscordWebhook(`📢 Torneo publicado: **${tournament.name}**`);
     return reply.send({ ok: true });
   });
 

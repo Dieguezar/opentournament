@@ -20,6 +20,7 @@ import {
   applyMatchWinner,
   loadEngineBracket,
 } from '../services/tournaments.js';
+import { emitTournamentEvent } from '../services/realtime.js';
 
 async function findMatchWithStage(matchId: string) {
   const [row] = await db
@@ -103,6 +104,7 @@ export async function registerMatchRoutes(app: FastifyInstance): Promise<void> {
       resourceType: 'match',
       resourceId: id,
     });
+    emitTournamentEvent(row.tournamentId, 'match.updated', { matchId: id });
     return reply.send({ ok: true });
   });
 
@@ -174,6 +176,7 @@ export async function registerMatchRoutes(app: FastifyInstance): Promise<void> {
         .update(tournamentParticipants)
         .set({ status: 'winner' })
         .where(eq(tournamentParticipants.id, champion));
+      emitTournamentEvent(row.tournamentId, 'tournament.updated', { status: 'finalized' });
     }
     await db.insert(auditLogs).values({
       organizationId: row.tournamentId,
@@ -183,6 +186,7 @@ export async function registerMatchRoutes(app: FastifyInstance): Promise<void> {
       resourceId: id,
       after: { winnerId: winnerParticipant.id },
     });
+    emitTournamentEvent(row.tournamentId, 'match.updated', { matchId: id, status: 'walkover' });
     return reply.send({ ok: true, champion });
   });
 }

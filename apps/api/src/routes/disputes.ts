@@ -25,6 +25,10 @@ import {
   applyMatchWinner,
   loadMatchContext,
 } from '../services/tournaments.js';
+import { notify } from '../services/notifications.js';
+import { tournamentAdminIds } from '../services/checkin.js';
+import { emitTournamentEvent } from '../services/realtime.js';
+import { sendDiscordWebhook } from '../services/discord.js';
 
 async function canAccessDispute(disputeId: string, userId: string): Promise<boolean> {
   const [dispute] = await db
@@ -117,6 +121,14 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       resourceId: dispute.id,
       after: { reason: body.reason },
     });
+    emitTournamentEvent(ctx.tournament.id, 'dispute.opened', { matchId: body.matchId });
+    await notify(
+      db,
+      await tournamentAdminIds(db, ctx.tournament.id),
+      'dispute.opened',
+      { matchId: body.matchId, tournamentId: ctx.tournament.id },
+    );
+    void sendDiscordWebhook(`⚠️ Nueva disputa abierta en **${ctx.tournament.name}**.`);
     return reply.status(201).send({ dispute });
   });
 
@@ -258,6 +270,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       resourceId: disputeId,
       after: { assigneeId: body.assigneeId },
     });
+    await notify(db, [body.assigneeId], 'dispute.assigned', { disputeId });
     return reply.send({ ok: true });
   });
 
@@ -312,6 +325,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
         .update(tournamentParticipants)
         .set({ status: 'winner' })
         .where(eq(tournamentParticipants.id, champion));
+      emitTournamentEvent(ctx.tournament.id, 'tournament.updated', { status: 'finalized' });
     }
 
     await db.insert(rulings).values({
@@ -338,6 +352,22 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       resourceId: disputeId,
       after: { winnerId },
     });
+    emitTournamentEvent(ctx.tournament.id, 'dispute.resolved', {
+      disputeId,
+      winnerId,
+    });
+    const teamIds = [ctx.home?.teamId, ctx.away?.teamId].filter(
+      (id): id is string => Boolean(id),
+    );
+    const captainRows = teamIds.length
+      ? await db.select({ captainId: teams.captainId }).from(teams).where(inArray(teams.id, teamIds))
+      : [];
+    await notify(
+      db,
+      captainRows.map((r) => r.captainId),
+      'dispute.resolved',
+      { disputeId, tournamentId: ctx.tournament.id },
+    );
     return reply.send({ ok: true, champion });
   });
 }
