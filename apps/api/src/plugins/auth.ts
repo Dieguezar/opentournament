@@ -1,7 +1,7 @@
 import cookie from '@fastify/cookie';
 import { and, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { csrfTokensMatch, findSessionByToken, generateCsrfToken } from '@opentournament/auth';
+import { csrfTokensMatch, findSessionByToken } from '@opentournament/auth';
 import {
   organizationMembers,
   organizations,
@@ -15,17 +15,6 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 export async function registerAuthPlugins(app: FastifyInstance, db: Db): Promise<void> {
   await app.register(cookie);
-
-  app.addHook('onSend', async (request, reply) => {
-    if (!request.cookies.csrf) {
-      reply.setCookie('csrf', generateCsrfToken(), {
-        httpOnly: false,
-        sameSite: 'lax',
-        secure: env.NODE_ENV === 'production',
-        path: '/',
-      });
-    }
-  });
 
   app.addHook('preHandler', async (request, reply) => {
     const token = request.cookies.session;
