@@ -30,18 +30,23 @@ export async function initServer(logger = true) {
   await registerCorePlugins(app);
   await registerAuthPlugins(app, db);
   await registerHealthRoutes(app);
-  await registerAuthRoutes(app);
-  await registerOrganizationRoutes(app);
-  await registerTeamRoutes(app);
-  await registerTournamentRoutes(app);
-  await registerRegistrationRoutes(app);
-  await registerCheckInRoutes(app);
-  await registerBracketRoutes(app);
-  await registerMatchRoutes(app);
-  await registerResultRoutes(app);
-  await registerEvidenceRoutes(app);
-  await registerDisputeRoutes(app);
-  await registerDiscordRoutes(app);
-  await registerEventRoutes(app);
+  await app.register(
+    async (api) => {
+      await registerAuthRoutes(api);
+      await registerOrganizationRoutes(api);
+      await registerTeamRoutes(api);
+      await registerTournamentRoutes(api);
+      await registerRegistrationRoutes(api);
+      await registerCheckInRoutes(api);
+      await registerBracketRoutes(api);
+      await registerMatchRoutes(api);
+      await registerResultRoutes(api);
+      await registerEvidenceRoutes(api);
+      await registerDisputeRoutes(api);
+      await registerDiscordRoutes(api);
+      await registerEventRoutes(api);
+    },
+    { prefix: '/api/v1' },
+  );
   return app;
 }

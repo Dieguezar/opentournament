@@ -10,6 +10,11 @@ const boolFromString = z
 
 const devSecret = 'dev-only-session-secret-change-me-32chars';
 
+const optionalUrl = z.preprocess(
+  (value) => (value === '' || value === undefined ? undefined : value),
+  z.string().url().optional(),
+);
+
 export const apiEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   HOST: z.string().default('0.0.0.0'),
@@ -32,10 +37,10 @@ export const apiEnvSchema = z.object({
   SEED_DEMO_DATA: boolFromString,
   DISCORD_CLIENT_ID: z.string().optional(),
   DISCORD_CLIENT_SECRET: z.string().optional(),
-  DISCORD_REDIRECT_URI: z.string().url().optional(),
+  DISCORD_REDIRECT_URI: optionalUrl,
   DISCORD_BOT_TOKEN: z.string().optional(),
   DISCORD_PUBLIC_KEY: z.string().optional(),
-  DISCORD_NOTIFY_WEBHOOK_URL: z.string().url().optional(),
+  DISCORD_NOTIFY_WEBHOOK_URL: optionalUrl,
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: z.string().optional(),

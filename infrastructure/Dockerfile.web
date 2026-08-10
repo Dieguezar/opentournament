@@ -2,6 +2,9 @@ FROM node:22-alpine AS builder
 
 RUN corepack enable
 
+ARG API_URL=http://api:4000
+ENV API_URL=$API_URL
+
 WORKDIR /app
 
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json .npmrc eslint.base.mjs eslint.config.mjs ./
