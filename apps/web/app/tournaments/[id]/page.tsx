@@ -65,7 +65,8 @@ export default async function TournamentAdminPage({
     <main className="container">
       <p>
         <Link href="/dashboard">← Panel</Link> ·{' '}
-        <Link href={`/t/${tournament.slug}`}>Ver página pública</Link>
+        <Link href={`/t/${tournament.slug}`}>Ver página pública</Link> ·{' '}
+        <Link href={`/tournaments/${id}/disputas`}>Disputas</Link>
       </p>
       <h1>{tournament.name}</h1>
       <p className="muted">

@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
   brackets,
   matches,
@@ -31,6 +31,56 @@ export class DomainError extends Error {
     super(message);
     this.name = 'DomainError';
   }
+}
+
+export interface MatchContext {
+  match: typeof matches.$inferSelect;
+  stage: StageRow;
+  tournament: TournamentRow;
+  home: (typeof tournamentParticipants.$inferSelect) | null;
+  away: (typeof tournamentParticipants.$inferSelect) | null;
+}
+
+export async function loadMatchContext(db: Db, matchId: string): Promise<MatchContext | null> {
+  const [row] = await db
+    .select({
+      match: matches,
+      stageId: stages.id,
+      tournamentId: stages.tournamentId,
+    })
+    .from(matches)
+    .innerJoin(rounds, eq(rounds.id, matches.roundId))
+    .innerJoin(brackets, eq(brackets.id, rounds.bracketId))
+    .innerJoin(stages, eq(stages.id, brackets.stageId))
+    .where(eq(matches.id, matchId))
+    .limit(1);
+  if (!row) return null;
+
+  const [stage] = await db
+    .select()
+    .from(stages)
+    .where(eq(stages.id, row.stageId))
+    .limit(1);
+  const [tournament] = await db
+    .select()
+    .from(tournaments)
+    .where(eq(tournaments.id, row.tournamentId))
+    .limit(1);
+  if (!stage || !tournament) return null;
+
+  const ids = [row.match.homeParticipantId, row.match.awayParticipantId].filter(
+    (id): id is string => Boolean(id),
+  );
+  const participants = ids.length
+    ? await db
+        .select()
+        .from(tournamentParticipants)
+        .where(inArray(tournamentParticipants.id, ids))
+    : [];
+  const home = participants.find((p) => p.id === row.match.homeParticipantId) ?? null;
+  const away = participants.find((p) => p.id === row.match.awayParticipantId) ?? null;
+
+  return { match: row.match, stage, tournament, home, away };
 }
 
 const BRACKET_NAMES: Record<string, string> = {

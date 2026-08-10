@@ -20,6 +20,8 @@
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/swagger": "^9.8.1",
     "@fastify/swagger-ui": "^6.1.1",
+    "@aws-sdk/client-s3": "^3.1000.0",
+    "@aws-sdk/s3-request-presigner": "^3.1000.0",
     "@opentournament/auth": "workspace:*",
     "@opentournament/config": "workspace:*",
     "@opentournament/database": "workspace:*",

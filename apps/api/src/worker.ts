@@ -1,5 +1,5 @@
 import { and, eq, lt, or, sql } from 'drizzle-orm';
-import { jobs, type Db } from '@opentournament/database';
+import { jobs, resultSubmissions, type Db } from '@opentournament/database';
 import { db } from './db.js';
 import { closeCheckIn } from './services/tournaments.js';
 
@@ -12,6 +12,16 @@ const handlers: Record<string, JobHandler> = {
       throw new Error('tournamentId ausente en el job');
     }
     await closeCheckIn(db, tournamentId);
+  },
+  'match.result_escalate': async (payload) => {
+    const matchId = payload.matchId;
+    if (typeof matchId !== 'string') {
+      throw new Error('matchId ausente en el job');
+    }
+    await db
+      .update(resultSubmissions)
+      .set({ status: 'escalated' })
+      .where(and(eq(resultSubmissions.matchId, matchId), eq(resultSubmissions.status, 'pending')));
   },
 };
 

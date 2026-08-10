@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { RegisterPanel } from '@/components/register-panel';
+import { ReportPanel } from '@/components/report-panel';
 import { serverFetch } from '@/lib/server-api';
 
 export const dynamic = 'force-dynamic';
@@ -56,6 +57,7 @@ export default async function PublicTournamentPage({
       {tournament.description && <p>{tournament.description}</p>}
 
       <RegisterPanel tournamentId={tournament.id} />
+      <ReportPanel tournamentId={tournament.id} />
 
       {tournament.rules && (
         <div className="card">

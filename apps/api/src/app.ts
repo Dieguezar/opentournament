@@ -11,6 +11,9 @@ import { registerRegistrationRoutes } from './routes/registrations.js';
 import { registerCheckInRoutes } from './routes/checkin.js';
 import { registerBracketRoutes } from './routes/bracket.js';
 import { registerMatchRoutes } from './routes/matches.js';
+import { registerResultRoutes } from './routes/results.js';
+import { registerEvidenceRoutes } from './routes/evidence.js';
+import { registerDisputeRoutes } from './routes/disputes.js';
 
 export function buildServer(options: { logger?: boolean } = {}) {
   const app = Fastify({
@@ -33,5 +36,8 @@ export async function initServer(logger = true) {
   await registerCheckInRoutes(app);
   await registerBracketRoutes(app);
   await registerMatchRoutes(app);
+  await registerResultRoutes(app);
+  await registerEvidenceRoutes(app);
+  await registerDisputeRoutes(app);
   return app;
 }

@@ -490,3 +490,118 @@ export const streamLinks = pgTable(
   },
   (table) => [index('stream_links_tournament_id_idx').on(table.tournamentId)],
 );
+
+export const resultSubmissions = pgTable(
+  'result_submissions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    matchId: uuid('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    reportedBy: uuid('reported_by')
+      .notNull()
+      .references(() => users.id),
+    result: jsonb('result')
+      .$type<{
+        winnerId?: string;
+        homeScore?: number;
+        awayScore?: number;
+        draw?: boolean;
+      }>()
+      .notNull(),
+    status: text('status').notNull().default('pending'),
+    submittedAt: timestamp('submitted_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('result_submissions_match_team_unique').on(table.matchId, table.teamId),
+    index('result_submissions_match_status_idx').on(table.matchId, table.status),
+  ],
+);
+
+export type ResultSubmissionRow = typeof resultSubmissions.$inferSelect;
+
+export const evidence = pgTable(
+  'evidence',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    resultSubmissionId: uuid('result_submission_id')
+      .notNull()
+      .references(() => resultSubmissions.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // screenshot | link
+    url: text('url').notNull(),
+    mimeType: text('mime_type'),
+    sizeBytes: integer('size_bytes'),
+    uploadedBy: uuid('uploaded_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('evidence_result_submission_idx').on(table.resultSubmissionId)],
+);
+
+export type EvidenceRow = typeof evidence.$inferSelect;
+
+export const disputes = pgTable(
+  'disputes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    matchId: uuid('match_id')
+      .notNull()
+      .references(() => matches.id, { onDelete: 'cascade' }),
+    openedBy: uuid('opened_by').references(() => users.id),
+    reason: text('reason').notNull(), // result_conflict | captain_request | system
+    status: text('status').notNull().default('open'),
+    assigneeId: uuid('assignee_id').references(() => users.id),
+    openedAt: timestamp('opened_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('disputes_match_id_idx').on(table.matchId)],
+);
+
+export type DisputeRow = typeof disputes.$inferSelect;
+
+export const disputeMessages = pgTable(
+  'dispute_messages',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    disputeId: uuid('dispute_id')
+      .notNull()
+      .references(() => disputes.id, { onDelete: 'cascade' }),
+    authorId: uuid('author_id')
+      .notNull()
+      .references(() => users.id),
+    body: text('body').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index('dispute_messages_dispute_idx').on(table.disputeId)],
+);
+
+export const rulings = pgTable(
+  'rulings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    disputeId: uuid('dispute_id')
+      .notNull()
+      .references(() => disputes.id, { onDelete: 'cascade' }),
+    resolvedBy: uuid('resolved_by')
+      .notNull()
+      .references(() => users.id),
+    decision: jsonb('decision')
+      .$type<{ winnerId?: string; homeScore?: number; awayScore?: number; draw?: boolean }>()
+      .notNull(),
+    rationale: text('rationale').notNull(),
+    consideredEvidence: jsonb('considered_evidence')
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('rulings_dispute_unique').on(table.disputeId)],
+);
+
+export type RulingRow = typeof rulings.$inferSelect;

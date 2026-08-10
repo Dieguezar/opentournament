@@ -40,6 +40,14 @@ export const apiEnvSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('OpenTournament <no-reply@example.com>'),
   SMTP_SECURE: boolFromString,
+  S3_ENDPOINT: z.string().url().default('http://localhost:9000'),
+  S3_REGION: z.string().default('us-east-1'),
+  S3_BUCKET: z.string().default('opentournament'),
+  S3_ACCESS_KEY: z.string().default('minioadmin'),
+  S3_SECRET_KEY: z.string().default('minioadmin'),
+  S3_FORCE_PATH_STYLE: boolFromString,
+  MAX_EVIDENCE_SIZE_MB: z.coerce.number().int().positive().default(10),
+  MAX_EVIDENCE_FILES_PER_SUBMISSION: z.coerce.number().int().positive().default(5),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

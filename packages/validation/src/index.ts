@@ -173,3 +173,66 @@ export const seedsSchema = z.object({
     .max(512),
 });
 export type SeedsInput = z.infer<typeof seedsSchema>;
+
+export const reportResultSchema = z.object({
+  winnerTeamId: z.string().uuid().nullable().optional(),
+  draw: z.boolean().default(false),
+  homeScore: z.coerce.number().int().min(0).max(99).optional(),
+  awayScore: z.coerce.number().int().min(0).max(99).optional(),
+});
+export type ReportResultInput = z.infer<typeof reportResultSchema>;
+
+export const presignSchema = z.object({
+  filename: z.string().trim().min(1).max(200),
+  contentType: z.string().trim().min(1).max(100),
+  sizeBytes: z.coerce.number().int().positive(),
+});
+export type PresignInput = z.infer<typeof presignSchema>;
+
+export const addEvidenceSchema = z
+  .object({
+    kind: z.enum(['screenshot', 'link']),
+    key: z.string().trim().max(500).optional(),
+    mimeType: z.string().trim().max(100).optional(),
+    sizeBytes: z.coerce.number().int().positive().optional(),
+    url: z.string().url().max(2000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.kind === 'screenshot' && (!value.key || !value.mimeType || !value.sizeBytes)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Para capturas se requieren key, mimeType y sizeBytes',
+        path: ['key'],
+      });
+    }
+    if (value.kind === 'link' && !value.url) {
+      ctx.addIssue({ code: 'custom', message: 'Para enlaces se requiere url', path: ['url'] });
+    }
+  });
+export type AddEvidenceInput = z.infer<typeof addEvidenceSchema>;
+
+export const createDisputeSchema = z.object({
+  matchId: z.string().uuid(),
+  reason: z.enum(['captain_request', 'system']).default('captain_request'),
+  message: z.string().trim().min(1).max(5000).optional(),
+});
+export type CreateDisputeInput = z.infer<typeof createDisputeSchema>;
+
+export const disputeMessageSchema = z.object({
+  body: z.string().trim().min(1).max(5000),
+});
+export type DisputeMessageInput = z.infer<typeof disputeMessageSchema>;
+
+export const assignRefereeSchema = z.object({
+  assigneeId: z.string().uuid(),
+});
+export type AssignRefereeInput = z.infer<typeof assignRefereeSchema>;
+
+export const resolveDisputeSchema = z.object({
+  winnerTeamId: z.string().uuid().nullable().optional(),
+  draw: z.boolean().default(false),
+  homeScore: z.coerce.number().int().min(0).max(99).optional(),
+  awayScore: z.coerce.number().int().min(0).max(99).optional(),
+  rationale: z.string().trim().min(10, 'El motivo debe tener al menos 10 caracteres').max(5000),
+});
+export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>;
