@@ -34,9 +34,55 @@ a {
 }
 
 .container {
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 2rem 1rem;
+}
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(15, 17, 21, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  flex-wrap: wrap;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.nav nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.nav nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.nav nav a:hover {
+  color: var(--text);
+}
+
+.nav-user {
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .card {
@@ -113,4 +159,97 @@ button:hover,
 
 .muted {
   color: var(--muted);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.badge-success {
+  color: #4ade80;
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.badge-warn {
+  color: #facc15;
+  border-color: rgba(250, 204, 21, 0.4);
+}
+
+.badge-danger {
+  color: var(--danger);
+  border-color: rgba(229, 72, 77, 0.4);
+}
+
+.actions {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.steps {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 1.25rem;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.step::after {
+  content: '→';
+  color: var(--border);
+}
+
+.step:last-child::after {
+  content: '';
+}
+
+.step-dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--border);
+}
+
+.step-done .step-dot {
+  background: #4ade80;
+}
+
+.step-current {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.step-current .step-dot {
+  background: var(--primary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+ul {
+  padding-left: 1.1rem;
+}
+
+.card h2 {
+  margin-top: 0;
 }

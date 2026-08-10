@@ -28,13 +28,18 @@ export function TournamentActions({
     }
   }
 
+  async function cancel() {
+    if (!window.confirm('¿Seguro que quieres cancelar este torneo?')) return;
+    await run(`/tournaments/${tournamentId}/cancel`, 'Cancelar');
+  }
+
   return (
-    <p>
+    <div className="actions">
       {status === 'draft' && (
         <button type="button" disabled={busy} onClick={() => run(`/tournaments/${tournamentId}/publish`, 'Publicar')}>
           Publicar torneo
         </button>
-      )}{' '}
+      )}
       {(status === 'open' || status === 'in_progress') && (
         <button
           type="button"
@@ -44,7 +49,12 @@ export function TournamentActions({
           Generar bracket
         </button>
       )}
+      {!['draft', 'finalized', 'cancelled'].includes(status) && (
+        <button type="button" className="button button-secondary" disabled={busy} onClick={cancel}>
+          Cancelar torneo
+        </button>
+      )}
       {error && <span className="error" role="alert"> {error}</span>}
-    </p>
+    </div>
   );
 }

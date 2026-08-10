@@ -1,100 +1,134 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api';
 
-interface TeamView {
+interface TeamEntry {
+  teamId: string;
+  teamName: string;
+  teamTag: string | null;
+  registrationStatus: string | null;
+  waitlistPosition: number | null;
+  checkedIn: boolean | null;
+}
+
+interface MyTeam {
   id: string;
   name: string;
 }
 
 export function RegisterPanel({ tournamentId }: { tournamentId: string }) {
   const router = useRouter();
-  const [teams, setTeams] = useState<TeamView[]>([]);
-  const [teamId, setTeamId] = useState('');
-  const [registered, setRegistered] = useState(false);
-  const [checkedIn, setCheckedIn] = useState(false);
+  const [entries, setEntries] = useState<TeamEntry[]>([]);
+  const [myTeams, setMyTeams] = useState<MyTeam[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [busyTeam, setBusyTeam] = useState<string | null>(null);
 
   useEffect(() => {
-    apiClient<{ teams: TeamView[] }>('/teams/mine')
-      .then((data) => {
-        setTeams(data.teams);
-        setTeamId(data.teams[0]?.id ?? '');
+    void Promise.all([
+      apiClient<{ teams: TeamEntry[] }>(`/tournaments/${tournamentId}/teams`),
+      apiClient<{ teams: MyTeam[] }>('/teams/mine'),
+    ])
+      .then(([entriesRes, teamsRes]) => {
+        setEntries(entriesRes.teams);
+        setMyTeams(teamsRes.teams);
       })
       .catch(() => undefined);
-  }, []);
+  }, [tournamentId]);
 
-  async function register() {
-    if (!teamId) return;
-    setBusy(true);
+  async function run(teamId: string, path: string) {
+    setBusyTeam(teamId);
     setError(null);
     try {
-      await apiClient(`/tournaments/${tournamentId}/registrations`, {
-        method: 'POST',
-        body: JSON.stringify({ teamId }),
-      });
-      setRegistered(true);
+      await apiClient(path, { method: 'POST', body: JSON.stringify({ teamId }) });
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'error');
+      setError(err instanceof ApiClientError ? err.message : 'Error');
     } finally {
-      setBusy(false);
+      setBusyTeam(null);
     }
   }
 
-  async function checkIn() {
-    if (!teamId) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient(`/tournaments/${tournamentId}/check-in`, {
-        method: 'POST',
-        body: JSON.stringify({ teamId }),
-      });
-      setCheckedIn(true);
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'error');
-    } finally {
-      setBusy(false);
-    }
+  if (myTeams.length === 0) {
+    return (
+      <div className="card">
+        <h2>Participar</h2>
+        <p className="muted">
+          Para inscribirte necesitas un equipo.{' '}
+          <Link href="/teams/new">Crea tu equipo →</Link>
+        </p>
+      </div>
+    );
   }
 
   return (
     <div className="card">
       <h2>Participar</h2>
-      {teams.length === 0 ? (
-        <p className="muted">
-          Crea un equipo primero:{' '}
-          <a href="/teams/new">Crear equipo</a>
-        </p>
-      ) : (
-        <>
-          <label htmlFor="team">Equipo</label>
-          <select id="team" value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.name}
-              </option>
-            ))}
-          </select>
-          {!registered && (
-            <button type="button" disabled={busy} onClick={register}>
-              Inscribir equipo
-            </button>
-          )}
-          {registered && !checkedIn && (
-            <button type="button" disabled={busy} onClick={checkIn}>
-              Check-in del equipo
-            </button>
-          )}
-          {checkedIn && <p>✓ Check-in confirmado</p>}
-          {error && <p className="error" role="alert">{error}</p>}
-        </>
-      )}
+      <ul style={{ listStyle: 'none', padding: 0 }}>
+        {myTeams.map((team) => {
+          const entry = entries.find((e) => e.teamId === team.id);
+          const busy = busyTeam === team.id;
+          let action: ReactNode = null;
+          let status: ReactNode = null;
+
+          if (!entry) {
+            status = <span className="badge">Sin inscripción</span>;
+            action = (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(team.id, `/tournaments/${tournamentId}/registrations`)}
+              >
+                {busy ? '…' : 'Inscribir equipo'}
+              </button>
+            );
+          } else if (entry.registrationStatus === 'pending') {
+            status = <span className="badge badge-warn">Pendiente de aprobación</span>;
+          } else if (entry.registrationStatus === 'waitlisted') {
+            status = (
+              <span className="badge badge-warn">
+                En espera #{entry.waitlistPosition ?? '?'}
+              </span>
+            );
+          } else if (entry.registrationStatus === 'rejected') {
+            status = <span className="badge badge-danger">Rechazada</span>;
+          } else if (entry.registrationStatus === 'cancelled') {
+            status = <span className="badge">Cancelada</span>;
+            action = (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(team.id, `/tournaments/${tournamentId}/registrations`)}
+              >
+                {busy ? '…' : 'Inscribir de nuevo'}
+              </button>
+            );
+          } else if (!entry.checkedIn) {
+            status = <span className="badge badge-success">Inscrito</span>;
+            action = (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => run(team.id, `/tournaments/${tournamentId}/check-in`)}
+              >
+                {busy ? '…' : 'Check-in del equipo'}
+              </button>
+            );
+          } else {
+            status = <span className="badge badge-success">Check-in hecho ✓</span>;
+          }
+
+          return (
+            <li key={team.id} style={{ marginBottom: '0.75rem' }}>
+              <strong>{team.name}</strong> {status}
+              <div className="actions">{action}</div>
+            </li>
+          );
+        })}
+      </ul>
+      {error && <p className="error" role="alert">{error}</p>}
     </div>
   );
 }

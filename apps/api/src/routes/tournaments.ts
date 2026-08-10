@@ -4,7 +4,10 @@ import {
   auditLogs,
   jobs,
   organizations,
+  teams,
   tournamentStaff,
+  tournamentParticipants,
+  tournamentRegistrations,
   tournaments,
 } from '@opentournament/database';
 import {
@@ -117,6 +120,62 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .where(eq(organizations.id, tournament.organizationId))
       .limit(1);
     return reply.send({ tournament, organization: org ?? null });
+  });
+
+  app.get('/tournaments/:id/teams', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const rows = await db
+      .select({
+        teamId: teams.id,
+        teamName: teams.name,
+        teamTag: teams.tag,
+        registrationStatus: tournamentRegistrations.status,
+        waitlistPosition: tournamentRegistrations.waitlistPosition,
+        checkedIn: tournamentParticipants.checkedIn,
+      })
+      .from(tournamentRegistrations)
+      .innerJoin(teams, eq(teams.id, tournamentRegistrations.teamId))
+      .leftJoin(
+        tournamentParticipants,
+        and(
+          eq(tournamentParticipants.tournamentId, id),
+          eq(tournamentParticipants.teamId, teams.id),
+        ),
+      )
+      .where(eq(tournamentRegistrations.tournamentId, id));
+    return reply.send({ teams: rows });
+  });
+
+  app.post('/tournaments/:id/cancel', async (request, reply) => {
+    if (!requireAuth(request, reply)) return;
+    const { id } = request.params as { id: string };
+    const tournament = await getTournament(db, id);
+    if (!tournament) {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+    }
+    if (!(await isTournamentAdmin(db, id, request.user!.id))) {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+      });
+    }
+    if (tournament.status === 'finalized' || tournament.status === 'cancelled') {
+      return reply.status(409).send({
+        error: { code: 'INVALID_STATUS', message: 'El torneo no se puede cancelar' },
+      });
+    }
+    await db
+      .update(tournaments)
+      .set({ status: 'cancelled', cancelledAt: new Date() })
+      .where(eq(tournaments.id, id));
+    await db.insert(auditLogs).values({
+      organizationId: tournament.organizationId,
+      actorId: request.user!.id,
+      action: 'tournament.cancelled',
+      resourceType: 'tournament',
+      resourceId: id,
+    });
+    emitTournamentEvent(id, 'tournament.updated', { status: 'cancelled' });
+    return reply.send({ ok: true });
   });
 
   app.patch('/tournaments/:id', async (request, reply) => {
