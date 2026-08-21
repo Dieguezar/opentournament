@@ -158,6 +158,7 @@ export const jobs = pgTable(
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),
     lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    lockToken: text('lock_token'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('jobs_status_run_at_idx').on(table.status, table.runAt)],

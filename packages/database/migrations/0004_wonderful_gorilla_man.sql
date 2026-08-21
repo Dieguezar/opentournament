@@ -1,0 +1,1 @@
+ALTER TABLE "jobs" ADD COLUMN "lock_token" text;

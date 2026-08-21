@@ -1,6 +1,8 @@
+import { and, eq } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const hasDb = Boolean(process.env.TEST_DATABASE_URL);
+const INTEGRATION_TEST_TIMEOUT_MS = 30_000;
 
 describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   afterAll(async () => {
@@ -8,7 +10,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     await pool.end();
   });
 
-  it('registro → me → crear organización → logout', async () => {
+  it('registro → me → crear organización → logout', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     const { runMigrations } = await import('@opentournament/database');
     const { initServer } = await import('./app.js');
@@ -80,7 +82,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     }
   });
 
-  it('flujo completo: torneo → inscripción → check-in → bracket → reporte bilateral', async () => {
+  it('flujo completo: torneo → inscripción → check-in → bracket → reporte bilateral', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     const { runMigrations } = await import('@opentournament/database');
     const { initServer } = await import('./app.js');
@@ -311,5 +313,76 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     } finally {
       await app.close();
     }
+  });
+
+  it('reclama jobs de forma exclusiva y recupera leases vencidos', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+    const { jobs, runMigrations } = await import('@opentournament/database');
+    const { db } = await import('./db.js');
+    const { claimDueJobs } = await import('./worker.js');
+
+    await runMigrations(process.env.TEST_DATABASE_URL!);
+    const now = new Date();
+    const [pendingJob] = await db
+      .insert(jobs)
+      .values({ kind: 'test.pending', runAt: new Date(now.getTime() - 1_000), payload: {} })
+      .returning();
+    expect(pendingJob).toBeDefined();
+
+    const [firstClaim, secondClaim] = await Promise.all([
+      claimDueJobs(db, now),
+      claimDueJobs(db, now),
+    ]);
+    const claims = [...firstClaim, ...secondClaim].filter((job) => job.id === pendingJob!.id);
+    expect(claims).toHaveLength(1);
+    expect(claims[0]?.attempts).toBe(1);
+
+    const [staleJob] = await db
+      .insert(jobs)
+      .values({
+        kind: 'test.stale',
+        runAt: new Date(now.getTime() - 60_000),
+        payload: {},
+        status: 'running',
+        attempts: 1,
+        lockedUntil: new Date(now.getTime() - 1_000),
+        lockToken: 'stale-worker-token',
+      })
+      .returning();
+    const recovered = await claimDueJobs(db, now);
+    const recoveredJob = recovered.find((job) => job.id === staleJob!.id);
+    expect(recoveredJob?.attempts).toBe(2);
+    expect(recoveredJob?.lockToken).not.toBe('stale-worker-token');
+
+    await db
+      .update(jobs)
+      .set({ status: 'done' })
+      .where(
+        and(eq(jobs.id, staleJob!.id), eq(jobs.lockToken, 'stale-worker-token')),
+      );
+    const [recoveredState] = await db
+      .select({ status: jobs.status })
+      .from(jobs)
+      .where(eq(jobs.id, staleJob!.id));
+    expect(recoveredState?.status).toBe('running');
+
+    const [exhaustedJob] = await db
+      .insert(jobs)
+      .values({
+        kind: 'test.exhausted',
+        runAt: new Date(now.getTime() - 60_000),
+        payload: {},
+        status: 'running',
+        attempts: 5,
+        lockedUntil: new Date(now.getTime() - 1_000),
+      })
+      .returning();
+    const exhaustedClaims = await claimDueJobs(db, now);
+    expect(exhaustedClaims.some((job) => job.id === exhaustedJob!.id)).toBe(false);
+    const [exhaustedState] = await db
+      .select({ status: jobs.status })
+      .from(jobs)
+      .where(eq(jobs.id, exhaustedJob!.id));
+    expect(exhaustedState?.status).toBe('failed');
   });
 });
