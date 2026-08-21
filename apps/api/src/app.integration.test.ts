@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 const hasDb = Boolean(process.env.TEST_DATABASE_URL);
 const INTEGRATION_TEST_TIMEOUT_MS = 30_000;
+process.env.ALLOW_UNVERIFIED_EMAILS ??= 'true';
 
 describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   afterAll(async () => {
@@ -384,5 +385,101 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       .from(jobs)
       .where(eq(jobs.id, exhaustedJob!.id));
     expect(exhaustedState?.status).toBe('failed');
+  });
+
+  it('separa verificación de correo y recuperación de contraseña', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+    const {
+      emailVerificationTokens,
+      passwordResetTokens,
+      runMigrations,
+      users,
+    } = await import('@opentournament/database');
+    const { generateResetToken, hashSessionToken } = await import('@opentournament/auth');
+    const { env } = await import('./config.js');
+    const { db } = await import('./db.js');
+    const { initServer } = await import('./app.js');
+
+    await runMigrations(process.env.TEST_DATABASE_URL!);
+    env.ALLOW_UNVERIFIED_EMAILS = false;
+    const app = await initServer(false);
+
+    try {
+      const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+      const csrfCookie = csrfRes.cookies.find((cookie) => cookie.name === 'csrf')!;
+      const csrfToken = csrfRes.json<{ token: string }>().token;
+      const email = `verify-${Date.now()}@example.com`;
+      const headers = {
+        'x-csrf-token': csrfToken,
+        cookie: `csrf=${csrfCookie.value}`,
+      };
+
+      const registerRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/register',
+        payload: { displayName: 'Verify User', email, password: 'password-123' },
+        headers,
+      });
+      expect(registerRes.statusCode).toBe(201);
+      expect(registerRes.cookies.some((cookie) => cookie.name === 'session')).toBe(false);
+      expect(registerRes.json<{ requiresEmailVerification: boolean }>().requiresEmailVerification).toBe(
+        true,
+      );
+
+      const loginBeforeVerification = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email, password: 'password-123' },
+        headers,
+      });
+      expect(loginBeforeVerification.statusCode).toBe(403);
+
+      const [user] = await db
+        .select({ id: users.id, emailVerifiedAt: users.emailVerifiedAt })
+        .from(users)
+        .where(eq(users.email, email));
+      expect(user?.emailVerifiedAt).toBeNull();
+      const resetTokens = await db
+        .select({ id: passwordResetTokens.id })
+        .from(passwordResetTokens)
+        .where(eq(passwordResetTokens.userId, user!.id));
+      expect(resetTokens).toHaveLength(0);
+
+      const verificationToken = generateResetToken();
+      await db.insert(emailVerificationTokens).values({
+        userId: user!.id,
+        tokenHash: hashSessionToken(verificationToken),
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+      const resetWithVerificationToken = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/reset-password',
+        payload: { token: verificationToken, password: 'different-password-123' },
+        headers,
+      });
+      expect(resetWithVerificationToken.statusCode).toBe(400);
+
+      const verifyRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/auth/verify?token=${verificationToken}`,
+      });
+      expect(verifyRes.statusCode).toBe(302);
+      const reusedVerification = await app.inject({
+        method: 'GET',
+        url: `/api/v1/auth/verify?token=${verificationToken}`,
+      });
+      expect(reusedVerification.statusCode).toBe(400);
+
+      const loginAfterVerification = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email, password: 'password-123' },
+        headers,
+      });
+      expect(loginAfterVerification.statusCode).toBe(200);
+    } finally {
+      env.ALLOW_UNVERIFIED_EMAILS = true;
+      await app.close();
+    }
   });
 });

@@ -18,10 +18,14 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      await apiClient('/auth/register', {
+      const result = await apiClient<{ requiresEmailVerification: boolean }>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ displayName, email, password }),
       });
+      if (result.requiresEmailVerification) {
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        return;
+      }
       router.push('/dashboard');
       router.refresh();
     } catch (err) {

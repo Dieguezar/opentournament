@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import {
   buildDiscordAuthorizationUrl,
@@ -15,6 +15,7 @@ import {
 } from '@opentournament/auth';
 import {
   auditLogs,
+  emailVerificationTokens,
   identities,
   passwordResetTokens,
   sessions,
@@ -28,7 +29,7 @@ import {
 } from '@opentournament/validation';
 import { env } from '../config.js';
 import { db } from '../db.js';
-import { hasSmtp, sendMail } from '../mailer.js';
+import { sendMail } from '../mailer.js';
 import { requireAuth, setSessionCookies } from '../plugins/auth.js';
 
 async function createSessionForUser(reply: FastifyReply, userId: string) {
@@ -51,7 +52,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
       });
     }
 
-    const verified = !hasSmtp() || env.ALLOW_UNVERIFIED_EMAILS;
+    const verified = env.ALLOW_UNVERIFIED_EMAILS;
     const passwordHash = await hashPassword(body.password);
     const [user] = await db
       .insert(users)
@@ -70,26 +71,29 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
 
     if (!verified) {
       const resetToken = generateResetToken();
-      await db.insert(passwordResetTokens).values({
+      await db.insert(emailVerificationTokens).values({
         userId: user.id,
         tokenHash: hashSessionToken(resetToken),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       });
-      sendMail({
+      await sendMail({
         to: body.email,
         subject: 'Verifica tu correo en OpenTournament',
         text: `Tu enlace de verificación (válido 24 h): ${env.API_URL}/api/v1/auth/verify?token=${resetToken}`,
       });
     }
 
-    await createSessionForUser(reply, user.id);
+    if (verified) await createSessionForUser(reply, user.id);
     await db.insert(auditLogs).values({
       actorId: user.id,
       action: 'auth.register',
       resourceType: 'user',
       resourceId: user.id,
     });
-    return reply.status(201).send({ user: { id: user.id, email: user.email } });
+    return reply.status(201).send({
+      user: { id: user.id, email: user.email },
+      requiresEmailVerification: !verified,
+    });
   });
 
   app.post('/auth/login', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request, reply) => {
@@ -103,6 +107,11 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     if (!user?.passwordHash || !(await verifyPassword(user.passwordHash, body.password))) {
       return reply.status(401).send({
         error: { code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos' },
+      });
+    }
+    if (!user.emailVerifiedAt && !env.ALLOW_UNVERIFIED_EMAILS) {
+      return reply.status(403).send({
+        error: { code: 'EMAIL_NOT_VERIFIED', message: 'Debes verificar tu correo antes de ingresar' },
       });
     }
 
@@ -143,6 +152,59 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ token });
   });
 
+  app.get('/auth/verify', async (request, reply) => {
+    const { token } = request.query as { token?: string };
+    if (!token) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_VERIFICATION_TOKEN', message: 'El enlace es inválido o expiró' },
+      });
+    }
+
+    const verifiedAt = new Date();
+    const verifiedUserId = await db.transaction(async (transaction) => {
+      const [verification] = await transaction
+        .update(emailVerificationTokens)
+        .set({ usedAt: verifiedAt })
+        .where(
+          and(
+            eq(emailVerificationTokens.tokenHash, hashSessionToken(token)),
+            isNull(emailVerificationTokens.usedAt),
+            gt(emailVerificationTokens.expiresAt, verifiedAt),
+          ),
+        )
+        .returning({ userId: emailVerificationTokens.userId });
+      if (!verification) return null;
+
+      await transaction
+        .update(users)
+        .set({ emailVerifiedAt: verifiedAt })
+        .where(eq(users.id, verification.userId));
+      await transaction
+        .update(emailVerificationTokens)
+        .set({ usedAt: verifiedAt })
+        .where(
+          and(
+            eq(emailVerificationTokens.userId, verification.userId),
+            isNull(emailVerificationTokens.usedAt),
+          ),
+        );
+      await transaction.insert(auditLogs).values({
+        actorId: verification.userId,
+        action: 'auth.email_verified',
+        resourceType: 'user',
+        resourceId: verification.userId,
+      });
+      return verification.userId;
+    });
+    if (!verifiedUserId) {
+      return reply.status(400).send({
+        error: { code: 'INVALID_VERIFICATION_TOKEN', message: 'El enlace es inválido o expiró' },
+      });
+    }
+
+    return reply.redirect(`${env.APP_URL}/login?verified=1`);
+  });
+
   app.post('/auth/forgot-password', async (request, reply) => {
     const body = forgotPasswordSchema.parse(request.body);
     const [user] = await db
@@ -158,7 +220,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         tokenHash: hashSessionToken(resetToken),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       });
-      sendMail({
+      await sendMail({
         to: body.email,
         subject: 'Recupera tu contraseña en OpenTournament',
         text: `Tu enlace de recuperación (válido 1 h): ${env.API_URL}/api/v1/auth/reset-password?token=${resetToken}`,
