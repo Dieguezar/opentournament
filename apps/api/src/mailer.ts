@@ -1,25 +1,36 @@
+import nodemailer from 'nodemailer';
 import { env } from './config.js';
 
-/**
- * Fase 1: mailer en modo consola (AF-02).
- * Si SMTP se configura en una fase posterior, este módulo se extiende
- * sin cambiar los llamadores.
- */
-export function sendMail(input: {
+const transporter = env.SMTP_HOST
+  ? nodemailer.createTransport({
+      host: env.SMTP_HOST,
+      port: env.SMTP_PORT,
+      secure: env.SMTP_SECURE,
+      auth:
+        env.SMTP_USER && env.SMTP_PASS
+          ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+          : undefined,
+      disableFileAccess: true,
+      disableUrlAccess: true,
+    })
+  : null;
+
+export async function sendMail(input: {
   to: string;
   subject: string;
   text: string;
-}): void {
-  if (!env.SMTP_HOST) {
+}): Promise<void> {
+  if (!transporter) {
     if (env.LOG_LEVEL !== 'silent') {
       console.log(`[mailer:consola] Para: ${input.to}\nAsunto: ${input.subject}\n${input.text}`);
     }
     return;
   }
-  // TODO(fase 3): transporte SMTP real (nodemailer u otro).
-  console.log(`[mailer] SMTP configurado pero el envío real llega en fase 3. Para: ${input.to}`);
-}
 
-export function hasSmtp(): boolean {
-  return Boolean(env.SMTP_HOST);
+  await transporter.sendMail({
+    from: env.SMTP_FROM,
+    to: input.to,
+    subject: input.subject,
+    text: input.text,
+  });
 }

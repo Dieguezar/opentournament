@@ -128,6 +128,21 @@ export const passwordResetTokens = pgTable(
   (table) => [uniqueIndex('password_reset_tokens_token_hash_unique').on(table.tokenHash)],
 );
 
+export const emailVerificationTokens = pgTable(
+  'email_verification_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('email_verification_tokens_token_hash_unique').on(table.tokenHash)],
+);
+
 export const auditLogs = pgTable(
   'audit_logs',
   {
@@ -158,6 +173,7 @@ export const jobs = pgTable(
     attempts: integer('attempts').notNull().default(0),
     lastError: text('last_error'),
     lockedUntil: timestamp('locked_until', { withTimezone: true }),
+    lockToken: text('lock_token'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index('jobs_status_run_at_idx').on(table.status, table.runAt)],

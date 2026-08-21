@@ -93,6 +93,19 @@ export async function generateTournamentBracket(
   db: Db,
   tournament: TournamentRow,
 ): Promise<StageRow> {
+  const [existingStage] = await db
+    .select({ id: stages.id })
+    .from(stages)
+    .where(eq(stages.tournamentId, tournament.id))
+    .limit(1);
+  if (existingStage) {
+    throw new DomainError(
+      409,
+      'BRACKET_ALREADY_EXISTS',
+      'El torneo ya tiene un bracket generado',
+    );
+  }
+
   const participants = await db
     .select()
     .from(tournamentParticipants)
@@ -118,9 +131,6 @@ export async function generateTournamentBracket(
         })
       : generateSingleElimination(engineParticipants),
   );
-
-  // Regeneración: se elimina la etapa anterior (cascada).
-  await db.delete(stages).where(eq(stages.tournamentId, tournament.id));
 
   const [stage] = await db
     .insert(stages)
@@ -249,6 +259,36 @@ export async function applyMatchWinner(
   return { champion: result.champion };
 }
 
+export function applyCheckInWalkovers(
+  engine: EngineBracket,
+  checkedInByParticipant: ReadonlyMap<string, boolean>,
+): EngineBracket {
+  const firstRoundMatchIds = engine.matches
+    .filter(
+      (match) =>
+        match.bracket === 'winners' && match.round === 1 && match.status === 'scheduled',
+    )
+    .map((match) => match.id);
+  let currentEngine = engine;
+
+  for (const matchId of firstRoundMatchIds) {
+    const match = currentEngine.matches.find((candidate) => candidate.id === matchId);
+    if (!match || match.status !== 'scheduled') continue;
+
+    const resolved = resolveMatchParticipants(currentEngine, match);
+    if (!resolved.home || !resolved.away) continue;
+
+    const homeCheckedIn = checkedInByParticipant.get(resolved.home) ?? false;
+    const awayCheckedIn = checkedInByParticipant.get(resolved.away) ?? false;
+    if (homeCheckedIn === awayCheckedIn) continue;
+
+    const winnerId = homeCheckedIn ? resolved.home : resolved.away;
+    currentEngine = advanceMatch(currentEngine, match.id, winnerId).bracket;
+  }
+
+  return currentEngine;
+}
+
 export async function closeCheckIn(db: Db, tournamentId: string): Promise<void> {
   const [tournament] = await db
     .select()
@@ -271,26 +311,17 @@ export async function closeCheckIn(db: Db, tournamentId: string): Promise<void> 
       .select()
       .from(tournamentParticipants)
       .where(eq(tournamentParticipants.tournamentId, tournamentId));
-    const byId = new Map(participants.map((p) => [p.id, p]));
+    const checkedInByParticipant = new Map(
+      participants.map((participant) => [participant.id, participant.checkedIn]),
+    );
+    const updatedEngine = applyCheckInWalkovers(engine, checkedInByParticipant);
 
-    for (const match of engine.matches.filter(
-      (m) => m.bracket === 'winners' && m.round === 1 && m.status === 'scheduled',
-    )) {
-      const resolved = resolveMatchParticipants(engine, match);
-      if (!resolved.home || !resolved.away) continue;
-      const homeOk = byId.get(resolved.home)?.checkedIn ?? false;
-      const awayOk = byId.get(resolved.away)?.checkedIn ?? false;
-      if (!homeOk || !awayOk) {
-        const winnerId = homeOk ? resolved.away : awayOk ? resolved.home : null;
-        if (winnerId) {
-          const result = advanceMatch(engine, match.id, winnerId);
-          await db
-            .update(stages)
-            .set({ config: { ...stage.config, engineBracket: result.bracket } })
-            .where(eq(stages.id, stage.id));
-          await syncMatchesFromEngine(db, stage, result.bracket);
-        }
-      }
+    if (updatedEngine !== engine) {
+      await db
+        .update(stages)
+        .set({ config: { ...stage.config, engineBracket: updatedEngine } })
+        .where(eq(stages.id, stage.id));
+      await syncMatchesFromEngine(db, stage, updatedEngine);
     }
   }
 

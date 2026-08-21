@@ -263,6 +263,11 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
     if (!tournament) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
+    if (tournament.visibility === 'unlisted' && !request.user) {
+      return reply.status(401).send({
+        error: { code: 'UNAUTHORIZED', message: 'Se requiere iniciar sesión' },
+      });
+    }
     const [org] = await db
       .select({ id: organizations.id, name: organizations.name, slug: organizations.slug })
       .from(organizations)
