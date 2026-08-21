@@ -11,15 +11,31 @@ export function LiveTournament({ tournamentId }: { tournamentId: string }) {
     const source = new EventSource(
       `/api/v1/events/public?tournament=${encodeURIComponent(tournamentId)}`,
     );
-    source.addEventListener('message', () => {
+    let refreshTimeout: ReturnType<typeof setTimeout> | undefined;
+    const refresh = () => {
       if (refreshing.current) return;
       refreshing.current = true;
       router.refresh();
-      setTimeout(() => {
+      refreshTimeout = setTimeout(() => {
         refreshing.current = false;
       }, 1500);
-    });
-    return () => source.close();
+    };
+    const eventNames = [
+      'tournament.updated',
+      'bracket.updated',
+      'match.updated',
+      'result.confirmed',
+      'dispute.opened',
+      'dispute.resolved',
+      'checkin.updated',
+    ];
+    for (const eventName of eventNames) source.addEventListener(eventName, refresh);
+
+    return () => {
+      if (refreshTimeout) clearTimeout(refreshTimeout);
+      for (const eventName of eventNames) source.removeEventListener(eventName, refresh);
+      source.close();
+    };
   }, [router, tournamentId]);
 
   return (

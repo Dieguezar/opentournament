@@ -1,18 +1,29 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 
 const hasDb = Boolean(process.env.TEST_DATABASE_URL);
 
 describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
+  afterAll(async () => {
+    const { pool } = await import('./db.js');
+    await pool.end();
+  });
+
   it('registro → me → crear organización → logout', async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     const { runMigrations } = await import('@opentournament/database');
     const { initServer } = await import('./app.js');
-    const { pool } = await import('./db.js');
 
     await runMigrations(process.env.TEST_DATABASE_URL!);
     const app = await initServer(false);
 
     try {
+      const discordRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/discord/interactions',
+        payload: {},
+      });
+      expect(discordRes.statusCode).not.toBe(403);
+
       const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
       const csrfCookie = csrfRes.cookies.find((c) => c.name === 'csrf')!;
       const csrfBody = csrfRes.json<{ token: string }>();
@@ -66,7 +77,6 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       expect(meAfter.statusCode).toBe(401);
     } finally {
       await app.close();
-      await pool.end();
     }
   });
 
@@ -74,7 +84,6 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     const { runMigrations } = await import('@opentournament/database');
     const { initServer } = await import('./app.js');
-    const { pool } = await import('./db.js');
 
     await runMigrations(process.env.TEST_DATABASE_URL!);
     const app = await initServer(false);
@@ -109,6 +118,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     try {
       const userA = await registerUser('Captain A');
       const userB = await registerUser('Captain B');
+      const userC = await registerUser('Captain C');
 
       const orgRes = await app.inject({
         method: 'POST',
@@ -139,10 +149,18 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       const inviteRes = await app.inject({
         method: 'POST',
         url: `/api/v1/organizations/${orgId}/members`,
-        payload: { email: userB.email, role: 'member' },
+        payload: { email: userB.email, role: 'admin' },
         headers: headersFor(userA),
       });
       expect(inviteRes.statusCode).toBe(201);
+
+      const ownerEscalationRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/organizations/${orgId}/members`,
+        payload: { email: userC.email, role: 'owner' },
+        headers: headersFor(userB),
+      });
+      expect(ownerEscalationRes.statusCode).toBe(403);
 
       const teamBRes = await app.inject({
         method: 'POST',
@@ -170,6 +188,30 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       });
       expect(tournamentRes.statusCode).toBe(201);
       const tournament = tournamentRes.json<{ tournament: { id: string } }>().tournament.id;
+
+      const unlistedSlug = `privado-${t}`;
+      const unlistedTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: unlistedSlug,
+          name: 'Torneo privado',
+          format: 'single_elimination',
+          visibility: 'unlisted',
+          capacity: 8,
+          seriesConfig: { bo: 1, drawsAllowed: false },
+        },
+        headers: headersFor(userA),
+      });
+      expect(unlistedTournamentRes.statusCode).toBe(201);
+
+      const anonymousUnlistedRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/by-slug/${unlistedSlug}`,
+      });
+      expect(anonymousUnlistedRes.statusCode).toBe(401);
 
       const publishRes = await app.inject({
         method: 'POST',
@@ -216,6 +258,13 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       });
       expect(bracketRes.statusCode).toBe(200);
 
+      const duplicateBracketRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${tournament}/bracket/generate`,
+        headers: headersFor(userA),
+      });
+      expect(duplicateBracketRes.statusCode).toBe(409);
+
       const bracketView = await app.inject({
         method: 'GET',
         url: `/api/v1/tournaments/${tournament}/bracket`,
@@ -236,6 +285,12 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       });
       expect(report1.statusCode).toBe(201);
 
+      const anonymousResults = await app.inject({
+        method: 'GET',
+        url: `/api/v1/matches/${firstMatch.id}/results`,
+      });
+      expect(anonymousResults.statusCode).toBe(401);
+
       const report2 = await app.inject({
         method: 'POST',
         url: `/api/v1/matches/${firstMatch.id}/results`,
@@ -255,7 +310,6 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       expect(finalized.status).toBe('finalized');
     } finally {
       await app.close();
-      await pool.end();
     }
   });
 });

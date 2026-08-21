@@ -1,5 +1,5 @@
 // Service worker de OpenTournament: caché de lectura (PWA).
-const CACHE = 'opentournament-v1';
+const CACHE = 'opentournament-v2';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -36,7 +36,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Páginas: network-first con respaldo de caché (lectura offline).
+  // Sólo las páginas públicas pueden persistirse. Las páginas de sesión siempre van a red.
+  const isPublicPage = url.pathname === '/';
+  if (!isPublicPage) return;
+
+  // Páginas públicas: network-first con respaldo de caché (lectura offline).
   event.respondWith(
     fetch(event.request)
       .then((response) => {

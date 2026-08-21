@@ -10,10 +10,10 @@ test('registro → wizard → dashboard', async ({ page }) => {
   await page.getByRole('button', { name: 'Crear cuenta' }).click();
 
   await page.waitForURL('**/dashboard');
-  await expect(page.getByRole('heading', { name: 'Panel de OpenTournament' })).toBeVisible();
-  await expect(page.getByText('Todavía no perteneces a ninguna organización.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hola, Usuario E2E' })).toBeVisible();
+  await expect(page.getByText('Todavía no tienes torneos.')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Crear mi organización' }).click();
+  await page.getByRole('link', { name: 'Crear organización' }).click();
   await page.waitForURL('**/wizard');
   await page.getByLabel('Nombre de la organización').fill('Comunidad E2E');
   await page.getByLabel('Slug (URL)').fill(`e2e-${Date.now()}`);

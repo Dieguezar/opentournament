@@ -158,6 +158,11 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
       });
     }
     const body = inviteMemberSchema.parse(request.body);
+    if (body.role === 'owner' && member.role !== 'owner') {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'Sólo un owner puede asignar el rol de owner' },
+      });
+    }
     const [target] = await db
       .select({ id: users.id })
       .from(users)

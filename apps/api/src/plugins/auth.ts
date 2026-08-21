@@ -12,6 +12,7 @@ import type { SessionUser, OrgRole } from '@opentournament/shared-types';
 import { env } from '../config.js';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const CSRF_EXEMPT_PATHS = new Set(['/api/v1/discord/interactions']);
 
 export async function registerAuthPlugins(app: FastifyInstance, db: Db): Promise<void> {
   await app.register(cookie);
@@ -31,6 +32,8 @@ export async function registerAuthPlugins(app: FastifyInstance, db: Db): Promise
 
   app.addHook('preHandler', async (request, reply) => {
     if (!MUTATING_METHODS.has(request.method)) return;
+    const requestPath = request.url.split('?', 1)[0];
+    if (requestPath && CSRF_EXEMPT_PATHS.has(requestPath)) return;
     const cookieToken = request.cookies.csrf;
     const headerToken = request.headers['x-csrf-token'];
     if (typeof headerToken !== 'string' || !csrfTokensMatch(cookieToken, headerToken)) {

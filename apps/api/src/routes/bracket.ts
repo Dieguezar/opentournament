@@ -29,7 +29,7 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
         error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
       });
     }
-    if (!['open', 'in_progress'].includes(tournament.status)) {
+    if (tournament.status !== 'open') {
       return reply.status(409).send({
         error: { code: 'INVALID_STATUS', message: 'El torneo debe estar abierto' },
       });

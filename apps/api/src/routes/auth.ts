@@ -259,13 +259,14 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     if (existingIdentity) {
       userId = existingIdentity.userId;
     } else {
-      const [userByEmail] = discordUser.email
+      const verifiedEmail = discordUser.verified ? discordUser.email?.toLowerCase() : undefined;
+      const [userByEmail] = verifiedEmail
         ? await db
             .select({ id: users.id })
             .from(users)
             .where(
               and(
-                eq(users.email, discordUser.email.toLowerCase()),
+                eq(users.email, verifiedEmail),
                 isNull(users.deletedAt),
               ),
             )
@@ -275,10 +276,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
       if (userByEmail) {
         userId = userByEmail.id;
       } else {
-    const [created] = await db
+        const [created] = await db
           .insert(users)
           .values({
-            email: discordUser.email?.toLowerCase() ?? null,
+            email: verifiedEmail ?? null,
             displayName: discordUser.username,
             emailVerifiedAt: discordUser.verified ? new Date() : null,
           })
@@ -294,7 +295,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         userId,
         provider: 'discord',
         providerSub: discordUser.id,
-        providerEmail: discordUser.email?.toLowerCase() ?? null,
+        providerEmail: verifiedEmail ?? null,
       });
     }
 

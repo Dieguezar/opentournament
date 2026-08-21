@@ -248,12 +248,13 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
   });
 
   app.get('/matches/:matchId/results', async (request, reply) => {
+    if (!requireAuth(request, reply)) return;
     const { matchId } = request.params as { matchId: string };
     const ctx = await loadMatchContext(db, matchId);
     if (!ctx) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
-    if (request.user && !(await canAccessResults(ctx, request.user.id))) {
+    if (!(await canAccessResults(ctx, request.user!.id))) {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: 'Sin acceso a los reportes' },
       });
