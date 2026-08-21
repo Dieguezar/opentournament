@@ -29,7 +29,7 @@
     "@opentournament/tournament-engine": "workspace:*",
     "@opentournament/validation": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "fastify": "^5.11.2",
+    "fastify": "^5.12.1",
     "nodemailer": "9.0.5",
     "pino": "^10.3.1",
     "zod": "^4.4.3"
