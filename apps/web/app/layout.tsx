@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import './globals.css';
+import './showcase.css';
 import { PwaRegister } from '@/components/pwa-register';
 import { Header } from '@/components/header';
 

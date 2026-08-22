@@ -628,4 +628,137 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       await app.close();
     }
   });
+
+  it('crea una experiencia demo poblada e idempotente', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+    const {
+      brackets,
+      disputes,
+      matches,
+      rounds,
+      runMigrations,
+      seedDemoData,
+      stages,
+      teams,
+      tournamentParticipants,
+      tournamentRegistrations,
+      tournaments,
+    } = await import('@opentournament/database');
+    const { db } = await import('./db.js');
+    const { initServer } = await import('./app.js');
+
+    await runMigrations(process.env.TEST_DATABASE_URL!);
+    const firstSeed = await seedDemoData(db);
+    const secondSeed = await seedDemoData(db);
+
+    expect(secondSeed).toEqual(firstSeed);
+
+    const [demoTournament] = await db
+      .select()
+      .from(tournaments)
+      .where(eq(tournaments.id, firstSeed.tournamentId));
+    expect(demoTournament).toMatchObject({
+      slug: 'copa-nexo-demo',
+      status: 'in_progress',
+      gameAdapterKey: 'valorant',
+    });
+
+    const demoTeams = await db
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.organizationId, firstSeed.organizationId));
+    const registrations = await db
+      .select({ id: tournamentRegistrations.id })
+      .from(tournamentRegistrations)
+      .where(eq(tournamentRegistrations.tournamentId, firstSeed.tournamentId));
+    const participants = await db
+      .select({ id: tournamentParticipants.id })
+      .from(tournamentParticipants)
+      .where(eq(tournamentParticipants.tournamentId, firstSeed.tournamentId));
+    const [stage] = await db
+      .select({ id: stages.id })
+      .from(stages)
+      .where(eq(stages.tournamentId, firstSeed.tournamentId));
+    const bracketRows = await db
+      .select({ id: brackets.id })
+      .from(brackets)
+      .where(eq(brackets.stageId, stage!.id));
+    const roundRows = await db
+      .select({ id: rounds.id })
+      .from(rounds)
+      .where(eq(rounds.bracketId, bracketRows[0]!.id));
+    const matchRows = await db
+      .select({ id: matches.id, status: matches.status })
+      .from(matches)
+      .where(eq(matches.tournamentId, firstSeed.tournamentId));
+    const disputeRows = await db
+      .select({ id: disputes.id, status: disputes.status })
+      .from(disputes)
+      .innerJoin(matches, eq(matches.id, disputes.matchId))
+      .where(eq(matches.tournamentId, firstSeed.tournamentId));
+
+    expect(demoTeams).toHaveLength(4);
+    expect(registrations).toHaveLength(4);
+    expect(participants).toHaveLength(4);
+    expect(bracketRows).toHaveLength(1);
+    expect(roundRows).toHaveLength(2);
+    expect(matchRows.filter((match) => match.status === 'finalized')).toHaveLength(2);
+    expect(matchRows.filter((match) => match.status === 'scheduled')).toHaveLength(1);
+    expect(disputeRows).toEqual([{ id: firstSeed.disputeId, status: 'resolved' }]);
+
+    const app = await initServer(false);
+    try {
+      const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+      const csrfCookie = csrfRes.cookies.find((cookie) => cookie.name === 'csrf')!;
+      const csrfToken = csrfRes.json<{ token: string }>().token;
+      const loginRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'admin@opentournament.local', password: 'demo-password-123' },
+        headers: {
+          'x-csrf-token': csrfToken,
+          cookie: `csrf=${csrfCookie.value}`,
+        },
+      });
+      expect(loginRes.statusCode).toBe(200);
+      const sessionCookie = loginRes.cookies.find((cookie) => cookie.name === 'session')!;
+      const authCookie = `session=${sessionCookie.value}; csrf=${csrfCookie.value}`;
+
+      const mineRes = await app.inject({
+        method: 'GET',
+        url: '/api/v1/tournaments/mine',
+        headers: { cookie: authCookie },
+      });
+      expect(
+        mineRes
+          .json<{ tournaments: Array<{ id: string }> }>()
+          .tournaments.some((tournament) => tournament.id === firstSeed.tournamentId),
+      ).toBe(true);
+
+      const bracketRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${firstSeed.tournamentId}/bracket`,
+      });
+      const bracketPayload = bracketRes.json<{
+        brackets: Array<{ rounds: Array<{ matches: unknown[] }> }>;
+      }>();
+      expect(
+        bracketPayload.brackets.flatMap((bracket) =>
+          bracket.rounds.flatMap((round) => round.matches),
+        ),
+      ).toHaveLength(3);
+
+      const disputesRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${firstSeed.tournamentId}/disputes`,
+        headers: { cookie: authCookie },
+      });
+      expect(disputesRes.statusCode).toBe(200);
+      expect(disputesRes.json<{ disputes: Array<{ status: string }> }>().disputes).toEqual([
+        expect.objectContaining({ status: 'resolved' }),
+      ]);
+    } finally {
+      await app.close();
+    }
+  });
 });

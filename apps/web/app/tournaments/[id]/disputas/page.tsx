@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { serverFetch } from '@/lib/server-api';
+import { formatDisputeReason, formatDisputeStatus } from '@/lib/presentation';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,20 +31,32 @@ export default async function DisputesPage({
       <p>
         <Link href={`/tournaments/${id}`}>← Torneo</Link>
       </p>
-      <h1>Disputas</h1>
+      <header className="page-heading compact-hero">
+        <div>
+          <p className="eyebrow">Arbitraje</p>
+          <h1>Disputas</h1>
+          <p className="muted">Conflictos, conversaciones y decisiones registradas.</p>
+        </div>
+        <span className="badge">{disputes.length} casos</span>
+      </header>
       {disputes.length === 0 ? (
         <p className="muted">No hay disputas.</p>
       ) : (
-        <ul>
+        <ul className="dispute-list">
           {disputes.map((dispute) => (
-            <li key={dispute.id}>
-              <Link href={`/disputas/${dispute.id}`}>
-                {dispute.homeTeam ?? 'TBD'} vs {dispute.awayTeam ?? 'TBD'}
-              </Link>{' '}
-              <span className="muted">
-                ({dispute.status} · {dispute.reason}
-                {dispute.assigneeName ? ` · árbitro: ${dispute.assigneeName}` : ''})
-              </span>
+            <li className="dispute-item" key={dispute.id}>
+              <div>
+                <Link href={`/disputas/${dispute.id}`}>
+                  <strong>{dispute.homeTeam ?? 'TBD'} vs {dispute.awayTeam ?? 'TBD'}</strong>
+                </Link>
+                <small>{formatDisputeReason(dispute.reason)}</small>
+              </div>
+              <div className="dispute-meta">
+                <span className={`badge ${dispute.status === 'resolved' ? 'badge-success' : 'badge-warn'}`}>
+                  {formatDisputeStatus(dispute.status)}
+                </span>
+                {dispute.assigneeName && <small>Árbitro: {dispute.assigneeName}</small>}
+              </div>
             </li>
           ))}
         </ul>

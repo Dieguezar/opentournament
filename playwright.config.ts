@@ -22,6 +22,7 @@ export default defineConfig({
         DATABASE_URL: databaseUrl,
         NODE_ENV: 'development',
         ALLOW_UNVERIFIED_EMAILS: 'true',
+        SEED_DEMO_DATA: 'true',
       },
     },
     {
