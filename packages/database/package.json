@@ -30,7 +30,7 @@
     "@types/pg": "^8.20.4",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.8",
-    "typescript": "~5.9.3",
+    "typescript": "~6.0.3",
     "vitest": "^4.1.10"
   }
 }
