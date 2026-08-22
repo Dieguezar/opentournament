@@ -16,7 +16,9 @@ import { requireAuth } from '../plugins/auth.js';
 import { isTeamCaptain, isTournamentAdmin } from '../services/permissions.js';
 import {
   applyMatchWinner,
+  DomainError,
   loadMatchContext,
+  lockMatchStage,
   type MatchContext,
 } from '../services/tournaments.js';
 import { notify } from '../services/notifications.js';
@@ -75,22 +77,6 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       });
     }
 
-    const existingDispute = await db
-      .select({ id: disputes.id })
-      .from(disputes)
-      .where(
-        and(
-          eq(disputes.matchId, matchId),
-          ne(disputes.status, 'resolved'),
-        ),
-      )
-      .limit(1);
-    if (existingDispute.length > 0) {
-      return reply.status(409).send({
-        error: { code: 'DISPUTE_OPEN', message: 'La partida tiene una disputa abierta' },
-      });
-    }
-
     const body = reportResultSchema.parse(request.body);
     const drawsAllowed = ctx.tournament.seriesConfig?.drawsAllowed === true;
     if (body.draw && !drawsAllowed) {
@@ -113,87 +99,158 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     }
 
     const reporter = captains[0]!;
-    const [submission] = await db
-      .insert(resultSubmissions)
-      .values({
-        matchId,
-        teamId: reporter.teamId,
-        reportedBy: request.user!.id,
-        result: {
-          winnerId: winnerId ?? undefined,
-          homeScore: body.homeScore,
-          awayScore: body.awayScore,
-          draw: body.draw || undefined,
-        },
-        status: 'pending',
-      })
-      .returning();
-    if (!submission) {
-      return reply.status(500).send({
-        error: { code: 'SUBMISSION_FAILED', message: 'No se pudo registrar el reporte' },
-      });
-    }
+    const outcome = await db.transaction(async (transaction) => {
+      const lockedContext = await lockMatchStage(transaction, matchId);
+      if (
+        lockedContext.match.status !== 'scheduled' &&
+        lockedContext.match.status !== 'in_progress'
+      ) {
+        throw new DomainError(409, 'INVALID_MATCH', 'La partida no acepta reportes');
+      }
 
-    const [counterpart] = await db
-      .select()
-      .from(resultSubmissions)
-      .where(
-        and(
-          eq(resultSubmissions.matchId, matchId),
-          ne(resultSubmissions.teamId, reporter.teamId),
-        ),
-      )
-      .limit(1);
+      const [openDispute] = await transaction
+        .select({ id: disputes.id })
+        .from(disputes)
+        .where(
+          and(eq(disputes.matchId, matchId), ne(disputes.status, 'resolved')),
+        )
+        .limit(1);
+      if (openDispute) {
+        throw new DomainError(409, 'DISPUTE_OPEN', 'La partida tiene una disputa abierta');
+      }
 
-    if (!counterpart) {
-      const confirmMinutes = ctx.tournament.timingConfig?.resultConfirmMinutes ?? 30;
-      await db.insert(jobs).values({
-        kind: 'match.result_escalate',
-        runAt: new Date(Date.now() + confirmMinutes * 60_000),
-        payload: { matchId },
-      });
-      return reply.status(201).send({ submission, confirmed: false, waiting: true });
-    }
-
-    if (submissionsMatch(submission, counterpart)) {
-      await db
-        .update(resultSubmissions)
-        .set({ status: 'confirmed' })
+      const [existingSubmission] = await transaction
+        .select({ id: resultSubmissions.id })
+        .from(resultSubmissions)
         .where(
           and(
             eq(resultSubmissions.matchId, matchId),
-            eq(resultSubmissions.status, 'pending'),
+            eq(resultSubmissions.teamId, reporter.teamId),
           ),
-        );
-      if (winnerId) {
-        const { champion } = await applyMatchWinner(db, ctx.stage, ctx.match.engineId, winnerId);
-        if (champion) {
-          await db
-            .update(tournaments)
-            .set({ status: 'finalized' })
-            .where(eq(tournaments.id, ctx.tournament.id));
-          await db
-            .update(tournamentParticipants)
-            .set({ status: 'winner' })
-            .where(eq(tournamentParticipants.id, champion));
-          emitTournamentEvent(ctx.tournament.id, 'tournament.updated', {
-            status: 'finalized',
-          });
-        }
+        )
+        .limit(1);
+      if (existingSubmission) {
+        throw new DomainError(409, 'RESULT_ALREADY_REPORTED', 'El equipo ya reportó este resultado');
       }
-      await db.insert(auditLogs).values({
-        organizationId: ctx.tournament.organizationId,
+
+      const [submission] = await transaction
+        .insert(resultSubmissions)
+        .values({
+          matchId,
+          teamId: reporter.teamId,
+          reportedBy: request.user!.id,
+          result: {
+            winnerId: winnerId ?? undefined,
+            homeScore: body.homeScore,
+            awayScore: body.awayScore,
+            draw: body.draw || undefined,
+          },
+          status: 'pending',
+        })
+        .returning();
+      if (!submission) {
+        throw new DomainError(500, 'SUBMISSION_FAILED', 'No se pudo registrar el reporte');
+      }
+
+      const [counterpart] = await transaction
+        .select()
+        .from(resultSubmissions)
+        .where(
+          and(
+            eq(resultSubmissions.matchId, matchId),
+            ne(resultSubmissions.teamId, reporter.teamId),
+          ),
+        )
+        .limit(1);
+
+      if (!counterpart) {
+        const confirmMinutes = lockedContext.tournament.timingConfig?.resultConfirmMinutes ?? 30;
+        await transaction.insert(jobs).values({
+          kind: 'match.result_escalate',
+          runAt: new Date(Date.now() + confirmMinutes * 60_000),
+          payload: { matchId },
+        });
+        return { kind: 'waiting' as const, submission };
+      }
+
+      if (submissionsMatch(submission, counterpart)) {
+        await transaction
+          .update(resultSubmissions)
+          .set({ status: 'confirmed' })
+          .where(
+            and(
+              eq(resultSubmissions.matchId, matchId),
+              eq(resultSubmissions.status, 'pending'),
+            ),
+          );
+        let champion: string | null = null;
+        if (winnerId) {
+          ({ champion } = await applyMatchWinner(
+            transaction,
+            lockedContext.stage,
+            lockedContext.match.engineId,
+            winnerId,
+          ));
+          if (champion) {
+            await transaction
+              .update(tournaments)
+              .set({ status: 'finalized' })
+              .where(eq(tournaments.id, lockedContext.tournament.id));
+            await transaction
+              .update(tournamentParticipants)
+              .set({ status: 'winner' })
+              .where(eq(tournamentParticipants.id, champion));
+          }
+        }
+        await transaction.insert(auditLogs).values({
+          organizationId: lockedContext.tournament.organizationId,
+          actorId: request.user!.id,
+          action: 'result.confirmed',
+          resourceType: 'match',
+          resourceId: matchId,
+          after: { winnerId },
+        });
+        return { kind: 'confirmed' as const, submission, champion, context: lockedContext };
+      }
+
+      const [dispute] = await transaction
+        .insert(disputes)
+        .values({ matchId, openedBy: null, reason: 'result_conflict' })
+        .returning();
+      await transaction
+        .update(resultSubmissions)
+        .set({ status: 'conflicted' })
+        .where(eq(resultSubmissions.matchId, matchId));
+      await transaction
+        .update(matches)
+        .set({ status: 'disputed' })
+        .where(eq(matches.id, matchId));
+      await transaction.insert(auditLogs).values({
+        organizationId: lockedContext.tournament.organizationId,
         actorId: request.user!.id,
-        action: 'result.confirmed',
+        action: 'dispute.opened',
         resourceType: 'match',
         resourceId: matchId,
-        after: { winnerId },
+        after: { reason: 'result_conflict' },
       });
-      emitTournamentEvent(ctx.tournament.id, 'result.confirmed', {
+      return { kind: 'conflict' as const, submission, dispute, context: lockedContext };
+    });
+
+    if (outcome.kind === 'waiting') {
+      return reply.status(201).send({ submission: outcome.submission, confirmed: false, waiting: true });
+    }
+
+    if (outcome.kind === 'confirmed') {
+      if (outcome.champion) {
+        emitTournamentEvent(outcome.context.tournament.id, 'tournament.updated', {
+          status: 'finalized',
+        });
+      }
+      emitTournamentEvent(outcome.context.tournament.id, 'result.confirmed', {
         matchId,
         winnerId,
       });
-      const teamIds = [ctx.home?.teamId, ctx.away?.teamId].filter(
+      const teamIds = [outcome.context.home?.teamId, outcome.context.away?.teamId].filter(
         (id): id is string => Boolean(id),
       );
       const captainRows = teamIds.length
@@ -201,49 +258,28 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         : [];
       await notify(
         db,
-        captainRows.map((r) => r.captainId),
+        captainRows.map((row) => row.captainId),
         'result.confirmed',
-        { matchId, tournamentId: ctx.tournament.id, winnerTeamId: body.winnerTeamId },
+        { matchId, tournamentId: outcome.context.tournament.id, winnerTeamId: body.winnerTeamId },
       );
       void sendDiscordWebhook(
-        `✅ Resultado confirmado en **${ctx.tournament.name}** (partida ${matchId.slice(0, 8)}).`,
+        `✅ Resultado confirmado en **${outcome.context.tournament.name}** (partida ${matchId.slice(0, 8)}).`,
       );
-      return reply.send({ submission, confirmed: true });
+      return reply.send({ submission: outcome.submission, confirmed: true });
     }
 
-    // Reportes en conflicto → disputa automática.
-    const [dispute] = await db
-      .insert(disputes)
-      .values({ matchId, openedBy: null, reason: 'result_conflict' })
-      .returning();
-    await db
-      .update(resultSubmissions)
-      .set({ status: 'conflicted' })
-      .where(eq(resultSubmissions.matchId, matchId));
-    await db
-      .update(matches)
-      .set({ status: 'disputed' })
-      .where(eq(matches.id, matchId));
-    await db.insert(auditLogs).values({
-      organizationId: ctx.tournament.organizationId,
-      actorId: request.user!.id,
-      action: 'dispute.opened',
-      resourceType: 'match',
-      resourceId: matchId,
-      after: { reason: 'result_conflict' },
-    });
-    emitTournamentEvent(ctx.tournament.id, 'dispute.opened', { matchId });
+    emitTournamentEvent(outcome.context.tournament.id, 'dispute.opened', { matchId });
     await notify(
       db,
-      await tournamentAdminIds(db, ctx.tournament.id),
+      await tournamentAdminIds(db, outcome.context.tournament.id),
       'dispute.opened',
-      { matchId, tournamentId: ctx.tournament.id },
+      { matchId, tournamentId: outcome.context.tournament.id },
     );
     return reply.status(201).send({
-      submission,
+      submission: outcome.submission,
       confirmed: false,
       conflict: true,
-      disputeId: dispute?.id ?? null,
+      disputeId: outcome.dispute?.id ?? null,
     });
   });
 

@@ -7,6 +7,8 @@ import {
   tournamentParticipants,
   tournaments,
   type Db,
+  type DbExecutor,
+  type DbTransaction,
   type RoundRow,
   type StageRow,
   type TournamentRow,
@@ -41,7 +43,7 @@ export interface MatchContext {
   away: (typeof tournamentParticipants.$inferSelect) | null;
 }
 
-export async function loadMatchContext(db: Db, matchId: string): Promise<MatchContext | null> {
+export async function loadMatchContext(db: DbExecutor, matchId: string): Promise<MatchContext | null> {
   const [row] = await db
     .select({
       match: matches,
@@ -81,6 +83,35 @@ export async function loadMatchContext(db: Db, matchId: string): Promise<MatchCo
   const away = participants.find((p) => p.id === row.match.awayParticipantId) ?? null;
 
   return { match: row.match, stage, tournament, home, away };
+}
+
+export async function lockMatchStage(
+  transaction: DbTransaction,
+  matchId: string,
+): Promise<MatchContext> {
+  const [stageReference] = await transaction
+    .select({ id: stages.id })
+    .from(matches)
+    .innerJoin(rounds, eq(rounds.id, matches.roundId))
+    .innerJoin(brackets, eq(brackets.id, rounds.bracketId))
+    .innerJoin(stages, eq(stages.id, brackets.stageId))
+    .where(eq(matches.id, matchId))
+    .limit(1);
+  if (!stageReference) {
+    throw new DomainError(404, 'MATCH_NOT_FOUND', 'La partida no existe');
+  }
+
+  await transaction
+    .select({ id: stages.id })
+    .from(stages)
+    .where(eq(stages.id, stageReference.id))
+    .for('update');
+
+  const context = await loadMatchContext(transaction, matchId);
+  if (!context) {
+    throw new DomainError(404, 'MATCH_NOT_FOUND', 'La partida no existe');
+  }
+  return context;
 }
 
 const BRACKET_NAMES: Record<string, string> = {
@@ -210,13 +241,13 @@ async function persistEngineBracket(
   }
 }
 
-export async function loadEngineBracket(db: Db, stage: StageRow): Promise<EngineBracket> {
+export async function loadEngineBracket(db: DbExecutor, stage: StageRow): Promise<EngineBracket> {
   const engine = (stage.config as { engineBracket?: EngineBracket }).engineBracket;
   if (!engine) throw new DomainError(500, 'ENGINE_MISSING', 'Bracket del motor ausente');
   return engine;
 }
 
-export async function syncMatchesFromEngine(db: Db, stage: StageRow, engine: EngineBracket) {
+export async function syncMatchesFromEngine(db: DbExecutor, stage: StageRow, engine: EngineBracket) {
   const rows = await db
     .select({ id: matches.id, engineId: matches.engineId })
     .from(matches)
@@ -244,7 +275,7 @@ export async function syncMatchesFromEngine(db: Db, stage: StageRow, engine: Eng
 }
 
 export async function applyMatchWinner(
-  db: Db,
+  db: DbExecutor,
   stage: StageRow,
   engineId: string,
   winnerId: string,
@@ -257,6 +288,26 @@ export async function applyMatchWinner(
     .where(eq(stages.id, stage.id));
   await syncMatchesFromEngine(db, stage, result.bracket);
   return { champion: result.champion };
+}
+
+export async function advanceMatchWinnerAtomically(
+  db: Db,
+  stageId: string,
+  engineId: string,
+  winnerId: string,
+): Promise<{ champion: string | null }> {
+  return db.transaction(async (transaction) => {
+    const [stage] = await transaction
+      .select()
+      .from(stages)
+      .where(eq(stages.id, stageId))
+      .for('update');
+    if (!stage) {
+      throw new DomainError(404, 'STAGE_NOT_FOUND', 'La etapa no existe');
+    }
+
+    return applyMatchWinner(transaction, stage, engineId, winnerId);
+  });
 }
 
 export function applyCheckInWalkovers(

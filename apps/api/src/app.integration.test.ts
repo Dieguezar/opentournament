@@ -316,6 +316,106 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     }
   });
 
+  it('conserva dos avances simultáneos dentro del mismo stage', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
+    process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+    const {
+      organizations,
+      runMigrations,
+      stages,
+      teams,
+      tournamentParticipants,
+      tournaments,
+      users,
+    } = await import('@opentournament/database');
+    const { db } = await import('./db.js');
+    const {
+      advanceMatchWinnerAtomically,
+      generateTournamentBracket,
+    } = await import('./services/tournaments.js');
+
+    await runMigrations(process.env.TEST_DATABASE_URL!);
+    const suffix = `${Date.now()}-${crypto.randomUUID()}`;
+    const [organization] = await db
+      .insert(organizations)
+      .values({ name: 'Concurrent Org', slug: `concurrent-${suffix}` })
+      .returning();
+    const [tournament] = await db
+      .insert(tournaments)
+      .values({
+        organizationId: organization!.id,
+        name: 'Concurrent Tournament',
+        slug: `concurrent-${suffix}`,
+        format: 'single_elimination',
+        status: 'open',
+        capacity: 8,
+      })
+      .returning();
+
+    for (let index = 0; index < 4; index += 1) {
+      const [user] = await db
+        .insert(users)
+        .values({ displayName: `Concurrent Captain ${index}` })
+        .returning();
+      const [team] = await db
+        .insert(teams)
+        .values({
+          organizationId: organization!.id,
+          captainId: user!.id,
+          name: `Concurrent Team ${index}`,
+        })
+        .returning();
+      await db.insert(tournamentParticipants).values({
+        tournamentId: tournament!.id,
+        teamId: team!.id,
+        seed: index + 1,
+      });
+    }
+
+    const stage = await generateTournamentBracket(db, tournament!);
+    const initialEngine = (
+      stage.config as {
+        engineBracket: {
+          matches: Array<{
+            id: string;
+            bracket: string;
+            round: number;
+            status: string;
+            home?: string;
+            away?: string;
+          }>;
+        };
+      }
+    ).engineBracket;
+    const semifinals = initialEngine.matches.filter(
+      (match) =>
+        match.bracket === 'winners' &&
+        match.round === 1 &&
+        match.status === 'scheduled' &&
+        match.home &&
+        match.away,
+    );
+    expect(semifinals).toHaveLength(2);
+
+    await Promise.all(
+      semifinals.map((match) =>
+        advanceMatchWinnerAtomically(db, stage.id, match.id, match.home!),
+      ),
+    );
+
+    const [persistedStage] = await db
+      .select({ config: stages.config })
+      .from(stages)
+      .where(eq(stages.id, stage.id));
+    const persistedEngine = persistedStage!.config as {
+      engineBracket: { matches: Array<{ id: string; status: string }> };
+    };
+    for (const semifinal of semifinals) {
+      expect(
+        persistedEngine.engineBracket.matches.find((match) => match.id === semifinal.id)?.status,
+      ).toBe('finalized');
+    }
+  });
+
   it('reclama jobs de forma exclusiva y recupera leases vencidos', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     const { jobs, runMigrations } = await import('@opentournament/database');
