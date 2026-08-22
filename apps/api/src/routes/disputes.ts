@@ -23,7 +23,9 @@ import { requireAuth } from '../plugins/auth.js';
 import { isTeamCaptain, isTournamentAdmin } from '../services/permissions.js';
 import {
   applyMatchWinner,
+  DomainError,
   loadMatchContext,
+  lockMatchStage,
 } from '../services/tournaments.js';
 import { notify } from '../services/notifications.js';
 import { tournamentAdminIds } from '../services/checkin.js';
@@ -313,45 +315,71 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       winnerId = winner.id;
     }
 
-    const { champion } = winnerId
-      ? await applyMatchWinner(db, ctx.stage, ctx.match.engineId, winnerId)
-      : { champion: null };
-    if (champion) {
-      await db
-        .update(tournaments)
-        .set({ status: 'finalized' })
-        .where(eq(tournaments.id, ctx.tournament.id));
-      await db
-        .update(tournamentParticipants)
-        .set({ status: 'winner' })
-        .where(eq(tournamentParticipants.id, champion));
-      emitTournamentEvent(ctx.tournament.id, 'tournament.updated', { status: 'finalized' });
-    }
+    const outcome = await db.transaction(async (transaction) => {
+      const lockedContext = await lockMatchStage(transaction, dispute.matchId);
+      const [currentDispute] = await transaction
+        .select()
+        .from(disputes)
+        .where(eq(disputes.id, disputeId))
+        .limit(1);
+      if (!currentDispute) {
+        throw new DomainError(404, 'NOT_FOUND', 'La disputa no existe');
+      }
+      if (currentDispute.status === 'resolved') {
+        throw new DomainError(409, 'ALREADY_RESOLVED', 'La disputa ya está resuelta');
+      }
 
-    await db.insert(rulings).values({
-      disputeId,
-      resolvedBy: request.user!.id,
-      decision: {
-        winnerId: winnerId ?? undefined,
-        homeScore: body.homeScore,
-        awayScore: body.awayScore,
-        draw: body.draw || undefined,
-      },
-      rationale: body.rationale,
-      consideredEvidence: [],
+      const { champion } = winnerId
+        ? await applyMatchWinner(
+            transaction,
+            lockedContext.stage,
+            lockedContext.match.engineId,
+            winnerId,
+          )
+        : { champion: null };
+      if (champion) {
+        await transaction
+          .update(tournaments)
+          .set({ status: 'finalized' })
+          .where(eq(tournaments.id, lockedContext.tournament.id));
+        await transaction
+          .update(tournamentParticipants)
+          .set({ status: 'winner' })
+          .where(eq(tournamentParticipants.id, champion));
+      }
+
+      await transaction.insert(rulings).values({
+        disputeId,
+        resolvedBy: request.user!.id,
+        decision: {
+          winnerId: winnerId ?? undefined,
+          homeScore: body.homeScore,
+          awayScore: body.awayScore,
+          draw: body.draw || undefined,
+        },
+        rationale: body.rationale,
+        consideredEvidence: [],
+      });
+      await transaction
+        .update(disputes)
+        .set({ status: 'resolved', resolvedAt: new Date() })
+        .where(eq(disputes.id, disputeId));
+      await transaction.insert(auditLogs).values({
+        organizationId: lockedContext.tournament.organizationId,
+        actorId: request.user!.id,
+        action: 'dispute.resolved',
+        resourceType: 'dispute',
+        resourceId: disputeId,
+        after: { winnerId },
+      });
+      return { champion, context: lockedContext };
     });
-    await db
-      .update(disputes)
-      .set({ status: 'resolved', resolvedAt: new Date() })
-      .where(eq(disputes.id, disputeId));
-    await db.insert(auditLogs).values({
-      organizationId: ctx.tournament.organizationId,
-      actorId: request.user!.id,
-      action: 'dispute.resolved',
-      resourceType: 'dispute',
-      resourceId: disputeId,
-      after: { winnerId },
-    });
+
+    if (outcome.champion) {
+      emitTournamentEvent(outcome.context.tournament.id, 'tournament.updated', {
+        status: 'finalized',
+      });
+    }
     emitTournamentEvent(ctx.tournament.id, 'dispute.resolved', {
       disputeId,
       winnerId,
@@ -368,6 +396,6 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       'dispute.resolved',
       { disputeId, tournamentId: ctx.tournament.id },
     );
-    return reply.send({ ok: true, champion });
+    return reply.send({ ok: true, champion: outcome.champion });
   });
 }
