@@ -1,5 +1,5 @@
 // Service worker de OpenTournament: caché de lectura (PWA).
-const CACHE = 'opentournament-v2';
+const CACHE = 'opentournament-v3';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
