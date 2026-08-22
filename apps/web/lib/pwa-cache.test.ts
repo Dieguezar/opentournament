@@ -1,0 +1,33 @@
+import { describe, expect, it, vi } from 'vitest';
+import { cleanupDevelopmentPwa, getPwaRuntimeAction } from './pwa-cache';
+
+describe('política de caché PWA', () => {
+  it('registra el service worker únicamente en producción', () => {
+    expect(getPwaRuntimeAction('production')).toBe('register');
+    expect(getPwaRuntimeAction('development')).toBe('cleanup');
+    expect(getPwaRuntimeAction('test')).toBe('cleanup');
+  });
+
+  it('elimina workers y cachés de OpenTournament durante el desarrollo', async () => {
+    const unregisterFirst = vi.fn().mockResolvedValue(true);
+    const unregisterSecond = vi.fn().mockResolvedValue(true);
+    const deleteCache = vi.fn().mockResolvedValue(true);
+    const serviceWorkers = {
+      getRegistrations: vi.fn().mockResolvedValue([
+        { unregister: unregisterFirst },
+        { unregister: unregisterSecond },
+      ]),
+    };
+    const cacheStorage = {
+      keys: vi.fn().mockResolvedValue(['opentournament-v1', 'third-party-cache']),
+      delete: deleteCache,
+    };
+
+    await cleanupDevelopmentPwa(serviceWorkers, cacheStorage);
+
+    expect(unregisterFirst).toHaveBeenCalledOnce();
+    expect(unregisterSecond).toHaveBeenCalledOnce();
+    expect(deleteCache).toHaveBeenCalledOnce();
+    expect(deleteCache).toHaveBeenCalledWith('opentournament-v1');
+  });
+});
