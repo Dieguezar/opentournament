@@ -316,9 +316,11 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     }
   });
 
-  it('conserva dos avances simultáneos dentro del mismo stage', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
+  it('serializa avances y rechaza walkovers duplicados', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
     const {
+      auditLogs,
+      matches,
       organizations,
       runMigrations,
       stages,
@@ -329,6 +331,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     } = await import('@opentournament/database');
     const { db } = await import('./db.js');
     const {
+      applyWalkoverAtomically,
       advanceMatchWinnerAtomically,
       generateTournamentBracket,
     } = await import('./services/tournaments.js');
@@ -351,11 +354,14 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       })
       .returning();
 
+    const teamByParticipant = new Map<string, string>();
+    let actorId = '';
     for (let index = 0; index < 4; index += 1) {
       const [user] = await db
         .insert(users)
         .values({ displayName: `Concurrent Captain ${index}` })
         .returning();
+      if (index === 0) actorId = user!.id;
       const [team] = await db
         .insert(teams)
         .values({
@@ -364,11 +370,15 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
           name: `Concurrent Team ${index}`,
         })
         .returning();
-      await db.insert(tournamentParticipants).values({
-        tournamentId: tournament!.id,
-        teamId: team!.id,
-        seed: index + 1,
-      });
+      const [participant] = await db
+        .insert(tournamentParticipants)
+        .values({
+          tournamentId: tournament!.id,
+          teamId: team!.id,
+          seed: index + 1,
+        })
+        .returning();
+      teamByParticipant.set(participant!.id, team!.id);
     }
 
     const stage = await generateTournamentBracket(db, tournament!);
@@ -396,10 +406,46 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     );
     expect(semifinals).toHaveLength(2);
 
-    await Promise.all(
-      semifinals.map((match) =>
-        advanceMatchWinnerAtomically(db, stage.id, match.id, match.home!),
-      ),
+    const firstSemifinal = semifinals[0]!;
+    const [firstMatch] = await db
+      .select({ id: matches.id })
+      .from(matches)
+      .where(
+        and(
+          eq(matches.tournamentId, tournament!.id),
+          eq(matches.engineId, firstSemifinal.id),
+        ),
+      );
+    const winnerTeamId = teamByParticipant.get(firstSemifinal.home!);
+    expect(winnerTeamId).toBeDefined();
+
+    const walkoverAttempts = await Promise.allSettled([
+      applyWalkoverAtomically(db, firstMatch!.id, winnerTeamId!, actorId),
+      applyWalkoverAtomically(db, firstMatch!.id, winnerTeamId!, actorId),
+    ]);
+    expect(walkoverAttempts.filter((attempt) => attempt.status === 'fulfilled')).toHaveLength(1);
+    const rejectedWalkover = walkoverAttempts.find((attempt) => attempt.status === 'rejected');
+    expect(rejectedWalkover).toMatchObject({
+      reason: { statusCode: 409, code: 'INVALID_MATCH' },
+    });
+
+    const walkoverAudits = await db
+      .select({ id: auditLogs.id })
+      .from(auditLogs)
+      .where(
+        and(
+          eq(auditLogs.action, 'match.walkover'),
+          eq(auditLogs.resourceId, firstMatch!.id),
+        ),
+      );
+    expect(walkoverAudits).toHaveLength(1);
+
+    const secondSemifinal = semifinals[1]!;
+    await advanceMatchWinnerAtomically(
+      db,
+      stage.id,
+      secondSemifinal.id,
+      secondSemifinal.home!,
     );
 
     const [persistedStage] = await db

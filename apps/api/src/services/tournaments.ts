@@ -1,5 +1,6 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import {
+  auditLogs,
   brackets,
   matches,
   rounds,
@@ -307,6 +308,67 @@ export async function advanceMatchWinnerAtomically(
     }
 
     return applyMatchWinner(transaction, stage, engineId, winnerId);
+  });
+}
+
+export async function applyWalkoverAtomically(
+  db: Db,
+  matchId: string,
+  winnerTeamId: string,
+  actorId: string,
+): Promise<{ champion: string | null; tournamentId: string }> {
+  return db.transaction(async (transaction) => {
+    const context = await lockMatchStage(transaction, matchId);
+    if (context.match.status !== 'scheduled' && context.match.status !== 'in_progress') {
+      throw new DomainError(409, 'INVALID_MATCH', 'La partida no está disponible');
+    }
+    if (!context.home || !context.away) {
+      throw new DomainError(409, 'MATCH_NOT_READY', 'Aún no se conocen ambos participantes');
+    }
+
+    const [winner] = await transaction
+      .select()
+      .from(tournamentParticipants)
+      .where(
+        and(
+          eq(tournamentParticipants.tournamentId, context.tournament.id),
+          eq(tournamentParticipants.teamId, winnerTeamId),
+        ),
+      )
+      .limit(1);
+    if (!winner) {
+      throw new DomainError(404, 'NOT_FOUND', 'El equipo no participa en el torneo');
+    }
+    if (winner.id !== context.home.id && winner.id !== context.away.id) {
+      throw new DomainError(409, 'INVALID_WINNER', 'El equipo no participa en esta partida');
+    }
+
+    const { champion } = await applyMatchWinner(
+      transaction,
+      context.stage,
+      context.match.engineId,
+      winner.id,
+    );
+    if (champion) {
+      await transaction
+        .update(tournaments)
+        .set({ status: 'finalized' })
+        .where(eq(tournaments.id, context.tournament.id));
+      await transaction
+        .update(tournamentParticipants)
+        .set({ status: 'winner' })
+        .where(eq(tournamentParticipants.id, champion));
+    }
+    await transaction.insert(auditLogs).values({
+      organizationId: context.tournament.organizationId,
+      actorId,
+      action: 'match.walkover',
+      resourceType: 'match',
+      resourceId: matchId,
+      after: { winnerId: winner.id },
+    });
+
+    return { champion, tournamentId: context.tournament.id };
   });
 }
 
