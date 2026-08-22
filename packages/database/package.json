@@ -23,11 +23,11 @@
     "@opentournament/tournament-engine": "workspace:*",
     "argon2": "^0.45.1",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.22.0",
+    "pg": "^8.23.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/pg": "^8.20.4",
+    "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.8",
     "typescript": "~5.9.3",
