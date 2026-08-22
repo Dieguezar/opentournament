@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { canGenerateBracket } from '@/lib/presentation';
 
 export function TournamentActions({
   tournamentId,
@@ -40,7 +41,7 @@ export function TournamentActions({
           Publicar torneo
         </button>
       )}
-      {(status === 'open' || status === 'in_progress') && (
+      {canGenerateBracket(status) && (
         <button
           type="button"
           disabled={busy}

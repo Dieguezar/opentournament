@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { canDeclareWalkover } from '@/lib/presentation';
 
 export function WalkoverButton({
   matchId,
@@ -10,12 +11,14 @@ export function WalkoverButton({
   awayTeamId,
   homeName,
   awayName,
+  matchStatus,
 }: {
   matchId: string;
   homeTeamId: string | null;
   awayTeamId: string | null;
   homeName: string | null;
   awayName: string | null;
+  matchStatus: string;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +36,7 @@ export function WalkoverButton({
     }
   }
 
-  if (!homeTeamId || !awayTeamId) return null;
+  if (!homeTeamId || !awayTeamId || !canDeclareWalkover(matchStatus)) return null;
   return (
     <span>
       {' '}

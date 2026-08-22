@@ -2,6 +2,11 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { SessionUser } from '@opentournament/shared-types';
 import { serverFetch } from '@/lib/server-api';
+import {
+  formatGameAdapter,
+  formatOrganizationRole,
+  getTournamentStatus,
+} from '@/lib/presentation';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,15 +26,6 @@ interface TeamView {
   organizationId: string;
 }
 
-const STATUS_LABELS: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Borrador', className: 'badge' },
-  open: { label: 'Inscripciones abiertas', className: 'badge badge-success' },
-  checkin_open: { label: 'Check-in abierto', className: 'badge badge-warn' },
-  in_progress: { label: 'En curso', className: 'badge badge-warn' },
-  finalized: { label: 'Finalizado', className: 'badge badge-success' },
-  cancelled: { label: 'Cancelado', className: 'badge badge-danger' },
-};
-
 export default async function DashboardPage() {
   const me = await serverFetch<{ user: SessionUser }>('/auth/me');
   if (me.status === 401) redirect('/login');
@@ -45,7 +41,18 @@ export default async function DashboardPage() {
 
   return (
     <main className="container">
-      <h1>Hola, {user.displayName}</h1>
+      <header className="page-heading">
+        <div>
+          <p className="eyebrow">Centro de control</p>
+          <h1>Hola, {user.displayName}</h1>
+          <p className="muted">Administrá torneos, equipos y operaciones desde un solo lugar.</p>
+        </div>
+        <div className="summary-strip" aria-label="Resumen de actividad">
+          <span><strong>{tournaments.length}</strong> torneos</span>
+          <span><strong>{teams.length}</strong> equipos</span>
+          <span><strong>{user.organizations.length}</strong> organizaciones</span>
+        </div>
+      </header>
       <div className="actions">
         <Link className="button" href="/tournaments/new">
           Crear torneo
@@ -61,7 +68,13 @@ export default async function DashboardPage() {
       </div>
 
       <div className="card">
-        <h2>Mis torneos</h2>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Competencia</p>
+            <h2>Mis torneos</h2>
+          </div>
+          <Link href="/tournaments/new">Nuevo torneo</Link>
+        </div>
         {tournaments.length === 0 ? (
           <p className="muted">
             Todavía no tienes torneos.{' '}
@@ -70,12 +83,16 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid">
             {tournaments.map((tournament) => {
-              const status = STATUS_LABELS[tournament.status] ?? STATUS_LABELS.draft!;
+              const status = getTournamentStatus(tournament.status);
+              const isDemo = tournament.slug === 'copa-nexo-demo';
               return (
-                <div className="card" key={tournament.id}>
-                  <h3 style={{ marginTop: 0 }}>{tournament.name}</h3>
+                <article className="tournament-card" key={tournament.id}>
+                  <div className="section-heading compact">
+                    <h3>{tournament.name}</h3>
+                    {isDemo && <span className="badge badge-demo">Demo incluida</span>}
+                  </div>
                   <p className="muted">
-                    {tournament.gameAdapterKey} ·{' '}
+                    {formatGameAdapter(tournament.gameAdapterKey)} ·{' '}
                     {tournament.format === 'double_elimination'
                       ? 'Doble eliminación'
                       : 'Eliminación sencilla'}
@@ -83,11 +100,15 @@ export default async function DashboardPage() {
                   <p>
                     <span className={status.className}>{status.label}</span>
                   </p>
-                  <p>
-                    <Link href={`/tournaments/${tournament.id}`}>Administrar</Link> ·{' '}
-                    <Link href={`/t/${tournament.slug}`}>Página pública</Link>
-                  </p>
-                </div>
+                  <div className="actions compact-actions">
+                    <Link className="button" href={`/tournaments/${tournament.id}`}>
+                      Administrar
+                    </Link>
+                    <Link className="button button-secondary" href={`/t/${tournament.slug}`}>
+                      Ver página pública
+                    </Link>
+                  </div>
+                </article>
               );
             })}
           </div>
@@ -95,17 +116,27 @@ export default async function DashboardPage() {
       </div>
 
       <div className="card">
-        <h2>Mis equipos</h2>
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Participantes</p>
+            <h2>Mis equipos</h2>
+          </div>
+          <Link href="/teams/new">Nuevo equipo</Link>
+        </div>
         {teams.length === 0 ? (
           <p className="muted">
             No tienes equipos.{' '}
             <Link href="/teams/new">Crea tu primer equipo →</Link>
           </p>
         ) : (
-          <ul>
+          <ul className="team-list">
             {teams.map((team) => (
-              <li key={team.id}>
-                {team.name} <span className="muted">{team.tag ? `[${team.tag}]` : ''}</span>
+              <li className="team-item" key={team.id}>
+                <span className="team-monogram" aria-hidden="true">{team.tag?.slice(0, 3) ?? 'OT'}</span>
+                <span>
+                  <strong>{team.name}</strong>
+                  <small>{team.tag ? `Etiqueta ${team.tag}` : 'Sin etiqueta'}</small>
+                </span>
               </li>
             ))}
           </ul>
@@ -114,12 +145,17 @@ export default async function DashboardPage() {
 
       {user.organizations.length > 0 && (
         <div className="card">
-          <h2>Mis organizaciones</h2>
-          <ul>
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Comunidad</p>
+                <h2>Mis organizaciones</h2>
+              </div>
+            </div>
+          <ul className="organization-list">
             {user.organizations.map((org) => (
               <li key={org.id}>
                 <Link href={`/organizations/${org.slug}`}>{org.name}</Link>{' '}
-                <span className="muted">({org.role})</span>
+                <span className="badge">{formatOrganizationRole(org.role)}</span>
               </li>
             ))}
           </ul>

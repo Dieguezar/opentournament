@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import { DisputeMessageForm } from '@/components/dispute-message-form';
 import { DisputeResolveForm } from '@/components/dispute-resolve-form';
 import { serverFetch } from '@/lib/server-api';
+import { formatDisputeReason, formatDisputeStatus } from '@/lib/presentation';
 
 export const dynamic = 'force-dynamic';
 
@@ -53,20 +54,27 @@ export default async function DisputePage({
       <p>
         <Link href="/dashboard">← Panel</Link>
       </p>
-      <h1>Disputa {dispute.id.slice(0, 8)}</h1>
-      <p className="muted">
-        Estado: {dispute.status} · Razón: {dispute.reason}
-      </p>
+      <header className="page-heading compact-hero">
+        <div>
+          <p className="eyebrow">Caso {dispute.id.slice(0, 8)}</p>
+          <h1>{res.data?.match?.homeTeamName ?? 'TBD'} vs {res.data?.match?.awayTeamName ?? 'TBD'}</h1>
+          <p className="muted">{formatDisputeReason(dispute.reason)}</p>
+        </div>
+        <span className={`badge ${dispute.status === 'resolved' ? 'badge-success' : 'badge-warn'}`}>
+          {formatDisputeStatus(dispute.status)}
+        </span>
+      </header>
 
       <div className="card">
         <h2>Conversación</h2>
         {messages.length === 0 ? (
           <p className="muted">Sin mensajes todavía.</p>
         ) : (
-          <ul>
+          <ul className="message-list">
             {messages.map((message) => (
-              <li key={message.id}>
-                <strong>{message.authorName}:</strong> {message.body}
+              <li className="message-item" key={message.id}>
+                <strong>{message.authorName}</strong>
+                <p>{message.body}</p>
               </li>
             ))}
           </ul>
@@ -87,7 +95,8 @@ export default async function DisputePage({
       )}
 
       {ruling && (
-        <div className="card">
+        <div className="card ruling-card">
+          <p className="eyebrow">Decisión final</p>
           <h2>Resolución</h2>
           <p>{ruling.rationale}</p>
         </div>

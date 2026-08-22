@@ -22,3 +22,36 @@ test('registro → wizard → dashboard', async ({ page }) => {
   await page.waitForURL('**/dashboard');
   await expect(page.getByText('Comunidad E2E')).toBeVisible();
 });
+
+test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Correo').fill('admin@opentournament.local');
+  await page.getByLabel('Contraseña').fill('demo-password-123');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+
+  await page.waitForURL('**/dashboard');
+  await expect(page.getByRole('heading', { name: 'Copa Nexo 2026' })).toBeVisible();
+  await expect(page.getByText('Demo incluida')).toBeVisible();
+  await expect(page.getByText('Valorant · Eliminación sencilla')).toBeVisible();
+  await expect(page.getByText('Aurora Gaming')).toBeVisible();
+  await expect(page.getByText('Quetzal Esports')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Ver página pública' }).click();
+  await page.waitForURL('**/t/copa-nexo-demo');
+  await expect(page.getByText('Las inscripciones finalizaron.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Equipos inscritos (4)' })).toBeVisible();
+  await expect(page.getByText('Finalizada')).toHaveCount(2);
+  await expect(page.getByText('Programada')).toHaveCount(1);
+
+  await page.getByRole('link', { name: 'Panel' }).click();
+  await page.getByRole('link', { name: 'Administrar' }).click();
+  await expect(page.getByRole('heading', { name: 'Check-in (4)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Partidas (3)' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'Disputas' }).click();
+  await expect(page.getByText('Resultados contradictorios')).toBeVisible();
+  await expect(page.getByText('Resuelta')).toBeVisible();
+  await page.getByRole('link', { name: 'Titanes del Centro vs Pixel Forge' }).click();
+  await expect(page.getByRole('heading', { name: 'Resolución' })).toBeVisible();
+  await expect(page.getByText('La evidencia del servidor confirma')).toBeVisible();
+});

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { shouldShowRegistrationDecisionActions } from '@/lib/presentation';
 
 export interface RegistrationView {
   id: string;
@@ -36,9 +37,7 @@ export function RegistrationActions({
     }
   }
 
-  if (registration.status === 'approved' || registration.status === 'rejected') {
-    return <span className="muted">{registration.status}</span>;
-  }
+  if (!shouldShowRegistrationDecisionActions(registration.status)) return null;
 
   return (
     <>

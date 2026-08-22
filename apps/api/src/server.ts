@@ -1,4 +1,4 @@
-import { runMigrations } from '@opentournament/database';
+import { runMigrations, seedDemoData } from '@opentournament/database';
 import { env } from './config.js';
 import { db, pool } from './db.js';
 import { initServer } from './app.js';
@@ -8,6 +8,10 @@ import { startDiscordBot } from './services/discord.js';
 async function main() {
   console.log('Aplicando migraciones…');
   await runMigrations(env.DATABASE_URL);
+  if (env.SEED_DEMO_DATA) {
+    await seedDemoData(db);
+    console.log('Escenario de demostración listo.');
+  }
 
   const app = await initServer();
   const scheduler = startScheduler(db);

@@ -3,6 +3,14 @@ import { notFound, redirect } from 'next/navigation';
 import { RegistrationActions, type RegistrationView } from '@/components/registration-actions';
 import { TournamentActions } from '@/components/tournament-actions';
 import { WalkoverButton } from '@/components/walkover-button';
+import {
+  formatBracketType,
+  formatGameAdapter,
+  formatMatchStatus,
+  formatParticipantStatus,
+  formatRegistrationStatus,
+  getTournamentStatus,
+} from '@/lib/presentation';
 import { serverFetch } from '@/lib/server-api';
 
 export const dynamic = 'force-dynamic';
@@ -73,7 +81,11 @@ export default async function TournamentAdminPage({
   const registrations = regsRes.data?.registrations ?? [];
   const participants = checkRes.data?.participants ?? [];
   const matches = matchesRes.data?.matches ?? [];
-  const step = currentStep(tournament.status);
+  const step =
+    tournament.status === 'in_progress' && matches.some((match) => match.status === 'finalized')
+      ? 4
+      : currentStep(tournament.status);
+  const tournamentStatus = getTournamentStatus(tournament.status);
 
   return (
     <main className="container">
@@ -82,11 +94,17 @@ export default async function TournamentAdminPage({
         <Link href={`/t/${tournament.slug}`}>Página pública</Link> ·{' '}
         <Link href={`/tournaments/${id}/disputas`}>Disputas</Link>
       </p>
-      <h1>{tournament.name}</h1>
-      <p className="muted">
-        {tournament.gameAdapterKey} ·{' '}
+      <header className="page-heading tournament-hero compact-hero">
+        <div>
+          <p className="eyebrow">Operación del torneo</p>
+          <h1>{tournament.name}</h1>
+        </div>
+        <span className={tournamentStatus.className}>{tournamentStatus.label}</span>
+      </header>
+      <p className="muted tournament-meta">
+        {formatGameAdapter(tournament.gameAdapterKey)} ·{' '}
         {tournament.format === 'double_elimination' ? 'Doble eliminación' : 'Eliminación sencilla'}{' '}
-        · Cupo {tournament.capacity} · Estado: {tournament.status}
+        · Cupo {tournament.capacity}
       </p>
 
       <ol className="steps">
@@ -115,7 +133,7 @@ export default async function TournamentAdminPage({
               <li key={reg.id} style={{ marginBottom: '0.6rem' }}>
                 <strong>{reg.teamName}</strong>{' '}
                 <span className="muted">
-                  ({reg.teamTag ?? 'sin tag'} · capitán: {reg.captainName ?? '—'} · {reg.status}
+                  ({reg.teamTag ?? 'sin tag'} · capitán: {reg.captainName ?? '—'} · {formatRegistrationStatus(reg.status)}
                   {reg.waitlistPosition ? ` · espera #${reg.waitlistPosition}` : ''})
                 </span>{' '}
                 {isAdmin && <RegistrationActions tournamentId={id} registration={reg} />}
@@ -137,7 +155,7 @@ export default async function TournamentAdminPage({
                 <span className={`badge ${p.checkedIn ? 'badge-success' : 'badge-warn'}`}>
                   {p.checkedIn ? 'Check-in hecho' : 'Sin check-in'}
                 </span>{' '}
-                <span className="muted">({p.status})</span>
+                <span className="muted">({formatParticipantStatus(p.status)})</span>
               </li>
             ))}
           </ul>
@@ -155,13 +173,13 @@ export default async function TournamentAdminPage({
             {matches.map((match) => (
               <li key={match.id} style={{ marginBottom: '0.6rem' }}>
                 <span className="muted">
-                  [{match.bracketType} · {match.roundName}]
+                  [{formatBracketType(match.bracketType)} · {match.roundName}]
                 </span>{' '}
                 <strong>
                   {match.homeTeam ?? 'TBD'} vs {match.awayTeam ?? 'TBD'}
                 </strong>{' '}
                 <span className={`badge ${match.status === 'finalized' ? 'badge-success' : ''}`}>
-                  {match.status}
+                  {formatMatchStatus(match.status)}
                 </span>
                 {isAdmin && (
                   <WalkoverButton
@@ -170,6 +188,7 @@ export default async function TournamentAdminPage({
                     awayTeamId={match.awayTeamId}
                     homeName={match.homeTeam}
                     awayName={match.awayTeam}
+                    matchStatus={match.status}
                   />
                 )}
               </li>
