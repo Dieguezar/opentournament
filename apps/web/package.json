@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@opentournament/bracket-ui": "workspace:*",
+    "@opentournament/game-adapters": "workspace:*",
     "@opentournament/shared-types": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "geist": "^1.7.2",

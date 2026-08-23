@@ -47,7 +47,7 @@ La API aplica las migraciones y crea la demo automáticamente al arrancar con `S
 - PWA instalable con caché de lectura (sin acciones offline).
 - Autenticación con correo + contraseña y Discord OAuth.
 - Bot de Discord con notificaciones y comandos slash.
-- Adaptador genérico + adaptadores oficiales de Valorant, CS2 y League of Legends.
+- Adaptador genérico + adaptadores oficiales de Valorant, CS2, League of Legends y Super Smash Bros. Ultimate; Smash incluye una plantilla competitiva versionada.
 - Instalación autoalojable con `docker compose up -d`.
 
 ## Stack previsto

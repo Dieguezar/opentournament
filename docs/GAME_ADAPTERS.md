@@ -11,6 +11,8 @@ flowchart LR
   Adapter --> Valorant[valorant]
   Adapter --> CS2[cs2]
   Adapter --> LoL[lol]
+  Adapter --> Smash[smash_ultimate]
+  Smash --> Template[smash_ultimate.standard_v1]
 ```
 
 ## 2. Interfaz del adaptador
@@ -47,6 +49,18 @@ interface GameAdapterConfig {
     mode: "external";          // MVP: fuera de plataforma + registro
     mapsRequired: boolean;
   };
+  terminology?: {
+    participantSingular: string;
+    participantPlural: string;
+    teamSingular: string;
+    teamPlural: string;
+  };
+  tournamentTemplate?: {
+    key: string;
+    version: number;
+    editable: boolean;
+    defaults: TournamentTemplateDefaults;
+  };
   customFields?: FieldSchema[]; // campos propios de inscripción
   integrations?: string[];      // ["riot-api", ...] futuro; vacío en MVP
 }
@@ -60,18 +74,22 @@ La validación en tiempo de ejecución usa zod (`packages/validation`) y compart
 - Config por defecto: equipo 1–10 jugadores, 0–2 suplentes, BO1/BO3/BO5, empates permitidos según el organizador, sin mapas ni regiones.
 - El organizador personaliza campos y tamaños al crear el torneo.
 
+Una **plantilla de torneo** es opcional y vive dentro de un adaptador. A diferencia del adaptador, que define identidad, roster y capacidades del juego, la plantilla aplica valores iniciales coherentes para formato, capacidad, series, check-in y reglas específicas. El servidor vuelve a validar esos invariantes; no confía solo en el formulario web.
+
 ## 4. Adaptadores oficiales del MVP
 
-| Juego | Tamaño equipo | Suplentes | ID de jugador | Mapas | Empate | Formato |
+| Juego | Tamaño equipo | Suplentes | ID de jugador | Mapas o escenarios | Empate | Formato |
 | --- | --- | --- | --- | --- | --- | --- |
-| Valorant | 5 | 1 | Riot ID (`Nombre#TAG`) | Ascendant, Bind, Breeze, Haven, Icebox, Lotus, Pearl, Split, Sunset | No | BO1/BO3/BO5 |
-| CS2 | 5 | 1 | SteamID64 | Anubis, Dust2, Inferno, Mirage, Nuke, Overpass, Ancient, Vertigo | No | BO1/BO3/BO5 |
+| Valorant | 5 | 1 | Riot ID (`Nombre#TAG`) | Abyss, Ascent, Bind, Breeze, Haven, Icebox, Lotus, Pearl, Split, Sunset | No | BO1/BO3/BO5 |
+| CS2 | 5 | 1 | SteamID64 | Ancient, Anubis, Dust2, Inferno, Mirage, Nuke, Overpass, Train, Vertigo | No | BO1/BO3/BO5 |
 | LoL | 5 | 1 | Invocador + región | Summoner's Rift (mapa único) | No | BO1/BO3/BO5 |
+| Super Smash Bros. Ultimate | 1 | 0 | Tag de bracket | Battlefield, Small Battlefield, Pokémon Stadium 2, Final Destination, Town & City + counterpicks | No | BO3/BO5; doble eliminación por defecto |
 
 Notas:
 - Los valores de mapas pueden cambiar con parches; se mantienen en configuración versionada del adaptador.
-- El empate se declara por adaptador (`drawAllowed: false` en estos tres).
+- El empate se declara por adaptador (`drawAllowed: false` en los cuatro adaptadores oficiales).
 - Los campos de ID se validan en inscripción y en el perfil público.
+- La plantilla `smash_ultimate.standard_v1` parte de 3 stocks, 7 minutos, objetos y hazards desactivados, 3 bans, gran final con reset y capacidad 32. El organizador puede editarla o restaurar sus valores estándar.
 
 ## 5. Ciclo de vida de un adaptador
 
@@ -85,6 +103,7 @@ Notas:
 - Tests de esquema: la configuración valida contra el contrato.
 - Tests de ejemplo: un torneo de ejemplo por juego genera brackets y acepta resultados correctos.
 - Tests negativos: rosters inválidos, IDs mal formados, empates en juegos sin empates.
+- Tests de plantilla: los defaults, el merge en servidor y las reglas específicas mantienen sus invariantes.
 
 ## 7. Futuro
 
