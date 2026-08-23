@@ -48,7 +48,7 @@ test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }
   await expect(page.getByRole('heading', { name: 'Check-in (4)' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Rondas' })).toBeVisible();
 
-  await page.getByRole('link', { name: 'Disputas' }).click();
+  await page.getByRole('link', { name: 'Disputas', exact: true }).click();
   await expect(page.getByText('Resultados contradictorios')).toBeVisible();
   await expect(page.getByText('Resuelta')).toBeVisible();
   await page.getByRole('link', { name: 'Titanes del Centro vs Pixel Forge' }).click();
