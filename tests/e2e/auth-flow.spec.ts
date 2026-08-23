@@ -11,7 +11,7 @@ test('registro → wizard → dashboard', async ({ page }) => {
 
   await page.waitForURL('**/dashboard');
   await expect(page.getByRole('heading', { name: 'Hola, Usuario E2E' })).toBeVisible();
-  await expect(page.getByText('Todavía no tienes torneos.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tu espacio está listo' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Crear organización' }).click();
   await page.waitForURL('**/wizard');
@@ -43,10 +43,10 @@ test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }
   await expect(page.getByText('Finalizada')).toHaveCount(2);
   await expect(page.getByText('Programada')).toHaveCount(1);
 
-  await page.getByRole('link', { name: 'Panel' }).click();
-  await page.getByRole('link', { name: 'Administrar' }).click();
+  await page.getByRole('link', { name: 'Torneos' }).click();
+  await page.getByRole('link', { name: 'Administrar torneo' }).click();
   await expect(page.getByRole('heading', { name: 'Check-in (4)' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Partidas (3)' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Rondas' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Disputas' }).click();
   await expect(page.getByText('Resultados contradictorios')).toBeVisible();
