@@ -47,7 +47,7 @@ export async function Header() {
             <>
               <HeaderNavLink href="/dashboard">Torneos</HeaderNavLink>
               <HeaderNavLink href="/tournaments/new">Nuevo torneo</HeaderNavLink>
-              <HeaderNavLink href="/teams/new">Nuevo equipo</HeaderNavLink>
+              <HeaderNavLink href="/teams/new">Nuevo participante</HeaderNavLink>
             </>
           ) : (
             <>

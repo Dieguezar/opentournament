@@ -8,7 +8,41 @@ const GAME_ADAPTER_LABELS: Record<string, string> = {
   valorant: 'Valorant',
   cs2: 'Counter-Strike 2',
   lol: 'League of Legends',
+  smash_ultimate: 'Super Smash Bros. Ultimate',
 };
+
+interface SmashRulesetInput {
+  game: 'smash_ultimate';
+  stocks: number;
+  timeLimitMinutes: number;
+  itemsEnabled: boolean;
+  finalSmashMeterEnabled: boolean;
+  stageHazardsEnabled: boolean;
+  launchRate: number;
+  starters: readonly string[];
+  counterpicks: readonly string[];
+  stageBans: number;
+  stageClause: string;
+}
+
+interface RulesetSummaryInput {
+  gameAdapterKey: string;
+  format: string;
+  seriesBestOf: number;
+  grandFinalReset: boolean;
+  gameRules: SmashRulesetInput | null | undefined;
+}
+
+export interface RulesetSummaryPresentation {
+  title: string;
+  format: string;
+  set: string;
+  grandFinal: string;
+  stagePolicy: string;
+  switches: string;
+  starters: readonly string[];
+  counterpicks: readonly string[];
+}
 
 const TOURNAMENT_STATUS_LABELS: Record<string, StatusPresentation> = {
   draft: { label: 'Borrador', className: 'badge' },
@@ -51,6 +85,97 @@ const DISPUTE_REASON_LABELS: Record<string, string> = {
 function humanize(value: string): string {
   const words = value.replaceAll('-', ' ').replaceAll('_', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function formatStageClause(value: string): string {
+  if (value === 'modified_dsr') return 'DSR modificado';
+  if (value === 'full_dsr') return 'DSR completo';
+  if (value === 'none') return 'Sin DSR';
+  return humanize(value);
+}
+
+function formatRulesSwitches(rules: SmashRulesetInput): string {
+  if (!rules.itemsEnabled && !rules.finalSmashMeterEnabled && !rules.stageHazardsEnabled) {
+    return 'Items, FS Meter y hazards desactivados';
+  }
+
+  const state = (isEnabled: boolean) => (isEnabled ? 'activados' : 'desactivados');
+  return [
+    `Items ${state(rules.itemsEnabled)}`,
+    `FS Meter ${state(rules.finalSmashMeterEnabled)}`,
+    `Hazards ${state(rules.stageHazardsEnabled)}`,
+  ].join(' · ');
+}
+
+function isSmashRulesetInput(value: unknown): value is SmashRulesetInput {
+  if (!value || typeof value !== 'object') return false;
+
+  const rules = value as Record<string, unknown>;
+  const hasValidStages = (stages: unknown) =>
+    Array.isArray(stages) && stages.every((stage) => typeof stage === 'string');
+
+  return (
+    rules.game === 'smash_ultimate' &&
+    typeof rules.stocks === 'number' &&
+    Number.isFinite(rules.stocks) &&
+    typeof rules.timeLimitMinutes === 'number' &&
+    Number.isFinite(rules.timeLimitMinutes) &&
+    typeof rules.itemsEnabled === 'boolean' &&
+    typeof rules.finalSmashMeterEnabled === 'boolean' &&
+    typeof rules.stageHazardsEnabled === 'boolean' &&
+    typeof rules.launchRate === 'number' &&
+    Number.isFinite(rules.launchRate) &&
+    hasValidStages(rules.starters) &&
+    hasValidStages(rules.counterpicks) &&
+    typeof rules.stageBans === 'number' &&
+    Number.isInteger(rules.stageBans) &&
+    typeof rules.stageClause === 'string'
+  );
+}
+
+export function buildRulesetSummary(
+  input: RulesetSummaryInput,
+): RulesetSummaryPresentation | null {
+  if (input.gameAdapterKey !== 'smash_ultimate' || !isSmashRulesetInput(input.gameRules)) {
+    return null;
+  }
+
+  const rules = input.gameRules;
+  const format =
+    input.format === 'double_elimination' ? 'Doble eliminación' : 'Eliminación sencilla';
+  const bans = `${rules.stageBans} ${rules.stageBans === 1 ? 'ban' : 'bans'}`;
+
+  return {
+    title: 'Reglas competitivas de Smash Ultimate',
+    format: `Singles 1v1 · ${format}`,
+    set: `BO${input.seriesBestOf} · ${rules.stocks} stocks · ${rules.timeLimitMinutes} min`,
+    grandFinal: input.grandFinalReset ? 'Gran final con reset' : 'Gran final sin reset',
+    stagePolicy: `${bans} · ${formatStageClause(rules.stageClause)}`,
+    switches: formatRulesSwitches(rules),
+    starters: rules.starters,
+    counterpicks: rules.counterpicks,
+  };
+}
+
+export function getPublicRegistrationMessage(
+  tournamentStatus: string,
+  isSmash: boolean,
+): string | null {
+  if (tournamentStatus === 'open' || tournamentStatus === 'checkin_open') return null;
+  if (tournamentStatus === 'draft') return 'Las inscripciones todavía no abrieron.';
+  if (tournamentStatus === 'cancelled') {
+    return 'El torneo fue cancelado y no admite nuevas inscripciones.';
+  }
+
+  const matchLabel = isSmash ? 'sets' : 'partidas';
+  if (tournamentStatus === 'in_progress') {
+    return `El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí los ${matchLabel} en el bracket.`;
+  }
+  if (tournamentStatus === 'finalized') {
+    return `El torneo finalizó. Consultá las ${matchLabel} y los resultados publicados en el bracket.`;
+  }
+
+  return 'Las inscripciones no están disponibles en este momento.';
 }
 
 export function formatGameAdapter(value: string): string {

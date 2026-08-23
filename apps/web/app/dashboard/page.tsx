@@ -21,6 +21,7 @@ interface TeamView {
   name: string;
   tag: string | null;
   organizationId: string;
+  gameAdapterKey: string | null;
 }
 
 const TOURNAMENT_PRIORITY: Record<string, number> = {
@@ -68,7 +69,7 @@ export default async function DashboardPage() {
           <p className={styles.eyebrow}>Centro de control</p>
           <h1>Hola, {user.displayName}</h1>
           <p className={styles.intro}>
-            Administrá la competencia, los equipos y las decisiones pendientes desde un mismo
+            Administrá la competencia, los participantes y las decisiones pendientes desde un mismo
             espacio.
           </p>
         </div>
@@ -77,7 +78,7 @@ export default async function DashboardPage() {
             Crear torneo
           </Link>
           <Link className="button button-secondary" href="/teams/new">
-            Crear equipo
+            Crear participante
           </Link>
         </div>
       </header>
@@ -88,7 +89,7 @@ export default async function DashboardPage() {
           <dd>{tournaments.length}</dd>
         </div>
         <div>
-          <dt>Equipos</dt>
+          <dt>Participantes</dt>
           <dd>{teams.length}</dd>
         </div>
         <div>
@@ -113,7 +114,7 @@ export default async function DashboardPage() {
             <div className={styles.emptyState}>
               <h3>Tu espacio está listo</h3>
               <p className={styles.emptyCopy}>
-                Creá el primer torneo para abrir inscripciones y empezar a recibir equipos.
+                Creá el primer torneo para abrir inscripciones y empezar a recibir participantes.
               </p>
               <Link className="button" href="/tournaments/new">
                 Crear primer torneo
@@ -204,7 +205,7 @@ export default async function DashboardPage() {
           <div className={styles.sectionHeader}>
             <div>
               <p className={styles.eyebrow}>Participantes</p>
-              <h2 id="teams-title">Mis equipos</h2>
+              <h2 id="teams-title">Mis participantes</h2>
             </div>
             <Link className={styles.sectionLink} href="/teams/new">
               Nuevo
@@ -213,25 +214,30 @@ export default async function DashboardPage() {
           {teams.length === 0 ? (
             <div className={styles.emptyState}>
               <p className={styles.emptyCopy}>
-                Todavía no tenés equipos disponibles para inscribir.
+                Todavía no tenés participantes disponibles para inscribir.
               </p>
               <Link className="button button-secondary" href="/teams/new">
-                Crear equipo
+                Crear participante
               </Link>
             </div>
           ) : (
             <ul className={styles.teamList}>
-              {teams.map((team) => (
-                <li key={team.id}>
-                  <span>
-                    <strong>{team.name}</strong>
-                    <small className={styles.teamMeta}>
-                      {team.tag ? `Etiqueta ${team.tag}` : 'Sin etiqueta'}
-                    </small>
-                  </span>
-                  <span className="badge">{team.tag?.slice(0, 3) ?? 'OT'}</span>
-                </li>
-              ))}
+              {teams.map((team) => {
+                const isPlayer = team.gameAdapterKey === 'smash_ultimate';
+                return (
+                  <li key={team.id}>
+                    <span>
+                      <strong>{team.name}</strong>
+                      <small className={styles.teamMeta}>
+                        {isPlayer ? 'Jugador' : 'Equipo'} ·{' '}
+                        {formatGameAdapter(team.gameAdapterKey ?? 'generic')} ·{' '}
+                        {team.tag ? `Etiqueta ${team.tag}` : 'Sin etiqueta'}
+                      </small>
+                    </span>
+                    <span className="badge">{team.tag?.slice(0, 3) ?? 'OT'}</span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </aside>
@@ -263,7 +269,7 @@ export default async function DashboardPage() {
             <p className={styles.eyebrow}>Configuración requerida</p>
             <h2 id="organization-empty-title">Creá una organización</h2>
             <p className={styles.emptyCopy}>
-              Los torneos y equipos necesitan una organización responsable antes de publicarse.
+              Los torneos y participantes necesitan una organización responsable antes de publicarse.
             </p>
             <Link className="button" href="/wizard">
               Crear organización

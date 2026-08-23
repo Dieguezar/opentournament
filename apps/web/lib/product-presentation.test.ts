@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fetchApiResource } from './server-api-core';
 import {
+  buildRulesetSummary,
   canDeclareWalkover,
   canGenerateBracket,
   formatDisputeReason,
@@ -11,6 +12,7 @@ import {
   formatOrganizationRole,
   formatParticipantStatus,
   formatRegistrationStatus,
+  getPublicRegistrationMessage,
   getTournamentStatus,
   shouldShowRegistrationDecisionActions,
 } from './presentation';
@@ -18,6 +20,7 @@ import {
 describe('presentación del producto', () => {
   it('convierte estados internos en etiquetas comprensibles', () => {
     expect(formatGameAdapter('valorant')).toBe('Valorant');
+    expect(formatGameAdapter('smash_ultimate')).toBe('Super Smash Bros. Ultimate');
     expect(getTournamentStatus('in_progress')).toEqual({
       label: 'En curso',
       className: 'badge badge-warn',
@@ -29,6 +32,101 @@ describe('presentación del producto', () => {
     expect(formatBracketType('winners')).toBe('Ganadores');
     expect(formatOrganizationRole('owner')).toBe('Propietario');
     expect(formatParticipantStatus('active')).toBe('En competencia');
+  });
+
+  it('presenta las reglas competitivas esenciales de Smash Ultimate', () => {
+    expect(
+      buildRulesetSummary({
+        gameAdapterKey: 'smash_ultimate',
+        format: 'double_elimination',
+        seriesBestOf: 3,
+        grandFinalReset: true,
+        gameRules: {
+          game: 'smash_ultimate',
+          stocks: 3,
+          timeLimitMinutes: 7,
+          itemsEnabled: false,
+          finalSmashMeterEnabled: false,
+          stageHazardsEnabled: false,
+          launchRate: 1,
+          starters: ['Battlefield', 'Final Destination'],
+          counterpicks: ['Small Battlefield'],
+          stageBans: 3,
+          stageClause: 'modified_dsr',
+        },
+      }),
+    ).toEqual({
+      title: 'Reglas competitivas de Smash Ultimate',
+      format: 'Singles 1v1 · Doble eliminación',
+      set: 'BO3 · 3 stocks · 7 min',
+      grandFinal: 'Gran final con reset',
+      stagePolicy: '3 bans · DSR modificado',
+      switches: 'Items, FS Meter y hazards desactivados',
+      starters: ['Battlefield', 'Final Destination'],
+      counterpicks: ['Small Battlefield'],
+    });
+  });
+
+  it('no inventa un resumen especializado para otros juegos', () => {
+    expect(
+      buildRulesetSummary({
+        gameAdapterKey: 'valorant',
+        format: 'single_elimination',
+        seriesBestOf: 3,
+        grandFinalReset: false,
+        gameRules: null,
+      }),
+    ).toBeNull();
+  });
+
+  it('descarta reglas de juego incompletas sin romper el render del servidor', () => {
+    expect(
+      buildRulesetSummary({
+        gameAdapterKey: 'smash_ultimate',
+        format: 'double_elimination',
+        seriesBestOf: 3,
+        grandFinalReset: true,
+        gameRules: { game: 'smash_ultimate', stocks: 3 } as never,
+      }),
+    ).toBeNull();
+    expect(
+      buildRulesetSummary({
+        gameAdapterKey: 'smash_ultimate',
+        format: 'double_elimination',
+        seriesBestOf: 3,
+        grandFinalReset: true,
+        gameRules: {
+          game: 'smash_ultimate',
+          stocks: 3,
+          timeLimitMinutes: 7,
+          itemsEnabled: false,
+          finalSmashMeterEnabled: false,
+          stageHazardsEnabled: false,
+          launchRate: 1,
+          starters: null,
+          counterpicks: [],
+          stageBans: 3,
+          stageClause: 'modified_dsr',
+        } as never,
+      }),
+    ).toBeNull();
+  });
+
+  it('explica la disponibilidad pública según el estado del torneo', () => {
+    expect(getPublicRegistrationMessage('draft', true)).toBe(
+      'Las inscripciones todavía no abrieron.',
+    );
+    expect(getPublicRegistrationMessage('in_progress', true)).toBe(
+      'El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí los sets en el bracket.',
+    );
+    expect(getPublicRegistrationMessage('finalized', false)).toBe(
+      'El torneo finalizó. Consultá las partidas y los resultados publicados en el bracket.',
+    );
+    expect(getPublicRegistrationMessage('cancelled', true)).toBe(
+      'El torneo fue cancelado y no admite nuevas inscripciones.',
+    );
+    expect(getPublicRegistrationMessage('open', true)).toBeNull();
+    expect(getPublicRegistrationMessage('checkin_open', true)).toBeNull();
   });
 
   it('conserva un fallback legible para valores futuros', () => {
