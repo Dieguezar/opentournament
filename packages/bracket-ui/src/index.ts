@@ -14,6 +14,7 @@ export interface BracketTeamNode {
 
 export interface BracketMatchNode {
   id: string;
+  bracketType?: string;
   round: number;
   position: number;
   home: BracketTeamNode | null;
@@ -29,3 +30,11 @@ export interface BracketData {
   tournamentId: string;
   rounds: BracketMatchNode[][];
 }
+
+export {
+  buildBracketWorkspacePresentation,
+  type BracketMatchPresentation,
+  type BracketRoundPresentation,
+  type BracketWorkspaceMetrics,
+  type BracketWorkspacePresentation,
+} from './bracket-presentation';
