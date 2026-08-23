@@ -27,15 +27,21 @@ export function RegisterPanel({ tournamentId }: { tournamentId: string }) {
   const [busyTeam, setBusyTeam] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     void Promise.all([
-      apiClient<{ teams: TeamEntry[] }>(`/tournaments/${tournamentId}/teams`),
-      apiClient<{ teams: MyTeam[] }>('/teams/mine'),
+      apiClient<{ teams: TeamEntry[] }>(`/tournaments/${tournamentId}/teams`, {
+        signal: controller.signal,
+      }),
+      apiClient<{ teams: MyTeam[] }>('/teams/mine', { signal: controller.signal }),
     ])
       .then(([entriesRes, teamsRes]) => {
         setEntries(entriesRes.teams);
         setMyTeams(teamsRes.teams);
       })
       .catch(() => undefined);
+
+    return () => controller.abort();
   }, [tournamentId]);
 
   async function run(teamId: string, path: string) {
@@ -56,8 +62,7 @@ export function RegisterPanel({ tournamentId }: { tournamentId: string }) {
       <div className="card">
         <h2>Participar</h2>
         <p className="muted">
-          Para inscribirte necesitas un equipo.{' '}
-          <Link href="/teams/new">Crea tu equipo →</Link>
+          Para inscribirte necesitás un equipo. <Link href="/teams/new">Creá tu equipo</Link>
         </p>
       </div>
     );
@@ -81,7 +86,7 @@ export function RegisterPanel({ tournamentId }: { tournamentId: string }) {
                 disabled={busy}
                 onClick={() => run(team.id, `/tournaments/${tournamentId}/registrations`)}
               >
-                {busy ? '…' : 'Inscribir equipo'}
+                {busy ? 'Procesando' : 'Inscribir equipo'}
               </button>
             );
           } else if (entry.registrationStatus === 'pending') {
@@ -102,7 +107,7 @@ export function RegisterPanel({ tournamentId }: { tournamentId: string }) {
                 disabled={busy}
                 onClick={() => run(team.id, `/tournaments/${tournamentId}/registrations`)}
               >
-                {busy ? '…' : 'Inscribir de nuevo'}
+                {busy ? 'Procesando' : 'Inscribir de nuevo'}
               </button>
             );
           } else if (!entry.checkedIn) {
@@ -113,11 +118,11 @@ export function RegisterPanel({ tournamentId }: { tournamentId: string }) {
                 disabled={busy}
                 onClick={() => run(team.id, `/tournaments/${tournamentId}/check-in`)}
               >
-                {busy ? '…' : 'Check-in del equipo'}
+                {busy ? 'Procesando' : 'Check-in del equipo'}
               </button>
             );
           } else {
-            status = <span className="badge badge-success">Check-in hecho ✓</span>;
+            status = <span className="badge badge-success">Check-in confirmado</span>;
           }
 
           return (
