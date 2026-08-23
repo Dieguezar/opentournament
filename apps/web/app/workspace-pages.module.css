@@ -1,0 +1,597 @@
+.page {
+  width: min(100%, 1380px);
+  max-width: 1380px;
+}
+
+.pageHeader {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.25rem 0 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.eyebrow {
+  margin: 0 0 0.4rem;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.pageHeader h1,
+.sectionHeader h2,
+.sectionHeader h3,
+.featureHeader h2,
+.bracketHeader h2,
+.formSection h2 {
+  margin: 0;
+}
+
+.pageHeader h1 {
+  font-size: clamp(1.8rem, 4vw, 2.65rem);
+}
+
+.intro {
+  max-width: 720px;
+  margin: 0.55rem 0 0;
+  color: var(--text-muted);
+}
+
+.headerActions,
+.cardActions,
+.formActions,
+.statusLine {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.headerActions {
+  align-self: start;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--border);
+}
+
+.metrics div {
+  min-width: 0;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+}
+
+.metrics dt {
+  color: var(--text-muted);
+  font-size: 0.73rem;
+}
+
+.metrics dd {
+  margin: 0.15rem 0 0;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 720;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboardLayout,
+.supportGrid,
+.publicSupportGrid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.panel,
+.featureCard,
+.tournamentCard,
+.bracketPanel,
+.formShell,
+.notice,
+.journeyPanel {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+}
+
+.panel,
+.featureCard,
+.bracketPanel,
+.journeyPanel {
+  padding: 1rem;
+}
+
+.sectionHeader,
+.featureHeader,
+.bracketHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.sectionLink {
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.sectionLink:hover {
+  text-decoration: underline;
+}
+
+.featureCard {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+  background: var(--surface-raised);
+}
+
+.featureCard + .sectionHeader {
+  margin-top: 1.25rem;
+}
+
+.featureHeader h2 {
+  font-size: clamp(1.35rem, 3vw, 1.8rem);
+}
+
+.meta,
+.help,
+.emptyCopy,
+.teamMeta,
+.bracketRoundMeta,
+.organizationMeta {
+  color: var(--text-muted);
+}
+
+.meta {
+  margin: 0.45rem 0 0;
+}
+
+.tournamentList,
+.teamList,
+.organizationList,
+.bracketRounds,
+.roundMatches {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.tournamentList {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.tournamentCard {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem;
+}
+
+.tournamentCard h3,
+.teamList strong {
+  margin: 0;
+}
+
+.teamList,
+.organizationList {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.teamList li,
+.organizationList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.teamList li:last-child,
+.organizationList li:last-child {
+  border-bottom: 0;
+}
+
+.teamMeta,
+.organizationMeta {
+  display: block;
+  font-size: 0.78rem;
+}
+
+.emptyState {
+  padding: 1.25rem 0;
+}
+
+.emptyState h3 {
+  margin: 0 0 0.4rem;
+}
+
+.emptyCopy {
+  margin: 0 0 1rem;
+}
+
+.tournamentHeader {
+  display: grid;
+  gap: 1rem;
+}
+
+.tournamentHeaderMeta {
+  display: flex;
+  gap: 0.45rem 0.9rem;
+  align-items: center;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.liveRegion {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+}
+
+.bracketPanel {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.bracketHeader {
+  align-items: center;
+}
+
+.bracketViewport {
+  overflow-x: auto;
+  padding: 0.25rem 0 0.75rem;
+  scrollbar-color: var(--border) var(--surface);
+}
+
+.bracketViewport:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.bracketGroup + .bracketGroup {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.bracketGroup h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.bracketRounds {
+  display: grid;
+  grid-auto-columns: minmax(235px, 1fr);
+  grid-auto-flow: column;
+  gap: 0.75rem;
+  min-width: max-content;
+}
+
+.roundColumn {
+  width: 235px;
+}
+
+.bracketRoundMeta {
+  margin: 0 0 0.55rem;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.roundMatches {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.matchCard {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-raised);
+}
+
+.matchTeam {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.4rem;
+  padding: 0.48rem 0.62rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.matchTeam:last-of-type {
+  border-bottom: 0;
+}
+
+.matchWinner {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.matchScore {
+  font-variant-numeric: tabular-nums;
+}
+
+.matchFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.42rem 0.62rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.journeyPanel {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.journeyList {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 1rem 0 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--border);
+  list-style: none;
+}
+
+.journeyList li {
+  padding: 0.7rem;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.journeyList strong {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--text);
+  font-size: 0.72rem;
+}
+
+.currentJourney {
+  box-shadow: inset 0 2px 0 var(--primary);
+}
+
+.publicSupportGrid {
+  align-items: start;
+}
+
+.rules {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.formPage {
+  width: min(100%, 1040px);
+  max-width: 1040px;
+}
+
+.formShell {
+  margin-top: 1rem;
+  overflow: hidden;
+}
+
+.formSection {
+  padding: 1rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.formSection:last-of-type {
+  border-bottom: 0;
+}
+
+.formSection legend {
+  width: 100%;
+  padding: 0;
+}
+
+.formSection h2 {
+  font-size: 1rem;
+}
+
+.sectionDescription {
+  margin: 0.25rem 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.formGrid {
+  display: grid;
+  gap: 0 1rem;
+}
+
+.field,
+.fieldWide {
+  min-width: 0;
+}
+
+.field input,
+.field select,
+.field textarea,
+.fieldWide input,
+.fieldWide select,
+.fieldWide textarea {
+  margin-bottom: 0.25rem;
+}
+
+.help {
+  min-height: 1.25rem;
+  margin: 0 0 0.85rem;
+  font-size: 0.76rem;
+}
+
+.urlPreview {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.optionStack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.checkboxRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.checkboxRow input {
+  margin-top: 0.2rem;
+}
+
+.checkboxRow span {
+  display: block;
+}
+
+.checkboxRow small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+}
+
+.notice {
+  margin-bottom: 1rem;
+  padding: 0.85rem;
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--border));
+  color: var(--text);
+}
+
+.notice p {
+  margin: 0 0 0.55rem;
+  color: var(--text-muted);
+}
+
+.formActions {
+  justify-content: space-between;
+  padding: 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.formError {
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.backLink {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  color: var(--text);
+}
+
+.page a:focus-visible,
+.page button:focus-visible,
+.page input:focus-visible,
+.page select:focus-visible,
+.page textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (min-width: 720px) {
+  .pageHeader,
+  .tournamentHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .dashboardLayout {
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.75fr);
+  }
+
+  .supportGrid,
+  .publicSupportGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .supportGrid > :only-child,
+  .publicSupportGrid > :only-child {
+    grid-column: 1 / -1;
+  }
+
+  .formGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fieldWide {
+    grid-column: 1 / -1;
+  }
+
+  .formSection {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 719px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .journeyList {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sectionHeader,
+  .featureHeader,
+  .bracketHeader,
+  .formActions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headerActions,
+  .cardActions {
+    width: 100%;
+  }
+
+  .headerActions a,
+  .cardActions a,
+  .formActions button {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bracketViewport {
+    scroll-behavior: auto;
+  }
+}

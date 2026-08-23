@@ -1,0 +1,627 @@
+.page {
+  width: min(100%, 1600px);
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.utilityLinks {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+}
+
+.utilityLinks a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.utilityLinks a:hover {
+  color: var(--text);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 2rem;
+  padding: 1.25rem 0 1.5rem;
+}
+
+.titleLine {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.titleLine h1 {
+  margin: 0;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+}
+
+.meta {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 0;
+  color: var(--text-muted);
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(90px, 1fr));
+  gap: 1rem;
+}
+
+.metric {
+  min-width: 90px;
+}
+
+.metric strong,
+.metric span {
+  display: block;
+}
+
+.metric strong {
+  font-size: 1.125rem;
+}
+
+.metric span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.primaryAction,
+.secondaryAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--primary);
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.primaryAction {
+  background: var(--primary-strong);
+  border-color: var(--primary-strong);
+  color: var(--on-primary);
+}
+
+.secondaryAction {
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  background: color-mix(in srgb, var(--primary-strong) 84%, black);
+  color: var(--on-primary);
+}
+
+.secondaryAction:hover {
+  color: var(--text);
+  border-color: var(--primary);
+}
+
+.tabs {
+  display: flex;
+  gap: 2rem;
+  overflow-x: auto;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs a {
+  flex: 0 0 auto;
+  padding: 1rem 0.25rem 0.85rem;
+  color: var(--text-muted);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.tabs a:hover,
+.tabs a:focus-visible {
+  color: var(--text);
+  border-bottom-color: var(--primary);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 350px;
+  min-height: max(640px, calc(100vh - 302px));
+  margin-top: -1px;
+  border: 1px solid var(--border);
+  background: var(--canvas);
+}
+
+.roundRail,
+.details {
+  background: var(--surface);
+}
+
+.roundRail {
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--border);
+}
+
+.roundRail h2,
+.details h2,
+.operations h3 {
+  margin: 0;
+}
+
+.roundRail h2 {
+  padding: 0 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+.roundList {
+  display: grid;
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.roundButton {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.625rem;
+  color: var(--text-muted);
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.roundButton:hover {
+  color: var(--text);
+  background: var(--surface-raised);
+}
+
+.roundButtonActive {
+  color: var(--text);
+  border-left-color: var(--primary);
+  background: var(--surface-raised);
+}
+
+.roundButton span,
+.roundButton small {
+  display: block;
+}
+
+.roundButton small {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.boardScroller {
+  min-width: 0;
+  overflow-x: auto;
+  background: var(--canvas);
+}
+
+.boardScroller:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(280px, 1fr);
+  min-width: 100%;
+  min-height: 100%;
+}
+
+.roundColumn {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 1.5rem;
+  min-height: 640px;
+  padding: 1.75rem 2.25rem;
+}
+
+.roundColumn > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.roundColumn > header p {
+  margin: 0;
+  color: var(--text);
+  font-weight: 700;
+}
+
+.roundColumn > header small {
+  color: var(--text-muted);
+}
+
+.roundMatches {
+  position: relative;
+  display: grid;
+  align-content: space-around;
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+.roundColumn[data-group-end='false'] .roundMatches::after {
+  content: '';
+  position: absolute;
+  top: 25%;
+  right: -2.25rem;
+  bottom: 25%;
+  border-right: 1px solid var(--border);
+}
+
+.matchCard {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 240px;
+  padding: 0;
+  overflow: visible;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+  text-align: left;
+}
+
+.matchCard:hover {
+  background: var(--surface-raised);
+  border-color: var(--primary);
+}
+
+.matchCard:focus-visible,
+.matchCardSelected {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.roundColumn[data-group-end='false'] .matchCard::after,
+.roundColumn[data-group-start='false'] .matchCard::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 2.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.roundColumn[data-group-end='false'] .matchCard::after {
+  right: -2.3rem;
+}
+
+.roundColumn[data-group-start='false'] .matchCard::before {
+  left: -2.3rem;
+}
+
+.teamRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 48px;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.teamIdentity {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.teamIdentity small {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.teamIdentity strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.teamWinner,
+.teamWinner .score {
+  color: var(--success);
+}
+
+.score {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.matchFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.status {
+  display: inline-flex;
+  padding: 0.2rem 0.5rem;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.statusSuccess {
+  color: var(--success);
+  border-color: var(--success);
+}
+
+.statusWarning {
+  color: var(--warning);
+  border-color: var(--warning);
+}
+
+.statusDanger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.details {
+  padding: 1.75rem 1.25rem;
+  border-left: 1px solid var(--border);
+}
+
+.detailsHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.detailsHeader h2 {
+  font-size: 1.25rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.detailTeams {
+  margin: 0 -0.25rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.definitionList {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.definitionList div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.definitionList dt {
+  color: var(--text-muted);
+}
+
+.definitionList dd {
+  margin: 0;
+  text-align: right;
+}
+
+.operations {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 1.25rem;
+}
+
+.operations h3 {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.operations :global(button) {
+  width: 100%;
+  margin-top: 0.4rem;
+}
+
+.detailsEmpty,
+.emptyState {
+  color: var(--text-muted);
+}
+
+.detailsEmpty h2,
+.emptyState h2 {
+  color: var(--text);
+}
+
+.emptyState {
+  margin-top: 1.5rem;
+  padding: 2rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.supportGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.supportPanel {
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface);
+}
+
+.supportPanel h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.supportPanel p {
+  color: var(--text-muted);
+}
+
+.supportList {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.supportList li {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.supportList li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.itemMeta {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.settings {
+  margin-top: 1rem;
+}
+
+.settings :global(.actions) {
+  margin-bottom: 0;
+}
+
+@media (max-width: 1180px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .primaryAction {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .workspace {
+    grid-template-columns: 150px minmax(0, 1fr);
+  }
+
+  .details {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 1rem 0.75rem;
+  }
+
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(3, 1fr);
+    order: 2;
+  }
+
+  .primaryAction {
+    width: 100%;
+    order: 1;
+  }
+
+  .tabs {
+    gap: 1.25rem;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: auto;
+  }
+
+  .roundRail {
+    padding: 0.75rem;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .roundRail h2 {
+    padding-bottom: 0.6rem;
+  }
+
+  .roundList {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .roundButton {
+    flex: 0 0 170px;
+  }
+
+  .board {
+    grid-auto-columns: minmax(260px, 84vw);
+  }
+
+  .roundColumn {
+    min-height: 500px;
+    padding: 1.25rem 1.5rem;
+  }
+
+  .roundColumn[data-group-end='false'] .roundMatches::after {
+    right: -1.5rem;
+  }
+
+  .details {
+    grid-column: auto;
+    padding: 1.25rem 1rem;
+  }
+
+  .supportGrid {
+    grid-template-columns: 1fr;
+  }
+}

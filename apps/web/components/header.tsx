@@ -1,6 +1,29 @@
+import { TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
 import Link from 'next/link';
+import { Suspense } from 'react';
+import { ActiveNavLink } from '@/components/active-nav-link';
 import { LogoutButton } from '@/components/logout-button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { serverFetch } from '@/lib/server-api';
+
+interface HeaderNavLinkProps {
+  children: string;
+  href: string;
+}
+
+function HeaderNavLink({ children, href }: HeaderNavLinkProps) {
+  return (
+    <Suspense
+      fallback={
+        <Link className="nav-link" href={href}>
+          {children}
+        </Link>
+      }
+    >
+      <ActiveNavLink href={href}>{children}</ActiveNavLink>
+    </Suspense>
+  );
+}
 
 export async function Header() {
   const { status, data } = await serverFetch<{ user: { displayName: string } | null }>('/auth/me');
@@ -10,30 +33,48 @@ export async function Header() {
   return (
     <header className="nav">
       <div className="nav-inner">
-        <Link className="brand" href="/">
-          OpenTournament
-        </Link>
-        <nav aria-label="Principal">
+        <div className="nav-leading">
+          <Link className="brand" href="/">
+            <span className="brand-mark" aria-hidden="true">
+              <TrophyIcon size={17} weight="bold" />
+            </span>
+            OpenTournament
+          </Link>
+          {user && <span className="workspace-chip">Workspace personal</span>}
+        </div>
+        <nav className="nav-links" aria-label="Principal">
           {user ? (
             <>
-              <Link href="/dashboard">Panel</Link>
-              <Link href="/tournaments/new">Crear torneo</Link>
-              <Link href="/teams/new">Crear equipo</Link>
-              <span className="nav-user">{user.displayName}</span>
-              <LogoutButton />
+              <HeaderNavLink href="/dashboard">Torneos</HeaderNavLink>
+              <HeaderNavLink href="/tournaments/new">Nuevo torneo</HeaderNavLink>
+              <HeaderNavLink href="/teams/new">Nuevo equipo</HeaderNavLink>
             </>
           ) : (
             <>
-              <Link href="/login">Iniciar sesión</Link>
-              <Link href="/register">Registrarse</Link>
-              {isApiUnavailable && (
-                <span className="badge badge-danger" role="status">
-                  API sin conexión
-                </span>
-              )}
+              <HeaderNavLink href="/login">Iniciar sesión</HeaderNavLink>
+              <HeaderNavLink href="/register">Registrarse</HeaderNavLink>
             </>
           )}
         </nav>
+        <div className="nav-actions">
+          {isApiUnavailable && (
+            <span className="badge badge-danger" role="status">
+              API sin conexión
+            </span>
+          )}
+          <ThemeToggle />
+          {user && (
+            <>
+              <span className="nav-account">
+                <span className="nav-avatar" aria-hidden="true">
+                  {user.displayName.slice(0, 1).toUpperCase()}
+                </span>
+                <span className="nav-user">{user.displayName}</span>
+              </span>
+              <LogoutButton />
+            </>
+          )}
+        </div>
       </div>
     </header>
   );
