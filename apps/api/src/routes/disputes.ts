@@ -75,63 +75,63 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       });
     }
 
-    const existing = await db
-      .select({ id: disputes.id })
-      .from(disputes)
-      .where(
-        and(
-          eq(disputes.matchId, body.matchId),
-          eq(disputes.status, 'open'),
-        ),
-      )
-      .limit(1);
-    if (existing.length > 0) {
-      return reply.status(409).send({
-        error: { code: 'DISPUTE_OPEN', message: 'Ya existe una disputa abierta' },
-      });
-    }
+    const outcome = await db.transaction(async (transaction) => {
+      const lockedContext = await lockMatchStage(transaction, body.matchId);
+      const [existing] = await transaction
+        .select({ id: disputes.id })
+        .from(disputes)
+        .where(and(eq(disputes.matchId, body.matchId), eq(disputes.status, 'open')))
+        .limit(1);
+      if (existing) {
+        throw new DomainError(409, 'DISPUTE_OPEN', 'Ya existe una disputa abierta');
+      }
 
-    const [dispute] = await db
-      .insert(disputes)
-      .values({
-        matchId: body.matchId,
-        openedBy: request.user!.id,
-        reason: body.reason,
-      })
-      .returning();
-    if (!dispute) {
-      return reply.status(500).send({
-        error: { code: 'DISPUTE_FAILED', message: 'No se pudo abrir la disputa' },
+      const [dispute] = await transaction
+        .insert(disputes)
+        .values({
+          matchId: body.matchId,
+          openedBy: request.user!.id,
+          reason: body.reason,
+        })
+        .returning();
+      if (!dispute) {
+        throw new DomainError(500, 'DISPUTE_FAILED', 'No se pudo abrir la disputa');
+      }
+      if (body.message) {
+        await transaction.insert(disputeMessages).values({
+          disputeId: dispute.id,
+          authorId: request.user!.id,
+          body: body.message,
+        });
+      }
+      await transaction
+        .update(matches)
+        .set({ status: 'disputed' })
+        .where(eq(matches.id, body.matchId));
+      await transaction.insert(auditLogs).values({
+        organizationId: lockedContext.tournament.organizationId,
+        actorId: request.user!.id,
+        action: 'dispute.opened',
+        resourceType: 'dispute',
+        resourceId: dispute.id,
+        after: { reason: body.reason },
       });
-    }
-    if (body.message) {
-      await db.insert(disputeMessages).values({
-        disputeId: dispute.id,
-        authorId: request.user!.id,
-        body: body.message,
-      });
-    }
-    await db
-      .update(matches)
-      .set({ status: 'disputed' })
-      .where(eq(matches.id, body.matchId));
-    await db.insert(auditLogs).values({
-      organizationId: ctx.tournament.organizationId,
-      actorId: request.user!.id,
-      action: 'dispute.opened',
-      resourceType: 'dispute',
-      resourceId: dispute.id,
-      after: { reason: body.reason },
+      return { dispute, context: lockedContext };
     });
-    emitTournamentEvent(ctx.tournament.id, 'dispute.opened', { matchId: body.matchId });
+
+    emitTournamentEvent(outcome.context.tournament.id, 'dispute.opened', {
+      matchId: body.matchId,
+    });
     await notify(
       db,
-      await tournamentAdminIds(db, ctx.tournament.id),
+      await tournamentAdminIds(db, outcome.context.tournament.id),
       'dispute.opened',
-      { matchId: body.matchId, tournamentId: ctx.tournament.id },
+      { matchId: body.matchId, tournamentId: outcome.context.tournament.id },
     );
-    void sendDiscordWebhook(`⚠️ Nueva disputa abierta en **${ctx.tournament.name}**.`);
-    return reply.status(201).send({ dispute });
+    void sendDiscordWebhook(
+      `⚠️ Nueva disputa abierta en **${outcome.context.tournament.name}**.`,
+    );
+    return reply.status(201).send({ dispute: outcome.dispute });
   });
 
   app.get('/tournaments/:id/disputes', async (request, reply) => {

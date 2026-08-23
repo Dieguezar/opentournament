@@ -44,6 +44,29 @@ export interface MatchContext {
   away: (typeof tournamentParticipants.$inferSelect) | null;
 }
 
+async function lockTournamentForMatchProgress(
+  transaction: DbTransaction,
+  tournamentId: string,
+): Promise<TournamentRow> {
+  const [tournament] = await transaction
+    .select()
+    .from(tournaments)
+    .where(eq(tournaments.id, tournamentId))
+    .limit(1)
+    .for('update');
+  if (!tournament) {
+    throw new DomainError(404, 'TOURNAMENT_NOT_FOUND', 'El torneo no existe');
+  }
+  if (tournament.status !== 'in_progress') {
+    throw new DomainError(
+      409,
+      'INVALID_TOURNAMENT_STATUS',
+      'El torneo no acepta resultados en su estado actual',
+    );
+  }
+  return tournament;
+}
+
 export async function loadMatchContext(db: DbExecutor, matchId: string): Promise<MatchContext | null> {
   const [row] = await db
     .select({
@@ -91,7 +114,7 @@ export async function lockMatchStage(
   matchId: string,
 ): Promise<MatchContext> {
   const [stageReference] = await transaction
-    .select({ id: stages.id })
+    .select({ id: stages.id, tournamentId: stages.tournamentId })
     .from(matches)
     .innerJoin(rounds, eq(rounds.id, matches.roundId))
     .innerJoin(brackets, eq(brackets.id, rounds.bracketId))
@@ -101,6 +124,8 @@ export async function lockMatchStage(
   if (!stageReference) {
     throw new DomainError(404, 'MATCH_NOT_FOUND', 'La partida no existe');
   }
+
+  await lockTournamentForMatchProgress(transaction, stageReference.tournamentId);
 
   await transaction
     .select({ id: stages.id })
@@ -122,7 +147,7 @@ const BRACKET_NAMES: Record<string, string> = {
 };
 
 export async function generateTournamentBracket(
-  db: Db,
+  db: DbExecutor,
   tournament: TournamentRow,
 ): Promise<StageRow> {
   const [existingStage] = await db
@@ -194,7 +219,7 @@ function groupByBracket(engine: EngineBracket): Record<string, EngineBracketMatc
 }
 
 async function persistEngineBracket(
-  db: Db,
+  db: DbExecutor,
   stage: StageRow,
   engine: EngineBracket,
 ): Promise<void> {
@@ -298,14 +323,22 @@ export async function advanceMatchWinnerAtomically(
   winnerId: string,
 ): Promise<{ champion: string | null }> {
   return db.transaction(async (transaction) => {
+    const [stageReference] = await transaction
+      .select({ id: stages.id, tournamentId: stages.tournamentId })
+      .from(stages)
+      .where(eq(stages.id, stageId))
+      .limit(1);
+    if (!stageReference) {
+      throw new DomainError(404, 'STAGE_NOT_FOUND', 'La etapa no existe');
+    }
+
+    await lockTournamentForMatchProgress(transaction, stageReference.tournamentId);
     const [stage] = await transaction
       .select()
       .from(stages)
       .where(eq(stages.id, stageId))
       .for('update');
-    if (!stage) {
-      throw new DomainError(404, 'STAGE_NOT_FOUND', 'La etapa no existe');
-    }
+    if (!stage) throw new DomainError(404, 'STAGE_NOT_FOUND', 'La etapa no existe');
 
     return applyMatchWinner(transaction, stage, engineId, winnerId);
   });

@@ -1,10 +1,13 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import {
   auditLogs,
+  type DbExecutor,
+  teamMembers,
   teams,
   tournamentParticipants,
   tournamentRegistrations,
+  tournaments,
   users,
 } from '@opentournament/database';
 import {
@@ -13,14 +16,18 @@ import {
 } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
+import { isTournamentAdmin } from '../services/permissions.js';
 import {
-  getTournament,
-  isTeamCaptain,
-  isTournamentAdmin,
-} from '../services/permissions.js';
+  countRosterRoles,
+  getRegistrationCompatibilityIssue,
+} from '../services/team-game-compatibility.js';
+import {
+  canDecideRegistration,
+  isRegistrationClosed,
+} from '../services/registration-policy.js';
 
-async function countApproved(tournamentId: string): Promise<number> {
-  const rows = await db
+async function countApproved(database: DbExecutor, tournamentId: string): Promise<number> {
+  const rows = await database
     .select({ id: tournamentRegistrations.id })
     .from(tournamentRegistrations)
     .where(
@@ -32,8 +39,11 @@ async function countApproved(tournamentId: string): Promise<number> {
   return rows.length;
 }
 
-async function nextWaitlistPosition(tournamentId: string): Promise<number> {
-  const rows = await db
+async function nextWaitlistPosition(
+  database: DbExecutor,
+  tournamentId: string,
+): Promise<number> {
+  const rows = await database
     .select({ position: tournamentRegistrations.waitlistPosition })
     .from(tournamentRegistrations)
     .where(
@@ -48,19 +58,46 @@ async function nextWaitlistPosition(tournamentId: string): Promise<number> {
 }
 
 async function addParticipant(
+  database: DbExecutor,
   tournamentId: string,
   registrationId: string,
   teamId: string,
   seed: number | null,
 ) {
-  await db.insert(tournamentParticipants).values({
-    tournamentId,
-    registrationId,
-    teamId,
-    seed,
-    checkedIn: false,
-    status: 'active',
-  });
+  await database
+    .insert(tournamentParticipants)
+    .values({
+      tournamentId,
+      registrationId,
+      teamId,
+      seed,
+      checkedIn: false,
+      status: 'active',
+    })
+    .onConflictDoUpdate({
+      target: [tournamentParticipants.tournamentId, tournamentParticipants.teamId],
+      set: {
+        registrationId,
+        checkedIn: false,
+        status: 'active',
+      },
+    });
+}
+
+async function deactivateParticipant(
+  database: DbExecutor,
+  tournamentId: string,
+  teamId: string,
+) {
+  await database
+    .update(tournamentParticipants)
+    .set({ checkedIn: false, status: 'inactive' })
+    .where(
+      and(
+        eq(tournamentParticipants.tournamentId, tournamentId),
+        eq(tournamentParticipants.teamId, teamId),
+      ),
+    );
 }
 
 export async function registerRegistrationRoutes(app: FastifyInstance): Promise<void> {
@@ -68,72 +105,126 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
     if (!requireAuth(request, reply)) return;
     const { id } = request.params as { id: string };
     const body = registerTeamSchema.parse(request.body);
-    const tournament = await getTournament(db, id);
-    if (!tournament) {
+    const outcome = await db.transaction(async (transaction) => {
+      const [tournament] = await transaction
+        .select()
+        .from(tournaments)
+        .where(and(eq(tournaments.id, id), isNull(tournaments.deletedAt)))
+        .limit(1)
+        .for('update');
+      if (!tournament) return { kind: 'not_found' as const };
+      if (tournament.status !== 'open') return { kind: 'closed' as const };
+      if (isRegistrationClosed(tournament.registrationConfig?.closesAt)) {
+        return { kind: 'registration_closed' as const };
+      }
+
+      const [team] = await transaction
+        .select()
+        .from(teams)
+        .where(and(eq(teams.id, body.teamId), isNull(teams.deletedAt)))
+        .limit(1)
+        .for('update');
+      if (!team) return { kind: 'team_not_found' as const };
+      if (team.captainId !== request.user!.id) return { kind: 'forbidden' as const };
+
+      const roster = await transaction
+        .select({ role: teamMembers.role })
+        .from(teamMembers)
+        .where(eq(teamMembers.teamId, body.teamId));
+      const compatibilityIssue = getRegistrationCompatibilityIssue({
+        tournamentAdapterKey: tournament.gameAdapterKey,
+        teamAdapterKey: team.gameAdapterKey,
+        ...countRosterRoles(roster),
+      });
+      if (compatibilityIssue) {
+        return { kind: 'incompatible' as const, issue: compatibilityIssue };
+      }
+
+      const [existing] = await transaction
+        .select({ id: tournamentRegistrations.id })
+        .from(tournamentRegistrations)
+        .where(
+          and(
+            eq(tournamentRegistrations.tournamentId, id),
+            eq(tournamentRegistrations.teamId, body.teamId),
+          ),
+        )
+        .limit(1);
+      if (existing) return { kind: 'duplicate' as const };
+
+      const approved = await countApproved(transaction, id);
+      const manual = tournament.registrationConfig?.manualApproval === true;
+      const status: 'pending' | 'approved' | 'waitlisted' = manual
+        ? 'pending'
+        : approved < tournament.capacity
+          ? 'approved'
+          : 'waitlisted';
+      const waitlistPosition =
+        status === 'waitlisted' ? await nextWaitlistPosition(transaction, id) : null;
+      const [registration] = await transaction
+        .insert(tournamentRegistrations)
+        .values({ tournamentId: id, teamId: body.teamId, status, waitlistPosition })
+        .returning();
+      if (!registration) return { kind: 'failed' as const };
+      if (status === 'approved') {
+        await addParticipant(transaction, id, registration.id, body.teamId, null);
+      }
+      await transaction.insert(auditLogs).values({
+        organizationId: tournament.organizationId,
+        actorId: request.user!.id,
+        action: 'registration.created',
+        resourceType: 'registration',
+        resourceId: registration.id,
+      });
+      return { kind: 'created' as const, registration };
+    });
+
+    if (outcome.kind === 'not_found') {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
-    if (tournament.status !== 'open') {
+    if (outcome.kind === 'closed') {
       return reply.status(409).send({
         error: { code: 'INVALID_STATUS', message: 'Las inscripciones están cerradas' },
       });
     }
-    if (!(await isTeamCaptain(db, body.teamId, request.user!.id))) {
+    if (outcome.kind === 'registration_closed') {
+      return reply.status(409).send({
+        error: {
+          code: 'REGISTRATION_CLOSED',
+          message: 'La fecha límite de inscripción ya pasó',
+        },
+      });
+    }
+    if (outcome.kind === 'team_not_found') {
+      return reply.status(404).send({
+        error: { code: 'TEAM_NOT_FOUND', message: 'El equipo no existe' },
+      });
+    }
+    if (outcome.kind === 'forbidden') {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: 'Solo el capitán inscribe al equipo' },
       });
     }
-
-    const existing = await db
-      .select({ id: tournamentRegistrations.id })
-      .from(tournamentRegistrations)
-      .where(
-        and(
-          eq(tournamentRegistrations.tournamentId, id),
-          eq(tournamentRegistrations.teamId, body.teamId),
-        ),
-      )
-      .limit(1);
-    if (existing.length > 0) {
+    if (outcome.kind === 'incompatible') {
+      return reply.status(outcome.issue.statusCode).send({
+        error: {
+          code: outcome.issue.code,
+          message: outcome.issue.message,
+          details: outcome.issue.details,
+        },
+      });
+    }
+    if (outcome.kind === 'duplicate') {
       return reply.status(409).send({
         error: { code: 'ALREADY_REGISTERED', message: 'El equipo ya está inscrito' },
       });
     }
-
-    const approved = await countApproved(id);
-    const manual = tournament.registrationConfig?.manualApproval === true;
-    const status: 'pending' | 'approved' | 'waitlisted' = manual
-      ? 'pending'
-      : approved < tournament.capacity
-        ? 'approved'
-        : 'waitlisted';
-    let waitlistPosition: number | null = null;
-    if (status === 'waitlisted') waitlistPosition = await nextWaitlistPosition(id);
-
-    const [registration] = await db
-      .insert(tournamentRegistrations)
-      .values({
-        tournamentId: id,
-        teamId: body.teamId,
-        status,
-        waitlistPosition,
-      })
-      .returning();
-    if (!registration) {
+    if (outcome.kind === 'failed') {
       return reply.status(500).send({
         error: { code: 'REGISTRATION_FAILED', message: 'No se pudo inscribir' },
       });
     }
-    if (status === 'approved') {
-      await addParticipant(id, registration.id, body.teamId, null);
-    }
-    await db.insert(auditLogs).values({
-      organizationId: tournament.organizationId,
-      actorId: request.user!.id,
-      action: 'registration.created',
-      resourceType: 'registration',
-      resourceId: registration.id,
-    });
-    return reply.status(201).send({ registration });
+    return reply.status(201).send({ registration: outcome.registration });
   });
 
   app.get('/tournaments/:id/registrations', async (request, reply) => {
@@ -173,45 +264,90 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
       });
     }
     const body = registrationDecisionSchema.parse(request.body);
-    const tournament = await getTournament(db, id);
-    const [registration] = await db
-      .select()
-      .from(tournamentRegistrations)
-      .where(eq(tournamentRegistrations.id, regId))
-      .limit(1);
-    if (!tournament || !registration || registration.tournamentId !== id) {
+    const outcome = await db.transaction(async (transaction) => {
+      const [tournament] = await transaction
+        .select()
+        .from(tournaments)
+        .where(and(eq(tournaments.id, id), isNull(tournaments.deletedAt)))
+        .limit(1)
+        .for('update');
+      if (!tournament) return { kind: 'not_found' as const };
+      if (!canDecideRegistration(tournament.status)) {
+        return { kind: 'invalid_status' as const };
+      }
+
+      const [registration] = await transaction
+        .select()
+        .from(tournamentRegistrations)
+        .where(
+          and(
+            eq(tournamentRegistrations.id, regId),
+            eq(tournamentRegistrations.tournamentId, id),
+          ),
+        )
+        .limit(1);
+      if (!registration) return { kind: 'not_found' as const };
+
+      if (body.status === 'approved' && registration.status === 'approved') {
+        return { kind: 'unchanged' as const };
+      }
+
+      if (body.status === 'rejected') {
+        await transaction
+          .update(tournamentRegistrations)
+          .set({
+            status: 'rejected',
+            approvedBy: request.user!.id,
+            waitlistPosition: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(tournamentRegistrations.id, regId));
+        await deactivateParticipant(transaction, id, registration.teamId);
+      } else {
+        const approved = await countApproved(transaction, id);
+        const status: 'approved' | 'waitlisted' =
+          approved < tournament.capacity ? 'approved' : 'waitlisted';
+        const waitlistPosition =
+          status === 'waitlisted'
+            ? (registration.status === 'waitlisted' && registration.waitlistPosition) ||
+              (await nextWaitlistPosition(transaction, id))
+            : null;
+        await transaction
+          .update(tournamentRegistrations)
+          .set({
+            status,
+            approvedBy: request.user!.id,
+            waitlistPosition,
+            updatedAt: new Date(),
+          })
+          .where(eq(tournamentRegistrations.id, regId));
+        if (status === 'approved') {
+          await addParticipant(transaction, id, registration.id, registration.teamId, null);
+        }
+      }
+      await transaction.insert(auditLogs).values({
+        organizationId: tournament.organizationId,
+        actorId: request.user!.id,
+        action: `registration.${body.status}`,
+        resourceType: 'registration',
+        resourceId: regId,
+      });
+      return { kind: 'updated' as const };
+    });
+
+    if (outcome.kind === 'not_found') {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'Inscripción no encontrada' },
       });
     }
-
-    if (body.status === 'rejected') {
-      await db
-        .update(tournamentRegistrations)
-        .set({ status: 'rejected', approvedBy: request.user!.id })
-        .where(eq(tournamentRegistrations.id, regId));
-    } else {
-      const approved = await countApproved(id);
-      const status = approved < tournament.capacity ? 'approved' : 'waitlisted';
-      await db
-        .update(tournamentRegistrations)
-        .set({
-          status,
-          approvedBy: request.user!.id,
-          waitlistPosition: status === 'waitlisted' ? await nextWaitlistPosition(id) : null,
-        })
-        .where(eq(tournamentRegistrations.id, regId));
-      if (status === 'approved') {
-        await addParticipant(id, registration.id, registration.teamId, null);
-      }
+    if (outcome.kind === 'invalid_status') {
+      return reply.status(409).send({
+        error: {
+          code: 'INVALID_STATUS',
+          message: 'Las inscripciones ya no se pueden aprobar ni rechazar',
+        },
+      });
     }
-    await db.insert(auditLogs).values({
-      organizationId: tournament.organizationId,
-      actorId: request.user!.id,
-      action: `registration.${body.status}`,
-      resourceType: 'registration',
-      resourceId: regId,
-    });
     return reply.send({ ok: true });
   });
 }
