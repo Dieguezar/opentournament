@@ -38,7 +38,11 @@ test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }
 
   await page.getByRole('link', { name: 'Ver página pública' }).click();
   await page.waitForURL('**/t/copa-nexo-demo');
-  await expect(page.getByText('Las inscripciones finalizaron.')).toBeVisible();
+  await expect(
+    page.getByText(
+      'El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí las partidas en el bracket.',
+    ),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Equipos inscritos (4)' })).toBeVisible();
   await expect(page.getByText('Finalizada')).toHaveCount(2);
   await expect(page.getByText('Programada')).toHaveCount(1);
