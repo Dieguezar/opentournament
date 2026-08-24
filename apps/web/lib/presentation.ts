@@ -133,9 +133,7 @@ function isSmashRulesetInput(value: unknown): value is SmashRulesetInput {
   );
 }
 
-export function buildRulesetSummary(
-  input: RulesetSummaryInput,
-): RulesetSummaryPresentation | null {
+export function buildRulesetSummary(input: RulesetSummaryInput): RulesetSummaryPresentation | null {
   if (input.gameAdapterKey !== 'smash_ultimate' || !isSmashRulesetInput(input.gameRules)) {
     return null;
   }
@@ -167,12 +165,12 @@ export function getPublicRegistrationMessage(
     return 'El torneo fue cancelado y no admite nuevas inscripciones.';
   }
 
-  const matchLabel = isSmash ? 'sets' : 'partidas';
+  const matchLabel = isSmash ? 'los sets' : 'las partidas';
   if (tournamentStatus === 'in_progress') {
-    return `El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí los ${matchLabel} en el bracket.`;
+    return `El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí ${matchLabel} en el bracket.`;
   }
   if (tournamentStatus === 'finalized') {
-    return `El torneo finalizó. Consultá las ${matchLabel} y los resultados publicados en el bracket.`;
+    return `El torneo finalizó. Consultá ${matchLabel} y los resultados publicados en el bracket.`;
   }
 
   return 'Las inscripciones no están disponibles en este momento.';

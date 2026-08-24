@@ -119,8 +119,14 @@ describe('presentación del producto', () => {
     expect(getPublicRegistrationMessage('in_progress', true)).toBe(
       'El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí los sets en el bracket.',
     );
+    expect(getPublicRegistrationMessage('in_progress', false)).toBe(
+      'El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí las partidas en el bracket.',
+    );
     expect(getPublicRegistrationMessage('finalized', false)).toBe(
       'El torneo finalizó. Consultá las partidas y los resultados publicados en el bracket.',
+    );
+    expect(getPublicRegistrationMessage('finalized', true)).toBe(
+      'El torneo finalizó. Consultá los sets y los resultados publicados en el bracket.',
     );
     expect(getPublicRegistrationMessage('cancelled', true)).toBe(
       'El torneo fue cancelado y no admite nuevas inscripciones.',
