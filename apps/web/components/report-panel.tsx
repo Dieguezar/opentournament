@@ -36,10 +36,12 @@ interface ReportPanelProps {
   gameAdapterKey: GameAdapterKey;
   seriesBestOf: number;
   settings: TournamentSettings | null;
+  staffMode?: boolean;
 }
 
 interface GenericReportFormProps {
   match: MatchView;
+  allowedWinnerTeamId?: string;
   isBusy: boolean;
   message?: string;
   error?: string;
@@ -56,6 +58,7 @@ interface CompleteMatchView extends MatchView {
 
 interface SmashReportFormProps {
   match: CompleteMatchView;
+  allowedWinnerTeamId?: string;
   bestOf: number;
   allowedStages: readonly string[];
   stockLimit: number;
@@ -68,13 +71,16 @@ interface SmashReportFormProps {
 
 function GenericReportForm({
   match,
+  allowedWinnerTeamId,
   isBusy,
   message,
   error,
   onReport,
   onDispute,
 }: GenericReportFormProps) {
-  const [winnerTeamId, setWinnerTeamId] = useState(match.homeTeamId ?? match.awayTeamId ?? '');
+  const [winnerTeamId, setWinnerTeamId] = useState(
+    allowedWinnerTeamId ?? match.homeTeamId ?? match.awayTeamId ?? '',
+  );
   const [homeScore, setHomeScore] = useState('');
   const [awayScore, setAwayScore] = useState('');
 
@@ -94,8 +100,14 @@ function GenericReportForm({
         <label>
           Ganador
           <select value={winnerTeamId} onChange={(event) => setWinnerTeamId(event.target.value)}>
-            {match.homeTeam && <option value={match.homeTeamId!}>{match.homeTeam}</option>}
-            {match.awayTeam && <option value={match.awayTeamId!}>{match.awayTeam}</option>}
+            {match.homeTeam &&
+              (!allowedWinnerTeamId || allowedWinnerTeamId === match.homeTeamId) && (
+                <option value={match.homeTeamId!}>{match.homeTeam}</option>
+              )}
+            {match.awayTeam &&
+              (!allowedWinnerTeamId || allowedWinnerTeamId === match.awayTeamId) && (
+                <option value={match.awayTeamId!}>{match.awayTeam}</option>
+              )}
           </select>
         </label>
         <label>
@@ -123,6 +135,7 @@ function GenericReportForm({
 
 function SmashReportForm({
   match,
+  allowedWinnerTeamId,
   bestOf,
   allowedStages,
   stockLimit,
@@ -135,7 +148,9 @@ function SmashReportForm({
   const [preset, setPreset] = useState<SmashScorePreset | null>(null);
   const [games, setGames] = useState<SmashGameDraft[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const scorePresets = getSmashScorePresets(bestOf, match.homeTeamId, match.awayTeamId);
+  const scorePresets = getSmashScorePresets(bestOf, match.homeTeamId, match.awayTeamId).filter(
+    (scorePreset) => !allowedWinnerTeamId || scorePreset.winnerTeamId === allowedWinnerTeamId,
+  );
   const characterListId = `smash-characters-${match.id}`;
   const fieldIdPrefix = `smash-${match.id}`;
 
@@ -439,6 +454,7 @@ export function ReportPanel({
   gameAdapterKey,
   seriesBestOf,
   settings,
+  staffMode = false,
 }: ReportPanelProps) {
   const router = useRouter();
   const [teams, setTeams] = useState<TeamView[]>([]);
@@ -450,7 +466,9 @@ export function ReportPanel({
 
   useEffect(() => {
     void Promise.all([
-      apiClient<{ teams: TeamView[] }>('/teams/mine'),
+      staffMode
+        ? Promise.resolve({ teams: [] as TeamView[] })
+        : apiClient<{ teams: TeamView[] }>('/teams/mine'),
       apiClient<{ matches: MatchView[] }>(`/tournaments/${tournamentId}/matches`),
     ])
       .then(([teamsResponse, matchesResponse]) => {
@@ -462,13 +480,15 @@ export function ReportPanel({
         if (loadRequestError instanceof ApiClientError && loadRequestError.status === 401) return;
         setLoadError('No pudimos cargar tus partidas. Intentá actualizar la página.');
       });
-  }, [tournamentId]);
+  }, [staffMode, tournamentId]);
 
   const myTeamIds = new Set(teams.map((team) => team.id));
+  const reportingMode = settings?.reportingMode ?? 'bilateral';
   const reportableMatches = matches.filter(
     (match) =>
       (match.status === 'scheduled' || match.status === 'in_progress') &&
-      ((match.homeTeamId && myTeamIds.has(match.homeTeamId)) ||
+      (staffMode ||
+        (match.homeTeamId && myTeamIds.has(match.homeTeamId)) ||
         (match.awayTeamId && myTeamIds.has(match.awayTeamId))),
   );
   const smashRules = settings?.gameRules?.game === 'smash_ultimate' ? settings.gameRules : null;
@@ -482,11 +502,17 @@ export function ReportPanel({
     try {
       await apiClient(`/matches/${matchId}/results`, {
         method: 'POST',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...(payload as Record<string, unknown>),
+          ...(staffMode ? { staffOverride: true } : {}),
+        }),
       });
       setMessages((current) => ({
         ...current,
-        [matchId]: 'Reporte enviado. Esperando la confirmación del rival…',
+        [matchId]:
+          !staffMode && reportingMode === 'bilateral'
+            ? 'Reporte enviado. Esperando la confirmación del rival…'
+            : 'Resultado confirmado y bracket actualizado.',
       }));
       router.refresh();
     } catch (reportError) {
@@ -508,8 +534,10 @@ export function ReportPanel({
         method: 'POST',
         body: JSON.stringify({
           matchId,
-          reason: 'captain_request',
-          message: 'Solicito revisión del resultado de la partida.',
+          reason: staffMode ? 'system' : 'captain_request',
+          message: staffMode
+            ? 'El staff solicita revisión administrativa de la partida.'
+            : 'Solicito revisión del resultado de la partida.',
         }),
       });
       setMessages((current) => ({
@@ -536,15 +564,16 @@ export function ReportPanel({
         {loadError}
       </p>
     );
-  if (reportableMatches.length === 0) return null;
+  if ((!staffMode && reportingMode === 'staff_only') || reportableMatches.length === 0) return null;
 
   return (
-    <section className={`card ${styles.panel}`} aria-labelledby="report-panel-title">
+    <section id="reportar" className={`card ${styles.panel}`} aria-labelledby="report-panel-title">
       <div className={styles.panelHeader}>
         <div>
-          <p className={styles.eyebrow}>Competencia</p>
+          <p className={styles.eyebrow}>{staffMode ? 'Operación de staff' : 'Competencia'}</p>
           <h2 id="report-panel-title">
-            Mis {gameAdapterKey === 'smash_ultimate' ? 'sets' : 'partidas'}
+            {staffMode ? 'Control de' : 'Mis'}{' '}
+            {gameAdapterKey === 'smash_ultimate' ? 'sets' : 'partidas'}
           </h2>
         </div>
         <span>{reportableMatches.length} por reportar</span>
@@ -556,6 +585,12 @@ export function ReportPanel({
             match.awayTeam !== null &&
             match.homeTeamId !== null &&
             match.awayTeamId !== null;
+          const allowedWinnerTeamId =
+            !staffMode && reportingMode === 'winner_reports'
+              ? [match.homeTeamId, match.awayTeamId].find((teamId): teamId is string =>
+                  Boolean(teamId && myTeamIds.has(teamId)),
+                )
+              : undefined;
           return (
             <li className={styles.matchItem} key={match.id}>
               <div className={styles.matchTitle}>
@@ -571,6 +606,7 @@ export function ReportPanel({
               {gameAdapterKey === 'smash_ultimate' && isCompleteMatch ? (
                 <SmashReportForm
                   match={match as CompleteMatchView}
+                  allowedWinnerTeamId={allowedWinnerTeamId}
                   bestOf={seriesBestOf}
                   allowedStages={allowedStages}
                   stockLimit={stockLimit}
@@ -583,6 +619,7 @@ export function ReportPanel({
               ) : (
                 <GenericReportForm
                   match={match}
+                  allowedWinnerTeamId={allowedWinnerTeamId}
                   isBusy={busyMatchId === match.id}
                   message={messages[match.id]}
                   error={errors[match.id]}

@@ -2,17 +2,16 @@ import {
   buildBracketWorkspacePresentation,
   type BracketMatchNode,
 } from '@opentournament/bracket-ui';
-import type { MatchStatus, TournamentSettings } from '@opentournament/shared-types';
+import type { GameAdapterKey, MatchStatus, TournamentSettings } from '@opentournament/shared-types';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
-import {
-  BracketWorkspace,
-  type BracketWorkspaceMatch,
-} from '@/components/bracket-workspace';
+import { BracketWorkspace, type BracketWorkspaceMatch } from '@/components/bracket-workspace';
 import styles from '@/components/bracket-workspace.module.css';
 import { RegistrationActions, type RegistrationView } from '@/components/registration-actions';
 import { RulesetSummary } from '@/components/ruleset-summary';
 import { TournamentActions } from '@/components/tournament-actions';
+import { ParticipantAccessManager } from '@/components/participant-access-manager';
+import { ReportPanel } from '@/components/report-panel';
 import {
   formatGameAdapter,
   formatParticipantStatus,
@@ -30,7 +29,7 @@ interface TournamentView {
   status: string;
   format: string;
   capacity: number;
-  gameAdapterKey: string;
+  gameAdapterKey: GameAdapterKey;
   startsAt: string | null;
   seriesConfig: { bo?: number } | null;
   settings: TournamentSettings | null;
@@ -144,30 +143,24 @@ function toWorkspaceMatches(
 
   if (bracketMatches.length > 0) return bracketMatches;
 
-  return matches.map(
-    (match): BracketWorkspaceMatch => ({
-      id: match.id,
-      round: match.roundNumber,
-      position: match.position,
-      home:
-        match.homeTeam && match.homeTeamId
-          ? { id: match.homeTeamId, name: match.homeTeam }
-          : null,
-      away:
-        match.awayTeam && match.awayTeamId
-          ? { id: match.awayTeamId, name: match.awayTeam }
-          : null,
-      homeScore: match.result?.homeScore,
-      awayScore: match.result?.awayScore,
-      winnerId: fallbackWinnerId(match),
-      status: match.status,
-      bracketType: match.bracketType,
-      roundName: match.roundName,
-      scheduledAt: match.scheduledAt,
-      homeTeamId: match.homeTeamId,
-      awayTeamId: match.awayTeamId,
-    }),
-  );
+  return matches.map((match): BracketWorkspaceMatch => ({
+    id: match.id,
+    round: match.roundNumber,
+    position: match.position,
+    home:
+      match.homeTeam && match.homeTeamId ? { id: match.homeTeamId, name: match.homeTeam } : null,
+    away:
+      match.awayTeam && match.awayTeamId ? { id: match.awayTeamId, name: match.awayTeam } : null,
+    homeScore: match.result?.homeScore,
+    awayScore: match.result?.awayScore,
+    winnerId: fallbackWinnerId(match),
+    status: match.status,
+    bracketType: match.bracketType,
+    roundName: match.roundName,
+    scheduledAt: match.scheduledAt,
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+  }));
 }
 
 function tournamentFormatLabel(format: string): string {
@@ -187,11 +180,7 @@ function nextActionLabel(
   return `${action} ${details.roundName.toLocaleLowerCase('es')}`;
 }
 
-export default async function TournamentAdminPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function TournamentAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const tournamentRes = await serverFetch<{ tournament: TournamentView }>(`/tournaments/${id}`);
   if (tournamentRes.status === 401) redirect('/login');
@@ -311,6 +300,16 @@ export default async function TournamentAdminPage({
       />
 
       {isAdmin && (
+        <ReportPanel
+          tournamentId={id}
+          gameAdapterKey={tournament.gameAdapterKey}
+          seriesBestOf={seriesBestOf}
+          settings={tournament.settings}
+          staffMode
+        />
+      )}
+
+      {isAdmin && (
         <section id="participants" className={styles.supportGrid} aria-label="Participantes">
           <div className={styles.supportPanel}>
             <h2>
@@ -370,6 +369,11 @@ export default async function TournamentAdminPage({
           <h2>Configuración y estado</h2>
           <p>Publicá, generá el bracket o cancelá el torneo según su estado actual.</p>
           <TournamentActions tournamentId={id} status={tournament.status} />
+          <ParticipantAccessManager
+            tournamentId={id}
+            registrations={registrations}
+            initialReportingMode={tournament.settings?.reportingMode ?? 'bilateral'}
+          />
         </section>
       )}
     </main>

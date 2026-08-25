@@ -40,12 +40,12 @@ La API aplica las migraciones y crea la demo automáticamente al arrancar con `S
 - Equipos permanentes y equipos efímeros por torneo; torneos individuales modelados como "equipo de 1".
 - Check-in general con tolerancia configurable y walkover automático.
 - Series BO1/BO3/BO5 configurables, con empates permitidos según el juego.
-- Reporte bilateral de resultados con confirmación automática.
+- Reportes configurables: confirmación bilateral, reporte único del ganador o carga exclusiva del staff.
 - Evidencias (capturas y enlaces externos) privadas por defecto.
 - Disputas con panel de árbitros, resolución registrada y auditoría.
 - Página pública del torneo con bracket, resultados y clasificación en tiempo real (SSE).
 - PWA instalable con caché de lectura (sin acciones offline).
-- Autenticación con correo + contraseña y Discord OAuth.
+- Identidad progresiva: lectura pública sin cuenta, pases privados revocables para participantes y cuentas permanentes opcionales con correo/Discord.
 - Bot de Discord con notificaciones y comandos slash.
 - Adaptador genérico + adaptadores oficiales de Valorant, CS2, League of Legends y Super Smash Bros. Ultimate; Smash incluye una plantilla competitiva versionada.
 - Instalación autoalojable con `docker compose up -d`.
