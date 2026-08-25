@@ -372,6 +372,134 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       });
       expect(smashRegistrationRes.statusCode).toBe(201);
 
+      const secondSmashRegistrationRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${smashTournament.id}/registrations`,
+        payload: { teamId: teamA },
+        headers: headersFor(userA),
+      });
+      expect(secondSmashRegistrationRes.statusCode).toBe(201);
+
+      for (const [teamId, session] of [
+        [teamA, userA],
+        [smashTeam, userC],
+      ] as const) {
+        const checkInRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${smashTournament.id}/check-in`,
+          payload: { teamId },
+          headers: headersFor(session),
+        });
+        expect(checkInRes.statusCode).toBe(200);
+      }
+
+      const smashBracketRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${smashTournament.id}/bracket/generate`,
+        headers: headersFor(userA),
+      });
+      expect(smashBracketRes.statusCode).toBe(200);
+
+      const smashBracketViewRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${smashTournament.id}/bracket`,
+      });
+      const smashMatch = smashBracketViewRes
+        .json<{
+          brackets: Array<{
+            rounds: Array<{
+              matches: Array<{
+                id: string;
+                home: { teamId: string } | null;
+                away: { teamId: string } | null;
+              }>;
+            }>;
+          }>;
+        }>()
+        .brackets.flatMap((bracket) => bracket.rounds)
+        .flatMap((round) => round.matches)
+        .find((match) => match.home && match.away)!;
+      const smashGames = [
+        {
+          number: 1,
+          stage: 'Battlefield',
+          homeCharacter: 'Mario',
+          awayCharacter: 'Link',
+          winnerTeamId: smashMatch.home!.teamId,
+          homeStocks: 2,
+          awayStocks: 0,
+        },
+        {
+          number: 2,
+          stage: 'Smashville',
+          homeCharacter: 'Mario',
+          awayCharacter: 'Young Link',
+          winnerTeamId: smashMatch.away!.teamId,
+          homeStocks: 0,
+          awayStocks: 1,
+        },
+        {
+          number: 3,
+          stage: 'Hollow Bastion',
+          homeCharacter: 'Luigi',
+          awayCharacter: 'Young Link',
+          winnerTeamId: smashMatch.home!.teamId,
+          homeStocks: 1,
+          awayStocks: 0,
+        },
+      ];
+      const smashResultPayload = {
+        winnerTeamId: smashMatch.home!.teamId,
+        homeScore: 2,
+        awayScore: 1,
+        games: smashGames,
+      };
+
+      const invalidSmashGameRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/matches/${smashMatch.id}/results`,
+        payload: {
+          ...smashResultPayload,
+          games: [{ ...smashGames[0], stage: 'Corneria' }, ...smashGames.slice(1)],
+        },
+        headers: headersFor(userA),
+      });
+      expect(invalidSmashGameRes.statusCode).toBe(409);
+      expect(invalidSmashGameRes.json<{ error: { code: string } }>().error.code).toBe(
+        'INVALID_GAME_STAGE',
+      );
+
+      for (const session of [userA, userC]) {
+        const smashResultRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/matches/${smashMatch.id}/results`,
+          payload: smashResultPayload,
+          headers: headersFor(session),
+        });
+        expect(smashResultRes.statusCode).toBe(session === userA ? 201 : 200);
+      }
+
+      const confirmedSmashBracketRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${smashTournament.id}/bracket`,
+      });
+      const confirmedSmashMatch = confirmedSmashBracketRes
+        .json<{
+          brackets: Array<{
+            rounds: Array<{
+              matches: Array<{
+                id: string;
+                result: { games?: Array<{ stage: string }> } | null;
+              }>;
+            }>;
+          }>;
+        }>()
+        .brackets.flatMap((bracket) => bracket.rounds)
+        .flatMap((round) => round.matches)
+        .find((match) => match.id === smashMatch.id)!;
+      expect(confirmedSmashMatch.result?.games).toHaveLength(3);
+      expect(confirmedSmashMatch.result?.games?.[0]?.stage).toBe('Battlefield');
+
       const tournamentRes = await app.inject({
         method: 'POST',
         url: '/api/v1/tournaments',
@@ -1088,10 +1216,36 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       const report1 = await app.inject({
         method: 'POST',
         url: `/api/v1/matches/${firstMatch.id}/results`,
+        payload: {
+          winnerTeamId: firstMatch.home!.teamId,
+          homeScore: 1,
+          awayScore: 0,
+          games: [
+            {
+              number: 1,
+              stage: 'Battlefield',
+              homeCharacter: 'Mario',
+              awayCharacter: 'Link',
+              winnerTeamId: firstMatch.home!.teamId,
+              homeStocks: 1,
+              awayStocks: 0,
+            },
+          ],
+        },
+        headers: headersFor(userA),
+      });
+      expect(report1.statusCode).toBe(409);
+      expect(report1.json<{ error: { code: string } }>().error.code).toBe(
+        'GAME_DETAILS_NOT_ALLOWED',
+      );
+
+      const validReport1 = await app.inject({
+        method: 'POST',
+        url: `/api/v1/matches/${firstMatch.id}/results`,
         payload: { winnerTeamId: firstMatch.home!.teamId },
         headers: headersFor(userA),
       });
-      expect(report1.statusCode).toBe(201);
+      expect(validReport1.statusCode).toBe(201);
 
       const anonymousResults = await app.inject({
         method: 'GET',

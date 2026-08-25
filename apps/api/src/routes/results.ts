@@ -10,7 +10,10 @@ import {
   tournamentParticipants,
   tournaments,
 } from '@opentournament/database';
-import { reportResultSchema } from '@opentournament/validation';
+import {
+  reportResultSchema,
+  type SmashGameResultInput,
+} from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { isTeamCaptain, isTournamentAdmin } from '../services/permissions.js';
@@ -25,12 +28,14 @@ import { notify } from '../services/notifications.js';
 import { tournamentAdminIds } from '../services/checkin.js';
 import { emitTournamentEvent } from '../services/realtime.js';
 import { sendDiscordWebhook } from '../services/discord.js';
+import { validateGameReport } from '../services/smash-game-report.js';
 
 interface SubmissionResult {
   winnerId?: string;
   homeScore?: number;
   awayScore?: number;
   draw?: boolean;
+  games?: SmashGameResultInput[];
 }
 
 function submissionsMatch(a: { result: SubmissionResult }, b: { result: SubmissionResult }): boolean {
@@ -38,7 +43,8 @@ function submissionsMatch(a: { result: SubmissionResult }, b: { result: Submissi
     (a.result.winnerId ?? null) === (b.result.winnerId ?? null) &&
     (a.result.homeScore ?? null) === (b.result.homeScore ?? null) &&
     (a.result.awayScore ?? null) === (b.result.awayScore ?? null) &&
-    Boolean(a.result.draw) === Boolean(b.result.draw)
+    Boolean(a.result.draw) === Boolean(b.result.draw) &&
+    JSON.stringify(a.result.games ?? null) === JSON.stringify(b.result.games ?? null)
   );
 }
 
@@ -98,6 +104,27 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       winnerId = winner.id;
     }
 
+    const gameRules = ctx.tournament.settings?.gameRules;
+    const gameValidation = validateGameReport(
+      {
+        gameAdapterKey: ctx.tournament.gameAdapterKey,
+        bestOf: ctx.tournament.seriesConfig?.bo ?? 1,
+        stockLimit: gameRules?.game === 'smash_ultimate' ? gameRules.stocks : 0,
+        stagePool:
+          gameRules?.game === 'smash_ultimate'
+            ? [...gameRules.starters, ...gameRules.counterpicks]
+            : [],
+        homeTeamId: ctx.home?.teamId ?? '',
+        awayTeamId: ctx.away?.teamId ?? '',
+      },
+      body,
+    );
+    if (!gameValidation.ok) {
+      return reply.status(409).send({
+        error: { code: gameValidation.code, message: gameValidation.message },
+      });
+    }
+
     const reporter = captains[0]!;
     const outcome = await db.transaction(async (transaction) => {
       const lockedContext = await lockMatchStage(transaction, matchId);
@@ -144,6 +171,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
             homeScore: body.homeScore,
             awayScore: body.awayScore,
             draw: body.draw || undefined,
+            games: gameValidation.games,
           },
           status: 'pending',
         })
@@ -191,6 +219,17 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
             lockedContext.match.engineId,
             winnerId,
           ));
+          await transaction
+            .update(matches)
+            .set({
+              result: {
+                winnerId,
+                homeScore: body.homeScore,
+                awayScore: body.awayScore,
+                games: gameValidation.games,
+              },
+            })
+            .where(eq(matches.id, matchId));
           if (champion) {
             await transaction
               .update(tournaments)
@@ -208,7 +247,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
           action: 'result.confirmed',
           resourceType: 'match',
           resourceId: matchId,
-          after: { winnerId },
+          after: { winnerId, games: gameValidation.games },
         });
         return { kind: 'confirmed' as const, submission, champion, context: lockedContext };
       }
