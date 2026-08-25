@@ -1,0 +1,273 @@
+.panel {
+  margin-top: 1rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.panelHeader,
+.matchTitle,
+.gameHeader,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.panelHeader {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.panelHeader h2,
+.matchTitle h3,
+.gameHeader,
+.scoreFieldset legend,
+.gamesFieldset legend {
+  margin: 0;
+}
+
+.panelHeader > span,
+.matchTitle > span,
+.eyebrow {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.eyebrow,
+.matchTitle > span {
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  color: var(--primary);
+  font-weight: 750;
+}
+
+.matchList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.matchItem {
+  padding: 1rem 1.1rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.matchItem:last-child {
+  border-bottom: 0;
+}
+
+.matchTitle {
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.matchTitle h3 {
+  font-size: 1.05rem;
+}
+
+.matchTitle small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.genericForm,
+.smashForm {
+  display: grid;
+  gap: 1rem;
+}
+
+.genericFields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.genericFields input,
+.genericFields select,
+.gameCard input,
+.gameCard select {
+  margin: 0;
+}
+
+.scoreFieldset,
+.gamesFieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.scoreFieldset legend,
+.gamesFieldset legend {
+  padding: 0;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 720;
+}
+
+.scoreFieldset:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 5px;
+}
+
+.scorePresets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.7rem;
+}
+
+.scorePreset,
+.scorePresetActive {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+  color: var(--text);
+  text-align: left;
+}
+
+.scorePreset:hover {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+  background: var(--surface-raised);
+}
+
+.scorePresetActive,
+.scorePresetActive:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.scorePreset span,
+.scorePresetActive span {
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+}
+
+.scorePreset small,
+.scorePresetActive small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.help {
+  margin: 0.35rem 0 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.gameGrid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.gameCard {
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--surface-raised);
+}
+
+.gameHeader {
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.gameHeader strong {
+  overflow: hidden;
+  color: var(--success);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.characterFields,
+.resultFields {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+
+.fieldError,
+.requestError,
+.success,
+.feedback {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.fieldError,
+.requestError,
+.loadError {
+  color: var(--danger);
+}
+
+.fieldError {
+  margin-top: 0.3rem;
+  font-weight: 650;
+}
+
+.gameCard input[aria-invalid='true'],
+.gameCard select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.actions {
+  justify-content: flex-start;
+  padding-top: 0.1rem;
+}
+
+.success {
+  color: var(--success);
+  font-weight: 650;
+}
+
+.feedback:empty {
+  display: none;
+}
+
+.loadError {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--border));
+  border-radius: 5px;
+  background: var(--surface);
+}
+
+@media (min-width: 680px) {
+  .genericFields {
+    grid-template-columns: 1.5fr 1fr 1fr;
+  }
+
+  .scorePresets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .characterFields,
+  .resultFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1040px) {
+  .gameGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
