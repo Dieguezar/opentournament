@@ -8,7 +8,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U opentournament -d opentournament"]
       interval: 5s
@@ -24,8 +24,8 @@ services:
     volumes:
       - miniodata:/data
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:${MINIO_API_HOST_PORT:-9000}:9000"
+      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 5s
@@ -65,7 +65,7 @@ services:
       minio:
         condition: service_started
     ports:
-      - "127.0.0.1:4000:4000"
+      - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
 
   web:
     build:
@@ -80,7 +80,7 @@ services:
     depends_on:
       - api
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
 
 volumes:
   pgdata:

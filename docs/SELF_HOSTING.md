@@ -21,6 +21,22 @@ docker compose up -d
 2. Completar el wizard de primer uso → se crea la cuenta y la primera organización.
 3. Verificar health: `GET /healthz`.
 
+### Puertos ocupados
+
+Compose publica los servicios únicamente en `127.0.0.1` y permite cambiar cada
+puerto del host desde `.env`. Los puertos internos entre contenedores no cambian.
+
+Por ejemplo, si PostgreSQL ya usa el puerto `5432`:
+
+```dotenv
+POSTGRES_HOST_PORT=15432
+```
+
+También se pueden ajustar `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`,
+`API_HOST_PORT` y `WEB_HOST_PORT`. Si se cambia el puerto web o API, actualizar
+también `APP_URL` o `API_URL`. Para ejecutar herramientas de desarrollo fuera de
+Docker con otro puerto de PostgreSQL, actualizar además `DATABASE_URL`.
+
 ## 3. Configuración opcional
 
 ### Correo (SMTP)
@@ -69,6 +85,7 @@ Restauración: detener servicios, restaurar el dump (`psql`), restaurar el bucke
 
 | Síntoma | Causa probable | Acción |
 | --- | --- | --- |
+| Compose no puede publicar un puerto | El puerto ya está ocupado en el host | Cambiar el `*_HOST_PORT` correspondiente en `.env` |
 | La API no arranca | `DATABASE_URL` incorrecta o postgres no listo | Revisar healthcheck y logs |
 | Login con Discord falla | Redirect URI mal configurada | Verificar `DISCORD_REDIRECT_URI` |
 | Subidas fallan | Bucket no creado o credenciales S3 | Crear buckets y revisar `S3_*` |

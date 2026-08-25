@@ -15,7 +15,7 @@
     "dev:web": "turbo run dev --filter=@opentournament/web",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test && node --test tests/config/compose.test.mjs",
     "test:unit": "turbo run test --filter=@opentournament/*",
     "test:e2e": "playwright test",
     "db:generate": "pnpm --filter @opentournament/database db:generate",

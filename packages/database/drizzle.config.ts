@@ -1,4 +1,7 @@
 import { defineConfig } from 'drizzle-kit';
+import { loadEnvironmentFiles } from '@opentournament/config';
+
+loadEnvironmentFiles();
 
 export default defineConfig({
   schema: './src/schema.ts',
