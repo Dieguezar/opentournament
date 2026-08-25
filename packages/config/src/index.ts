@@ -1,7 +1,26 @@
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+
 import { z } from 'zod';
 import { config as loadDotenv } from 'dotenv';
 
-loadDotenv();
+export function getEnvironmentFilePaths(cwd = process.cwd()): string[] {
+  return [
+    ...new Set([
+      resolve(cwd, '.env'),
+      fileURLToPath(new URL('../../../.env', import.meta.url)),
+    ]),
+  ];
+}
+
+export function loadEnvironmentFiles(
+  paths = getEnvironmentFilePaths(),
+  targetEnvironment: NodeJS.ProcessEnv = process.env,
+): void {
+  loadDotenv({ path: paths, processEnv: targetEnvironment, quiet: true });
+}
+
+loadEnvironmentFiles();
 
 const boolFromString = z
   .enum(['true', 'false'])
