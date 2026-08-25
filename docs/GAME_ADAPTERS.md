@@ -19,34 +19,34 @@ flowchart LR
 
 ```ts
 interface GameAdapterConfig {
-  key: string;                 // "valorant"
-  name: string;                // "Valorant"
+  key: string; // "valorant"
+  name: string; // "Valorant"
   iconUrl?: string;
-  platforms: Platform[];       // ["pc", ...]
+  platforms: Platform[]; // ["pc", ...]
   team: {
-    minPlayers: number;        // 5
-    maxPlayers: number;        // 5
-    substitutes: number;       // 1-2
+    minPlayers: number; // 5
+    maxPlayers: number; // 5
+    substitutes: number; // 1-2
   };
   playerId: {
-    label: string;             // "Riot ID"
-    format: RegExp;            // /^[^#]+#[A-Z0-9]{3,5}$/i
-    hint: string;              // "Nombre#TAG"
+    label: string; // "Riot ID"
+    format: RegExp; // /^[^#]+#[A-Z0-9]{3,5}$/i
+    hint: string; // "Nombre#TAG"
   };
   regions?: string[];
-  maps?: string[];             // nombres canónicos
+  maps?: string[]; // nombres canónicos
   modes?: string[];
   scoring: {
-    type: "series" | "first_to" | "timed";
+    type: 'series' | 'first_to' | 'timed';
     drawAllowed: boolean;
-    defaultSeries?: number[];  // [1, 3, 5]
+    defaultSeries?: number[]; // [1, 3, 5]
   };
   matchFormats: {
-    series: boolean;           // BO1/BO3/BO5
+    series: boolean; // BO1/BO3/BO5
     timed: boolean;
   };
   veto: {
-    mode: "external";          // MVP: fuera de plataforma + registro
+    mode: 'external'; // MVP: fuera de plataforma + registro
     mapsRequired: boolean;
   };
   terminology?: {
@@ -62,7 +62,7 @@ interface GameAdapterConfig {
     defaults: TournamentTemplateDefaults;
   };
   customFields?: FieldSchema[]; // campos propios de inscripción
-  integrations?: string[];      // ["riot-api", ...] futuro; vacío en MVP
+  integrations?: string[]; // ["riot-api", ...] futuro; vacío en MVP
 }
 ```
 
@@ -78,14 +78,15 @@ Una **plantilla de torneo** es opcional y vive dentro de un adaptador. A diferen
 
 ## 4. Adaptadores oficiales del MVP
 
-| Juego | Tamaño equipo | Suplentes | ID de jugador | Mapas o escenarios | Empate | Formato |
-| --- | --- | --- | --- | --- | --- | --- |
-| Valorant | 5 | 1 | Riot ID (`Nombre#TAG`) | Abyss, Ascent, Bind, Breeze, Haven, Icebox, Lotus, Pearl, Split, Sunset | No | BO1/BO3/BO5 |
-| CS2 | 5 | 1 | SteamID64 | Ancient, Anubis, Dust2, Inferno, Mirage, Nuke, Overpass, Train, Vertigo | No | BO1/BO3/BO5 |
-| LoL | 5 | 1 | Invocador + región | Summoner's Rift (mapa único) | No | BO1/BO3/BO5 |
-| Super Smash Bros. Ultimate | 1 | 0 | Tag de bracket | Battlefield, Small Battlefield, Pokémon Stadium 2, Final Destination, Town & City + counterpicks | No | BO3/BO5; doble eliminación por defecto |
+| Juego                      | Tamaño equipo | Suplentes | ID de jugador          | Mapas o escenarios                                                                               | Empate | Formato                                |
+| -------------------------- | ------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------ | ------ | -------------------------------------- |
+| Valorant                   | 5             | 1         | Riot ID (`Nombre#TAG`) | Abyss, Ascent, Bind, Breeze, Haven, Icebox, Lotus, Pearl, Split, Sunset                          | No     | BO1/BO3/BO5                            |
+| CS2                        | 5             | 1         | SteamID64              | Ancient, Anubis, Dust2, Inferno, Mirage, Nuke, Overpass, Train, Vertigo                          | No     | BO1/BO3/BO5                            |
+| LoL                        | 5             | 1         | Invocador + región     | Summoner's Rift (mapa único)                                                                     | No     | BO1/BO3/BO5                            |
+| Super Smash Bros. Ultimate | 1             | 0         | Tag de bracket         | Battlefield, Small Battlefield, Pokémon Stadium 2, Final Destination, Town & City + counterpicks | No     | BO3/BO5; doble eliminación por defecto |
 
 Notas:
+
 - Los valores de mapas pueden cambiar con parches; se mantienen en configuración versionada del adaptador.
 - El empate se declara por adaptador (`drawAllowed: false` en los cuatro adaptadores oficiales).
 - Los campos de ID se validan en inscripción y en el perfil público.
@@ -95,7 +96,7 @@ Notas:
 
 El endpoint `POST /matches/:matchId/results` admite un campo opcional `games` para Smash Ultimate. Cada entrada registra número de game, escenario, personaje de cada participante, ganador y stocks restantes. El servidor valida el orden, el BO, el límite de stocks, los participantes, el pool de escenarios y la coherencia con el marcador global.
 
-Durante la transición al formulario visual, los reportes de Smash sin `games` siguen siendo compatibles. Cuando ambos capitanes incluyen el detalle, éste también debe coincidir para confirmar automáticamente el resultado. El detalle confirmado queda dentro del JSONB `matches.result` y se publica mediante el bracket API. Otros adaptadores rechazan este campo específico.
+En la web, los capitanes usan un formulario guiado compatible con BO3/BO5 para elegir marcador, escenario, personajes, ganador y stocks de cada game. El formulario construye el contrato estructurado y lleva el foco al primer campo incompleto. Los reportes heredados sin `games` siguen siendo compatibles; cuando ambos capitanes incluyen el detalle, éste también debe coincidir para confirmar automáticamente el resultado. El detalle confirmado queda dentro del JSONB `matches.result` y se publica mediante el bracket API. Otros adaptadores conservan el formulario genérico y rechazan este campo específico.
 
 Esta capacidad registra lo ocurrido; todavía no implementa el veto interactivo ni aplica DSR durante la selección de escenario.
 

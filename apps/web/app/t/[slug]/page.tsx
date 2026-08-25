@@ -321,7 +321,12 @@ export default async function PublicTournamentPage({
         <BracketSection brackets={brackets} tournamentId={tournament.id} isSmash={isSmash} />
       )}
 
-      <ReportPanel tournamentId={tournament.id} />
+      <ReportPanel
+        tournamentId={tournament.id}
+        gameAdapterKey={tournament.gameAdapterKey}
+        seriesBestOf={seriesBestOf}
+        settings={tournament.settings}
+      />
 
       <div className={styles.publicSupportGrid}>
         <section className={styles.panel} aria-labelledby="teams-title">
