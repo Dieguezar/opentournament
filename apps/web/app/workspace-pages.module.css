@@ -277,14 +277,23 @@
 }
 
 .bracketRounds {
+  --bracket-column-gap: 5rem;
+  --bracket-track-row: 7rem;
+  --bracket-track-height: calc(var(--bracket-max-matches) * var(--bracket-track-row));
+  --bracket-line: color-mix(in srgb, var(--primary) 52%, var(--border));
+
+  position: relative;
   display: grid;
-  grid-auto-columns: minmax(235px, 1fr);
+  grid-auto-columns: 235px;
   grid-auto-flow: column;
-  gap: 0.75rem;
+  gap: var(--bracket-column-gap);
+  align-items: stretch;
   min-width: max-content;
 }
 
 .roundColumn {
+  display: grid;
+  grid-template-rows: auto 1fr;
   width: 235px;
 }
 
@@ -295,11 +304,54 @@
 }
 
 .roundMatches {
-  display: grid;
-  gap: 0.55rem;
+  position: relative;
+  min-height: var(--bracket-track-height);
+}
+
+.matchSlot {
+  position: absolute;
+  top: calc((var(--match-index) + 0.5) * 100% / var(--round-match-count));
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+}
+
+.roundColumn:not(:first-child) .matchSlot::before,
+.roundColumn:not(:last-child) .matchConnector::before {
+  position: absolute;
+  top: 50%;
+  width: calc(var(--bracket-column-gap) / 2 + 1px);
+  border-top: 2px solid var(--bracket-line);
+  content: '';
+}
+
+.roundColumn:not(:first-child) .matchSlot::before {
+  right: 100%;
+}
+
+.matchConnector {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+
+.roundColumn:not(:last-child) .matchConnector::before {
+  left: 100%;
+}
+
+.roundPairs .matchSlot:nth-child(odd):not(:last-child) .matchConnector::after {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + var(--bracket-column-gap) / 2);
+  height: calc(var(--bracket-track-height) / var(--round-match-count));
+  border-right: 2px solid var(--bracket-line);
+  content: '';
 }
 
 .matchCard {
+  position: relative;
+  z-index: 1;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -323,6 +375,26 @@
 .matchWinner {
   color: var(--success);
   font-weight: 700;
+}
+
+.matchCompetitor {
+  display: grid;
+  min-width: 0;
+  gap: 0.12rem;
+}
+
+.matchCompetitor small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 550;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.matchWinner .matchCompetitor small {
+  color: color-mix(in srgb, var(--success) 72%, var(--text-muted));
 }
 
 .matchScore {

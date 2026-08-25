@@ -46,6 +46,8 @@ test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }
   await expect(page.getByRole('heading', { name: 'Equipos inscritos (4)' })).toBeVisible();
   await expect(page.getByText('Finalizada')).toHaveCount(2);
   await expect(page.getByText('Programada')).toHaveCount(1);
+  await expect(page.getByTestId('bracket-connector')).toHaveCount(2);
+  await expect(page.getByTestId('bracket-connector').first()).toBeVisible();
 
   await page.getByRole('link', { name: 'Torneos' }).click();
   await page.getByRole('link', { name: 'Administrar torneo' }).click();
@@ -58,4 +60,14 @@ test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }
   await page.getByRole('link', { name: 'Titanes del Centro vs Pixel Forge' }).click();
   await expect(page.getByRole('heading', { name: 'Resolución' })).toBeVisible();
   await expect(page.getByText('La evidencia del servidor confirma')).toBeVisible();
+});
+
+test('demo Smash → 8 participantes → personajes y games visibles', async ({ page }) => {
+  await page.goto('/t/smash-random-showdown');
+
+  await expect(page.getByRole('heading', { name: 'Smash Random Showdown' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Jugadores inscritos (8)' })).toBeVisible();
+  await expect(page.getByText('Finalizada')).toHaveCount(15);
+  await expect(page.getByTestId('smash-character')).toHaveCount(30);
+  await expect(page.getByText(/^[2-5] games$/)).toHaveCount(15);
 });
