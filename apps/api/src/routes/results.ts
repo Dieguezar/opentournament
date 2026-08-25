@@ -10,10 +10,7 @@ import {
   tournamentParticipants,
   tournaments,
 } from '@opentournament/database';
-import {
-  reportResultSchema,
-  type SmashGameResultInput,
-} from '@opentournament/validation';
+import { reportResultSchema, type SmashGameResultInput } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { isTeamCaptain, isTournamentAdmin } from '../services/permissions.js';
@@ -29,6 +26,7 @@ import { tournamentAdminIds } from '../services/checkin.js';
 import { emitTournamentEvent } from '../services/realtime.js';
 import { sendDiscordWebhook } from '../services/discord.js';
 import { validateGameReport } from '../services/smash-game-report.js';
+import { authorizeResultReport } from '../services/result-reporting-policy.js';
 
 interface SubmissionResult {
   winnerId?: string;
@@ -38,7 +36,10 @@ interface SubmissionResult {
   games?: SmashGameResultInput[];
 }
 
-function submissionsMatch(a: { result: SubmissionResult }, b: { result: SubmissionResult }): boolean {
+function submissionsMatch(
+  a: { result: SubmissionResult },
+  b: { result: SubmissionResult },
+): boolean {
   return (
     (a.result.winnerId ?? null) === (b.result.winnerId ?? null) &&
     (a.result.homeScore ?? null) === (b.result.homeScore ?? null) &&
@@ -51,8 +52,15 @@ function submissionsMatch(a: { result: SubmissionResult }, b: { result: Submissi
 async function canAccessResults(
   ctx: MatchContext,
   userId: string,
+  participantAccess?: { tournamentId: string; teamId: string },
 ): Promise<boolean> {
   if (await isTournamentAdmin(db, ctx.tournament.id, userId)) return true;
+  if (participantAccess) {
+    return (
+      participantAccess.tournamentId === ctx.tournament.id &&
+      [ctx.home?.teamId, ctx.away?.teamId].includes(participantAccess.teamId)
+    );
+  }
   for (const participant of [ctx.home, ctx.away]) {
     if (participant && (await isTeamCaptain(db, participant.teamId, userId))) return true;
   }
@@ -68,14 +76,15 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
 
+    if (!ctx.home || !ctx.away) {
+      return reply.status(409).send({
+        error: { code: 'INVALID_MATCH', message: 'La partida aún no tiene dos participantes' },
+      });
+    }
+
     const captains = [];
     for (const p of [ctx.home, ctx.away]) {
       if (p && (await isTeamCaptain(db, p.teamId, request.user!.id))) captains.push(p);
-    }
-    if (captains.length === 0) {
-      return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo los capitanes reportan resultados' },
-      });
     }
     if (ctx.match.status !== 'scheduled' && ctx.match.status !== 'in_progress') {
       return reply.status(409).send({
@@ -93,9 +102,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
 
     let winnerId: string | null = null;
     if (!body.draw) {
-      const winner = [ctx.home, ctx.away].find(
-        (p) => p && p.teamId === body.winnerTeamId,
-      );
+      const winner = [ctx.home, ctx.away].find((p) => p && p.teamId === body.winnerTeamId);
       if (!winner) {
         return reply.status(409).send({
           error: { code: 'INVALID_WINNER', message: 'El ganador no participa en la partida' },
@@ -125,7 +132,27 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       });
     }
 
-    const reporter = captains[0]!;
+    const reportingMode = ctx.tournament.settings?.reportingMode ?? 'bilateral';
+    const userIsTournamentAdmin = await isTournamentAdmin(db, ctx.tournament.id, request.user!.id);
+    const authorization = authorizeResultReport({
+      reportingMode,
+      isTournamentAdmin:
+        userIsTournamentAdmin &&
+        (reportingMode === 'staff_only' ||
+          body.staffOverride ||
+          (captains.length === 0 && !request.participantAccess)),
+      tournamentId: ctx.tournament.id,
+      participantAccess: request.participantAccess ?? null,
+      captainTeamIds: captains.map((captain) => captain.teamId),
+      eligibleTeamIds: [ctx.home.teamId, ctx.away.teamId],
+      winnerTeamId: body.draw ? null : (body.winnerTeamId ?? null),
+    });
+    if (!authorization.ok) {
+      return reply.status(403).send({
+        error: { code: authorization.code, message: authorization.message },
+      });
+    }
+
     const outcome = await db.transaction(async (transaction) => {
       const lockedContext = await lockMatchStage(transaction, matchId);
       if (
@@ -138,33 +165,37 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       const [openDispute] = await transaction
         .select({ id: disputes.id })
         .from(disputes)
-        .where(
-          and(eq(disputes.matchId, matchId), ne(disputes.status, 'resolved')),
-        )
+        .where(and(eq(disputes.matchId, matchId), ne(disputes.status, 'resolved')))
         .limit(1);
       if (openDispute) {
         throw new DomainError(409, 'DISPUTE_OPEN', 'La partida tiene una disputa abierta');
       }
 
-      const [existingSubmission] = await transaction
-        .select({ id: resultSubmissions.id })
-        .from(resultSubmissions)
-        .where(
-          and(
-            eq(resultSubmissions.matchId, matchId),
-            eq(resultSubmissions.teamId, reporter.teamId),
-          ),
-        )
-        .limit(1);
-      if (existingSubmission) {
-        throw new DomainError(409, 'RESULT_ALREADY_REPORTED', 'El equipo ya reportó este resultado');
+      if (authorization.reporterTeamId) {
+        const [existingSubmission] = await transaction
+          .select({ id: resultSubmissions.id })
+          .from(resultSubmissions)
+          .where(
+            and(
+              eq(resultSubmissions.matchId, matchId),
+              eq(resultSubmissions.teamId, authorization.reporterTeamId),
+            ),
+          )
+          .limit(1);
+        if (existingSubmission) {
+          throw new DomainError(
+            409,
+            'RESULT_ALREADY_REPORTED',
+            'El equipo ya reportó este resultado',
+          );
+        }
       }
 
       const [submission] = await transaction
         .insert(resultSubmissions)
         .values({
           matchId,
-          teamId: reporter.teamId,
+          teamId: authorization.reporterTeamId,
           reportedBy: request.user!.id,
           result: {
             winnerId: winnerId ?? undefined,
@@ -173,44 +204,14 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
             draw: body.draw || undefined,
             games: gameValidation.games,
           },
-          status: 'pending',
+          status: authorization.strategy === 'authoritative' ? 'confirmed' : 'pending',
         })
         .returning();
       if (!submission) {
         throw new DomainError(500, 'SUBMISSION_FAILED', 'No se pudo registrar el reporte');
       }
 
-      const [counterpart] = await transaction
-        .select()
-        .from(resultSubmissions)
-        .where(
-          and(
-            eq(resultSubmissions.matchId, matchId),
-            ne(resultSubmissions.teamId, reporter.teamId),
-          ),
-        )
-        .limit(1);
-
-      if (!counterpart) {
-        const confirmMinutes = lockedContext.tournament.timingConfig?.resultConfirmMinutes ?? 30;
-        await transaction.insert(jobs).values({
-          kind: 'match.result_escalate',
-          runAt: new Date(Date.now() + confirmMinutes * 60_000),
-          payload: { matchId },
-        });
-        return { kind: 'waiting' as const, submission };
-      }
-
-      if (submissionsMatch(submission, counterpart)) {
-        await transaction
-          .update(resultSubmissions)
-          .set({ status: 'confirmed' })
-          .where(
-            and(
-              eq(resultSubmissions.matchId, matchId),
-              eq(resultSubmissions.status, 'pending'),
-            ),
-          );
+      const finalizeResult = async () => {
         let champion: string | null = null;
         if (winnerId) {
           ({ champion } = await applyMatchWinner(
@@ -247,9 +248,59 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
           action: 'result.confirmed',
           resourceType: 'match',
           resourceId: matchId,
-          after: { winnerId, games: gameValidation.games },
+          after: {
+            winnerId,
+            games: gameValidation.games,
+            reportingMode: ctx.tournament.settings?.reportingMode ?? 'bilateral',
+          },
         });
-        return { kind: 'confirmed' as const, submission, champion, context: lockedContext };
+        return {
+          kind: 'confirmed' as const,
+          submission,
+          champion,
+          context: lockedContext,
+        };
+      };
+
+      if (authorization.strategy === 'authoritative') {
+        await transaction
+          .update(resultSubmissions)
+          .set({ status: 'overridden' })
+          .where(
+            and(eq(resultSubmissions.matchId, matchId), eq(resultSubmissions.status, 'pending')),
+          );
+        return finalizeResult();
+      }
+
+      const [counterpart] = await transaction
+        .select()
+        .from(resultSubmissions)
+        .where(
+          and(
+            eq(resultSubmissions.matchId, matchId),
+            ne(resultSubmissions.teamId, authorization.reporterTeamId!),
+          ),
+        )
+        .limit(1);
+
+      if (!counterpart) {
+        const confirmMinutes = lockedContext.tournament.timingConfig?.resultConfirmMinutes ?? 30;
+        await transaction.insert(jobs).values({
+          kind: 'match.result_escalate',
+          runAt: new Date(Date.now() + confirmMinutes * 60_000),
+          payload: { matchId },
+        });
+        return { kind: 'waiting' as const, submission };
+      }
+
+      if (submissionsMatch(submission, counterpart)) {
+        await transaction
+          .update(resultSubmissions)
+          .set({ status: 'confirmed' })
+          .where(
+            and(eq(resultSubmissions.matchId, matchId), eq(resultSubmissions.status, 'pending')),
+          );
+        return finalizeResult();
       }
 
       const [dispute] = await transaction
@@ -260,10 +311,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         .update(resultSubmissions)
         .set({ status: 'conflicted' })
         .where(eq(resultSubmissions.matchId, matchId));
-      await transaction
-        .update(matches)
-        .set({ status: 'disputed' })
-        .where(eq(matches.id, matchId));
+      await transaction.update(matches).set({ status: 'disputed' }).where(eq(matches.id, matchId));
       await transaction.insert(auditLogs).values({
         organizationId: lockedContext.tournament.organizationId,
         actorId: request.user!.id,
@@ -276,7 +324,9 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     });
 
     if (outcome.kind === 'waiting') {
-      return reply.status(201).send({ submission: outcome.submission, confirmed: false, waiting: true });
+      return reply
+        .status(201)
+        .send({ submission: outcome.submission, confirmed: false, waiting: true });
     }
 
     if (outcome.kind === 'confirmed') {
@@ -293,7 +343,10 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         (id): id is string => Boolean(id),
       );
       const captainRows = teamIds.length
-        ? await db.select({ captainId: teams.captainId }).from(teams).where(inArray(teams.id, teamIds))
+        ? await db
+            .select({ captainId: teams.captainId })
+            .from(teams)
+            .where(inArray(teams.id, teamIds))
         : [];
       await notify(
         db,
@@ -329,7 +382,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     if (!ctx) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
-    if (!(await canAccessResults(ctx, request.user!.id))) {
+    if (!(await canAccessResults(ctx, request.user!.id, request.participantAccess))) {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: 'Sin acceso a los reportes' },
       });
