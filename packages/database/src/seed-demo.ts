@@ -6,6 +6,7 @@ import {
   type EngineBracket,
 } from '@opentournament/tournament-engine';
 import type { Db, DbExecutor } from './client.js';
+import { seedSmashDemoData } from './seed-smash-demo.js';
 import {
   auditLogs,
   brackets,
@@ -62,10 +63,7 @@ const IDS = {
   ],
   stage: '00000000-0000-4000-8000-000000000400',
   bracket: '00000000-0000-4000-8000-000000000410',
-  rounds: [
-    '00000000-0000-4000-8000-000000000421',
-    '00000000-0000-4000-8000-000000000422',
-  ],
+  rounds: ['00000000-0000-4000-8000-000000000421', '00000000-0000-4000-8000-000000000422'],
   matches: [
     '00000000-0000-4000-8000-000000000431',
     '00000000-0000-4000-8000-000000000432',
@@ -78,10 +76,7 @@ const IDS = {
     '00000000-0000-4000-8000-000000000444',
   ],
   dispute: '00000000-0000-4000-8000-000000000450',
-  messages: [
-    '00000000-0000-4000-8000-000000000451',
-    '00000000-0000-4000-8000-000000000452',
-  ],
+  messages: ['00000000-0000-4000-8000-000000000451', '00000000-0000-4000-8000-000000000452'],
   ruling: '00000000-0000-4000-8000-000000000460',
 } as const;
 
@@ -103,11 +98,16 @@ export interface DemoSeedResult {
   adminUserId: string;
   organizationId: string;
   tournamentId: string;
+  smashTournamentId: string;
   disputeId: string;
 }
 
 async function findUserIdByEmail(db: DbExecutor, email: string): Promise<string> {
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1);
+  const [user] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1);
   if (!user) throw new Error(`No se pudo preparar el usuario demo ${email}`);
   return user.id;
 }
@@ -143,10 +143,15 @@ export async function seedDemoData(db: Db): Promise<DemoSeedResult> {
       .where(eq(tournaments.id, IDS.tournament))
       .limit(1);
     if (!tournament) throw new Error('El escenario demo está marcado pero incompleto');
+    const adminUserId = await findUserIdByEmail(db, 'admin@opentournament.local');
+    const smashTournamentId = await db.transaction((transaction) =>
+      seedSmashDemoData(transaction, adminUserId, tournament.organizationId),
+    );
     return {
-      adminUserId: await findUserIdByEmail(db, 'admin@opentournament.local'),
+      adminUserId,
       organizationId: tournament.organizationId,
       tournamentId: IDS.tournament,
+      smashTournamentId,
       disputeId: IDS.dispute,
     };
   }
@@ -307,8 +312,20 @@ export async function seedDemoData(db: Db): Promise<DemoSeedResult> {
     await transaction
       .insert(rounds)
       .values([
-        { id: IDS.rounds[0], bracketId: IDS.bracket, number: 1, name: 'Semifinales', status: 'finalized' },
-        { id: IDS.rounds[1], bracketId: IDS.bracket, number: 2, name: 'Gran final', status: 'active' },
+        {
+          id: IDS.rounds[0],
+          bracketId: IDS.bracket,
+          number: 1,
+          name: 'Semifinales',
+          status: 'finalized',
+        },
+        {
+          id: IDS.rounds[1],
+          bracketId: IDS.bracket,
+          number: 2,
+          name: 'Gran final',
+          status: 'active',
+        },
       ])
       .onConflictDoNothing();
 
@@ -449,11 +466,13 @@ export async function seedDemoData(db: Db): Promise<DemoSeedResult> {
       .insert(demoFlags)
       .values({ key: DEMO_FLAG, value: true })
       .onConflictDoUpdate({ target: demoFlags.key, set: { value: true } });
+    const smashTournamentId = await seedSmashDemoData(transaction, adminUserId, organizationId);
 
     return {
       adminUserId,
       organizationId,
       tournamentId: IDS.tournament,
+      smashTournamentId,
       disputeId: IDS.dispute,
     };
   });
