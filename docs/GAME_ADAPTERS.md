@@ -91,6 +91,14 @@ Notas:
 - Los campos de ID se validan en inscripción y en el perfil público.
 - La plantilla `smash_ultimate.standard_v1` parte de 3 stocks, 7 minutos, objetos y hazards desactivados, 3 bans, gran final con reset y capacidad 32. El organizador puede editarla o restaurar sus valores estándar.
 
+### Reporte estructurado de sets de Smash
+
+El endpoint `POST /matches/:matchId/results` admite un campo opcional `games` para Smash Ultimate. Cada entrada registra número de game, escenario, personaje de cada participante, ganador y stocks restantes. El servidor valida el orden, el BO, el límite de stocks, los participantes, el pool de escenarios y la coherencia con el marcador global.
+
+Durante la transición al formulario visual, los reportes de Smash sin `games` siguen siendo compatibles. Cuando ambos capitanes incluyen el detalle, éste también debe coincidir para confirmar automáticamente el resultado. El detalle confirmado queda dentro del JSONB `matches.result` y se publica mediante el bracket API. Otros adaptadores rechazan este campo específico.
+
+Esta capacidad registra lo ocurrido; todavía no implementa el veto interactivo ni aplica DSR durante la selección de escenario.
+
 ## 5. Ciclo de vida de un adaptador
 
 1. **Propuesta:** issue con la plantilla `game_adapter_proposal.md`.
@@ -104,6 +112,7 @@ Notas:
 - Tests de ejemplo: un torneo de ejemplo por juego genera brackets y acepta resultados correctos.
 - Tests negativos: rosters inválidos, IDs mal formados, empates en juegos sin empates.
 - Tests de plantilla: los defaults, el merge en servidor y las reglas específicas mantienen sus invariantes.
+- Tests de resultados: el detalle por game respeta participantes, BO, stocks, escenarios y marcador global.
 
 ## 7. Futuro
 

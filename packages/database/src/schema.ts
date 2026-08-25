@@ -464,7 +464,20 @@ export const matches = pgTable(
     lobbyUrl: text('lobby_url'),
     maps: jsonb('maps').$type<{ maps?: string[] }>(),
     scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
-    result: jsonb('result').$type<{ winnerId?: string; homeScore?: number; awayScore?: number }>(),
+    result: jsonb('result').$type<{
+      winnerId?: string;
+      homeScore?: number;
+      awayScore?: number;
+      games?: Array<{
+        number: number;
+        stage: string;
+        homeCharacter: string;
+        awayCharacter: string;
+        winnerTeamId: string;
+        homeStocks: number;
+        awayStocks: number;
+      }>;
+    }>(),
     rescheduleCount: integer('reschedule_count').notNull().default(0),
     version: integer('version').notNull().default(1),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -566,6 +579,15 @@ export const resultSubmissions = pgTable(
         homeScore?: number;
         awayScore?: number;
         draw?: boolean;
+        games?: Array<{
+          number: number;
+          stage: string;
+          homeCharacter: string;
+          awayCharacter: string;
+          winnerTeamId: string;
+          homeStocks: number;
+          awayStocks: number;
+        }>;
       }>()
       .notNull(),
     status: text('status').notNull().default('pending'),
