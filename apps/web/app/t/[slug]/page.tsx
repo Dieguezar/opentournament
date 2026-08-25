@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import type { CSSProperties } from 'react';
 import type {
   GameAdapterKey,
   TournamentSettings,
@@ -25,7 +26,17 @@ interface BracketMatchView {
   status: string;
   home: { participantId: string; name: string } | null;
   away: { participantId: string; name: string } | null;
-  result: { winnerId?: string; homeScore?: number; awayScore?: number } | null;
+  result: {
+    winnerId?: string;
+    homeScore?: number;
+    awayScore?: number;
+    games?: Array<{
+      number: number;
+      stage: string;
+      homeCharacter: string;
+      awayCharacter: string;
+    }>;
+  } | null;
 }
 
 interface BracketRoundView {
@@ -55,6 +66,15 @@ function formatBracketName(type: string): string {
   if (type === 'winners') return 'Ganadores';
   if (type === 'losers') return 'Perdedores';
   return 'Gran final';
+}
+
+function formatCharacterSummary(
+  games: NonNullable<BracketMatchView['result']>['games'],
+  side: 'home' | 'away',
+): string | null {
+  const characters = [...new Set(games?.map((game) => game[`${side}Character`]).filter(Boolean))];
+
+  return characters.length > 0 ? characters.join(' · ') : null;
 }
 
 function BracketSection({
@@ -92,55 +112,118 @@ function BracketSection({
           tabIndex={0}
           aria-label="Bracket desplazable"
         >
-          {brackets.map((bracket) => (
-            <section className={styles.bracketGroup} key={bracket.type}>
-              <h3>{formatBracketName(bracket.type)}</h3>
-              <ol className={styles.bracketRounds}>
-                {bracket.rounds.map((round) => (
-                  <li className={styles.roundColumn} key={round.number}>
-                    <p className={styles.bracketRoundMeta}>{round.name}</p>
-                    <ol className={styles.roundMatches}>
-                      {round.matches.map((match) => {
-                        const isHomeWinner =
-                          match.result?.winnerId !== undefined &&
-                          match.home?.participantId === match.result.winnerId;
-                        const isAwayWinner =
-                          match.result?.winnerId !== undefined &&
-                          match.away?.participantId === match.result.winnerId;
+          {brackets.map((bracket) => {
+            const maxMatches = Math.max(1, ...bracket.rounds.map((round) => round.matches.length));
 
-                        return (
-                          <li key={match.id}>
-                            <article className={styles.matchCard}>
-                              <div
-                                className={`${styles.matchTeam} ${isHomeWinner ? styles.matchWinner : ''}`}
+            return (
+              <section className={styles.bracketGroup} key={bracket.type}>
+                <h3>{formatBracketName(bracket.type)}</h3>
+                <ol
+                  className={styles.bracketRounds}
+                  style={
+                    {
+                      '--bracket-max-matches': maxMatches,
+                      '--bracket-track-row': isSmash ? '9rem' : '7rem',
+                    } as CSSProperties
+                  }
+                >
+                  {bracket.rounds.map((round, roundIndex) => {
+                    const nextRound = bracket.rounds[roundIndex + 1];
+                    const joinsPairs =
+                      nextRound !== undefined &&
+                      round.matches.length === nextRound.matches.length * 2;
+
+                    return (
+                      <li
+                        className={`${styles.roundColumn} ${joinsPairs ? styles.roundPairs : ''}`}
+                        key={round.number}
+                      >
+                        <p className={styles.bracketRoundMeta}>{round.name}</p>
+                        <ol
+                          className={styles.roundMatches}
+                          style={
+                            {
+                              '--round-match-count': Math.max(1, round.matches.length),
+                            } as CSSProperties
+                          }
+                        >
+                          {round.matches.map((match, matchIndex) => {
+                            const isHomeWinner =
+                              match.result?.winnerId !== undefined &&
+                              match.home?.participantId === match.result.winnerId;
+                            const isAwayWinner =
+                              match.result?.winnerId !== undefined &&
+                              match.away?.participantId === match.result.winnerId;
+                            const games = match.result?.games;
+                            const homeCharacters = formatCharacterSummary(games, 'home');
+                            const awayCharacters = formatCharacterSummary(games, 'away');
+
+                            return (
+                              <li
+                                className={styles.matchSlot}
+                                key={match.id}
+                                style={{ '--match-index': matchIndex } as CSSProperties}
                               >
-                                <span>{teamLabel(match.home)}</span>
-                                <span className={styles.matchScore}>
-                                  {match.result?.homeScore ?? '—'}
-                                </span>
-                              </div>
-                              <div
-                                className={`${styles.matchTeam} ${isAwayWinner ? styles.matchWinner : ''}`}
-                              >
-                                <span>{teamLabel(match.away)}</span>
-                                <span className={styles.matchScore}>
-                                  {match.result?.awayScore ?? '—'}
-                                </span>
-                              </div>
-                              <footer className={styles.matchFooter}>
-                                <span>{isSmash ? 'Set' : 'Partida'}</span>
-                                <span>{formatMatchStatus(match.status)}</span>
-                              </footer>
-                            </article>
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          ))}
+                                <article className={styles.matchCard}>
+                                  <div
+                                    className={`${styles.matchTeam} ${isHomeWinner ? styles.matchWinner : ''}`}
+                                  >
+                                    <span className={styles.matchCompetitor}>
+                                      <span>{teamLabel(match.home)}</span>
+                                      {isSmash && homeCharacters && (
+                                        <small data-testid="smash-character">
+                                          {homeCharacters}
+                                        </small>
+                                      )}
+                                    </span>
+                                    <span className={styles.matchScore}>
+                                      {match.result?.homeScore ?? '—'}
+                                    </span>
+                                  </div>
+                                  <div
+                                    className={`${styles.matchTeam} ${isAwayWinner ? styles.matchWinner : ''}`}
+                                  >
+                                    <span className={styles.matchCompetitor}>
+                                      <span>{teamLabel(match.away)}</span>
+                                      {isSmash && awayCharacters && (
+                                        <small data-testid="smash-character">
+                                          {awayCharacters}
+                                        </small>
+                                      )}
+                                    </span>
+                                    <span className={styles.matchScore}>
+                                      {match.result?.awayScore ?? '—'}
+                                    </span>
+                                  </div>
+                                  <footer className={styles.matchFooter}>
+                                    <span>
+                                      {isSmash && games?.length
+                                        ? `${games.length} games`
+                                        : isSmash
+                                          ? 'Set'
+                                          : 'Partida'}
+                                    </span>
+                                    <span>{formatMatchStatus(match.status)}</span>
+                                  </footer>
+                                </article>
+                                {nextRound && (
+                                  <span
+                                    aria-hidden="true"
+                                    className={styles.matchConnector}
+                                    data-testid="bracket-connector"
+                                  />
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ol>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
+            );
+          })}
         </div>
       )}
     </section>
