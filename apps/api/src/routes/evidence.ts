@@ -1,11 +1,6 @@
 import { count, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import {
-  auditLogs,
-  evidence,
-  resultSubmissions,
-  teams,
-} from '@opentournament/database';
+import { auditLogs, evidence, resultSubmissions, teams } from '@opentournament/database';
 import { addEvidenceSchema, presignSchema } from '@opentournament/validation';
 import { env } from '../config.js';
 import { db } from '../db.js';
@@ -36,7 +31,7 @@ async function canAccessEvidence(
   if (await isTournamentAdmin(db, ctx.tournament.id, userId)) {
     return { allowed: true, tournamentId: ctx.tournament.id };
   }
-  if (await isTeamCaptain(db, submission.teamId, userId)) {
+  if (submission.teamId && (await isTeamCaptain(db, submission.teamId, userId))) {
     return { allowed: true, tournamentId: ctx.tournament.id };
   }
   return { allowed: false };
@@ -145,7 +140,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance): Promise<void
       })
       .from(evidence)
       .innerJoin(resultSubmissions, eq(resultSubmissions.id, evidence.resultSubmissionId))
-      .innerJoin(teams, eq(teams.id, resultSubmissions.teamId))
+      .leftJoin(teams, eq(teams.id, resultSubmissions.teamId))
       .where(eq(evidence.resultSubmissionId, resultId));
 
     const items = await Promise.all(
