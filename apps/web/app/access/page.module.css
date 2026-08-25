@@ -1,0 +1,57 @@
+.page {
+  display: grid;
+  min-height: calc(100vh - 3.5rem);
+  place-items: center;
+}
+
+.card {
+  width: min(100%, 560px);
+  padding: clamp(1.25rem, 4vw, 2rem);
+}
+
+.card h1,
+.card p {
+  margin-top: 0;
+}
+
+.card p {
+  color: var(--text-muted);
+}
+
+.eyebrow {
+  color: var(--primary) !important;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.progress {
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.progress::after {
+  display: block;
+  width: 40%;
+  height: 100%;
+  background: var(--primary);
+  animation: progress 1s ease-in-out infinite alternate;
+  content: '';
+}
+
+@keyframes progress {
+  to {
+    transform: translateX(150%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress::after {
+    width: 100%;
+    animation: none;
+  }
+}

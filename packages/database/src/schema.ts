@@ -84,34 +84,12 @@ export const organizationMembers = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex('organization_members_org_user_unique').on(
-      table.organizationId,
-      table.userId,
-    ),
+    uniqueIndex('organization_members_org_user_unique').on(table.organizationId, table.userId),
     index('organization_members_user_id_idx').on(table.userId),
   ],
 );
 
 export type OrganizationMemberRow = typeof organizationMembers.$inferSelect;
-
-export const sessions = pgTable(
-  'sessions',
-  {
-    id: uuid('id').primaryKey().defaultRandom(),
-    userId: uuid('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    tokenHash: text('token_hash').notNull(),
-    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex('sessions_token_hash_unique').on(table.tokenHash),
-    index('sessions_user_id_idx').on(table.userId),
-  ],
-);
-
-export type SessionRow = typeof sessions.$inferSelect;
 
 export const passwordResetTokens = pgTable(
   'password_reset_tokens',
@@ -192,15 +170,19 @@ export const demoFlags = pgTable('demo_flags', {
   value: boolean('value').notNull().default(false),
 });
 
-export const gameAdapters = pgTable('game_adapters', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  key: text('key').notNull(),
-  name: text('name').notNull(),
-  iconUrl: text('icon_url'),
-  config: jsonb('config').$type<Record<string, unknown>>().notNull().default({}),
-  enabled: boolean('enabled').notNull().default(true),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-}, (table) => [uniqueIndex('game_adapters_key_unique').on(table.key)]);
+export const gameAdapters = pgTable(
+  'game_adapters',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    key: text('key').notNull(),
+    name: text('name').notNull(),
+    iconUrl: text('icon_url'),
+    config: jsonb('config').$type<Record<string, unknown>>().notNull().default({}),
+    enabled: boolean('enabled').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex('game_adapters_key_unique').on(table.key)],
+);
 
 export type GameAdapterRow = typeof gameAdapters.$inferSelect;
 
@@ -253,6 +235,7 @@ export const teamMembers = pgTable(
 export interface TournamentSettingsDocument {
   grandFinalReset?: boolean;
   presencial?: boolean;
+  reportingMode?: 'bilateral' | 'winner_reports' | 'staff_only';
   templateKey?: string;
   templateVersion?: number;
   gameRules?: {
@@ -305,7 +288,7 @@ export const tournaments = pgTable(
     settings: jsonb('settings')
       .$type<TournamentSettingsDocument>()
       .notNull()
-      .default({ grandFinalReset: false, presencial: false }),
+      .default({ grandFinalReset: false, presencial: false, reportingMode: 'bilateral' }),
     startsAt: timestamp('starts_at', { withTimezone: true }),
     endsAt: timestamp('ends_at', { withTimezone: true }),
     publishedAt: timestamp('published_at', { withTimezone: true }),
@@ -389,6 +372,64 @@ export const tournamentParticipants = pgTable(
 );
 
 export type TournamentParticipantRow = typeof tournamentParticipants.$inferSelect;
+
+export const participantAccessPasses = pgTable(
+  'participant_access_passes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tournamentId: uuid('tournament_id')
+      .notNull()
+      .references(() => tournaments.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id')
+      .notNull()
+      .references(() => teams.id, { onDelete: 'cascade' }),
+    actorUserId: uuid('actor_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    createdBy: uuid('created_by')
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('participant_access_passes_token_hash_unique').on(table.tokenHash),
+    index('participant_access_passes_team_idx').on(
+      table.tournamentId,
+      table.teamId,
+      table.revokedAt,
+    ),
+  ],
+);
+
+export type ParticipantAccessPassRow = typeof participantAccessPasses.$inferSelect;
+
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    participantAccessPassId: uuid('participant_access_pass_id').references(
+      () => participantAccessPasses.id,
+      { onDelete: 'cascade' },
+    ),
+    tokenHash: text('token_hash').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('sessions_token_hash_unique').on(table.tokenHash),
+    index('sessions_user_id_idx').on(table.userId),
+    index('sessions_participant_access_pass_id_idx').on(table.participantAccessPassId),
+  ],
+);
+
+export type SessionRow = typeof sessions.$inferSelect;
 
 export const stages = pgTable(
   'stages',
@@ -523,9 +564,7 @@ export const checkIns = pgTable(
       .references(() => users.id),
     checkedInAt: timestamp('checked_in_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    uniqueIndex('check_ins_tournament_team_unique').on(table.tournamentId, table.teamId),
-  ],
+  (table) => [uniqueIndex('check_ins_tournament_team_unique').on(table.tournamentId, table.teamId)],
 );
 
 export const streamLinks = pgTable(
@@ -567,9 +606,7 @@ export const resultSubmissions = pgTable(
     matchId: uuid('match_id')
       .notNull()
       .references(() => matches.id, { onDelete: 'cascade' }),
-    teamId: uuid('team_id')
-      .notNull()
-      .references(() => teams.id, { onDelete: 'cascade' }),
+    teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }),
     reportedBy: uuid('reported_by')
       .notNull()
       .references(() => users.id),
@@ -673,10 +710,7 @@ export const rulings = pgTable(
       .$type<{ winnerId?: string; homeScore?: number; awayScore?: number; draw?: boolean }>()
       .notNull(),
     rationale: text('rationale').notNull(),
-    consideredEvidence: jsonb('considered_evidence')
-      .$type<string[]>()
-      .notNull()
-      .default([]),
+    consideredEvidence: jsonb('considered_evidence').$type<string[]>().notNull().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [uniqueIndex('rulings_dispute_unique').on(table.disputeId)],

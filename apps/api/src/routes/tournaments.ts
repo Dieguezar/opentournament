@@ -13,11 +13,7 @@ import {
 import { updateTournamentSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
-import {
-  getTournament,
-  isOrgMember,
-  isTournamentAdmin,
-} from '../services/permissions.js';
+import { getTournament, isOrgMember, isTournamentAdmin } from '../services/permissions.js';
 import { emitTournamentEvent } from '../services/realtime.js';
 import { sendDiscordWebhook } from '../services/discord.js';
 import { resolveTournamentCreationRequest } from '../services/tournament-creation.js';
@@ -201,6 +197,12 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
         error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
       });
     }
+    const tournament = await getTournament(db, id);
+    if (!tournament) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'El torneo no existe' },
+      });
+    }
     const body = updateTournamentSchema.parse(request.body);
     await db
       .update(tournaments)
@@ -209,15 +211,23 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
         description: body.description === undefined ? undefined : body.description,
         rules: body.rules === undefined ? undefined : body.rules,
         visibility: body.visibility,
-        startsAt: body.startsAt === undefined ? undefined : body.startsAt ? new Date(body.startsAt) : null,
+        startsAt:
+          body.startsAt === undefined ? undefined : body.startsAt ? new Date(body.startsAt) : null,
         endsAt: body.endsAt === undefined ? undefined : body.endsAt ? new Date(body.endsAt) : null,
+        settings:
+          body.reportingMode === undefined
+            ? undefined
+            : { ...tournament.settings, reportingMode: body.reportingMode },
+        updatedAt: new Date(),
       })
       .where(eq(tournaments.id, id));
     await db.insert(auditLogs).values({
+      organizationId: tournament.organizationId,
       actorId: request.user!.id,
       action: 'tournament.updated',
       resourceType: 'tournament',
       resourceId: id,
+      after: body.reportingMode ? { reportingMode: body.reportingMode } : undefined,
     });
     return reply.send({ ok: true });
   });

@@ -1,0 +1,105 @@
+.manager,
+.block {
+  display: grid;
+  gap: 1rem;
+}
+
+.manager {
+  margin-top: 1rem;
+}
+
+.block {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.block:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.block h3,
+.block p,
+.feedback p {
+  margin: 0;
+}
+
+.block p,
+.block small {
+  color: var(--text-muted);
+}
+
+.createRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.createRow label,
+.block > label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.secretBox {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
+  border-radius: 5px;
+  background: var(--primary-soft);
+}
+
+.secretBox strong,
+.secretBox small {
+  grid-column: 1 / -1;
+}
+
+.secretBox input {
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.passList {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passList li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.passList span,
+.passList small {
+  display: block;
+}
+
+.success {
+  color: var(--success);
+}
+
+@media (max-width: 680px) {
+  .createRow,
+  .secretBox {
+    grid-template-columns: 1fr;
+  }
+
+  .secretBox strong,
+  .secretBox small {
+    grid-column: auto;
+  }
+}

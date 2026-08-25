@@ -59,6 +59,20 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/teams/mine', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
+    if (request.participantAccess) {
+      const rows = await db
+        .select({
+          id: teams.id,
+          organizationId: teams.organizationId,
+          name: teams.name,
+          tag: teams.tag,
+          captainId: teams.captainId,
+          gameAdapterKey: teams.gameAdapterKey,
+        })
+        .from(teams)
+        .where(and(eq(teams.id, request.participantAccess.teamId), isNull(teams.deletedAt)));
+      return reply.send({ teams: rows });
+    }
     const rows = await db
       .selectDistinct({
         id: teams.id,
@@ -119,15 +133,13 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
         .select({ role: teamMembers.role })
         .from(teamMembers)
         .where(eq(teamMembers.teamId, teamId));
-      const capacityIssue = getMemberCapacityIssue(
-        team.gameAdapterKey,
-        { ...countRosterRoles(roster), requestedRole: body.role },
-      );
+      const capacityIssue = getMemberCapacityIssue(team.gameAdapterKey, {
+        ...countRosterRoles(roster),
+        requestedRole: body.role,
+      });
       if (capacityIssue) return { kind: 'incompatible' as const, issue: capacityIssue };
 
-      await transaction
-        .insert(teamMembers)
-        .values({ teamId, userId: user.id, role: body.role });
+      await transaction.insert(teamMembers).values({ teamId, userId: user.id, role: body.role });
       return { kind: 'created' as const };
     });
 

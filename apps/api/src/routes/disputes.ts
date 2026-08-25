@@ -32,17 +32,23 @@ import { tournamentAdminIds } from '../services/checkin.js';
 import { emitTournamentEvent } from '../services/realtime.js';
 import { sendDiscordWebhook } from '../services/discord.js';
 
-async function canAccessDispute(disputeId: string, userId: string): Promise<boolean> {
-  const [dispute] = await db
-    .select()
-    .from(disputes)
-    .where(eq(disputes.id, disputeId))
-    .limit(1);
+async function canAccessDispute(
+  disputeId: string,
+  userId: string,
+  participantAccess?: { tournamentId: string; teamId: string },
+): Promise<boolean> {
+  const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
   if (!dispute) return false;
   const ctx = await loadMatchContext(db, dispute.matchId);
   if (!ctx) return false;
   if (await isTournamentAdmin(db, ctx.tournament.id, userId)) return true;
   if (dispute.assigneeId === userId) return true;
+  if (
+    participantAccess?.tournamentId === ctx.tournament.id &&
+    [ctx.home?.teamId, ctx.away?.teamId].includes(participantAccess.teamId)
+  ) {
+    return true;
+  }
   for (const participant of [ctx.home, ctx.away]) {
     if (participant && (await isTeamCaptain(db, participant.teamId, userId))) return true;
   }
@@ -64,12 +70,21 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
         isCaptain = true;
       }
     }
-    if (!isCaptain && body.reason !== 'system') {
+    const hasParticipantAccess =
+      request.participantAccess?.tournamentId === ctx.tournament.id &&
+      [ctx.home?.teamId, ctx.away?.teamId].includes(request.participantAccess.teamId);
+    if (!isCaptain && !hasParticipantAccess && body.reason !== 'system') {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo los capitanes abren disputas' },
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Sólo los participantes de la partida pueden abrir disputas',
+        },
       });
     }
-    if (body.reason === 'system' && !(await isTournamentAdmin(db, ctx.tournament.id, request.user!.id))) {
+    if (
+      body.reason === 'system' &&
+      !(await isTournamentAdmin(db, ctx.tournament.id, request.user!.id))
+    ) {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: 'Solo el staff abre disputas de sistema' },
       });
@@ -128,9 +143,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       'dispute.opened',
       { matchId: body.matchId, tournamentId: outcome.context.tournament.id },
     );
-    void sendDiscordWebhook(
-      `⚠️ Nueva disputa abierta en **${outcome.context.tournament.name}**.`,
-    );
+    void sendDiscordWebhook(`⚠️ Nueva disputa abierta en **${outcome.context.tournament.name}**.`);
     return reply.status(201).send({ dispute: outcome.dispute });
   });
 
@@ -172,16 +185,12 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
   app.get('/disputes/:disputeId', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     const { disputeId } = request.params as { disputeId: string };
-    if (!(await canAccessDispute(disputeId, request.user!.id))) {
+    if (!(await canAccessDispute(disputeId, request.user!.id, request.participantAccess))) {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: 'Sin acceso a esta disputa' },
       });
     }
-    const [dispute] = await db
-      .select()
-      .from(disputes)
-      .where(eq(disputes.id, disputeId))
-      .limit(1);
+    const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     if (!dispute) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
@@ -202,8 +211,8 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       .where(eq(rulings.disputeId, disputeId))
       .limit(1);
     const ctx = await loadMatchContext(db, dispute.matchId);
-    const teamIds = [ctx?.home?.teamId, ctx?.away?.teamId].filter(
-      (id): id is string => Boolean(id),
+    const teamIds = [ctx?.home?.teamId, ctx?.away?.teamId].filter((id): id is string =>
+      Boolean(id),
     );
     const teamRows = teamIds.length
       ? await db.select().from(teams).where(inArray(teams.id, teamIds))
@@ -229,7 +238,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
   app.post('/disputes/:disputeId/messages', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     const { disputeId } = request.params as { disputeId: string };
-    if (!(await canAccessDispute(disputeId, request.user!.id))) {
+    if (!(await canAccessDispute(disputeId, request.user!.id, request.participantAccess))) {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: 'Sin acceso a esta disputa' },
       });
@@ -245,11 +254,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
   app.patch('/disputes/:disputeId/assignee', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     const { disputeId } = request.params as { disputeId: string };
-    const [dispute] = await db
-      .select()
-      .from(disputes)
-      .where(eq(disputes.id, disputeId))
-      .limit(1);
+    const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     if (!dispute) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
@@ -279,11 +284,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
   app.post('/disputes/:disputeId/resolve', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     const { disputeId } = request.params as { disputeId: string };
-    const [dispute] = await db
-      .select()
-      .from(disputes)
-      .where(eq(disputes.id, disputeId))
-      .limit(1);
+    const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     if (!dispute) {
       return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
     }
@@ -384,11 +385,12 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       disputeId,
       winnerId,
     });
-    const teamIds = [ctx.home?.teamId, ctx.away?.teamId].filter(
-      (id): id is string => Boolean(id),
-    );
+    const teamIds = [ctx.home?.teamId, ctx.away?.teamId].filter((id): id is string => Boolean(id));
     const captainRows = teamIds.length
-      ? await db.select({ captainId: teams.captainId }).from(teams).where(inArray(teams.id, teamIds))
+      ? await db
+          .select({ captainId: teams.captainId })
+          .from(teams)
+          .where(inArray(teams.id, teamIds))
       : [];
     await notify(
       db,

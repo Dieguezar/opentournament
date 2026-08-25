@@ -2,9 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   addTeamMemberSchema,
   assignTeamGameAdapterSchema,
+  createParticipantAccessPassSchema,
   createTeamSchema,
   createTournamentSchema,
+  exchangeParticipantAccessPassSchema,
   reportResultSchema,
+  tournamentSettingsSchema,
+  updateTournamentSchema,
 } from './index.js';
 
 const organizationId = '550e8400-e29b-41d4-a716-446655440000';
@@ -100,18 +104,12 @@ describe('validación de plantillas por juego', () => {
   it.each([
     ['starters vacíos', { ...smashRules, starters: [] }],
     ['counterpicks vacíos', { ...smashRules, counterpicks: [] }],
-    [
-      'starters duplicados',
-      { ...smashRules, starters: ['Battlefield', 'battlefield'] },
-    ],
+    ['starters duplicados', { ...smashRules, starters: ['Battlefield', 'battlefield'] }],
     [
       'starters duplicados con whitespace interno distinto',
       { ...smashRules, starters: ['Final Destination', 'Final  Destination'] },
     ],
-    [
-      'counterpicks duplicados',
-      { ...smashRules, counterpicks: ['Smashville', ' smashville '] },
-    ],
+    ['counterpicks duplicados', { ...smashRules, counterpicks: ['Smashville', ' smashville '] }],
     [
       'escenarios solapados',
       { ...smashRules, counterpicks: ['Kalos Pokémon League', 'BATTLEFIELD'] },
@@ -287,21 +285,22 @@ describe('validación del roster por juego', () => {
       email: 'player@example.com',
       role: 'member',
     });
-    expect(
-      addTeamMemberSchema.parse({ email: 'sub@example.com', role: 'substitute' }),
-    ).toEqual({ email: 'sub@example.com', role: 'substitute' });
+    expect(addTeamMemberSchema.parse({ email: 'sub@example.com', role: 'substitute' })).toEqual({
+      email: 'sub@example.com',
+      role: 'substitute',
+    });
     expect(
       addTeamMemberSchema.safeParse({ email: 'captain@example.com', role: 'captain' }).success,
     ).toBe(false);
   });
 
   it('solo permite asignar un adaptador competitivo concreto a un equipo genérico', () => {
-    expect(
-      assignTeamGameAdapterSchema.parse({ gameAdapterKey: 'smash_ultimate' }),
-    ).toEqual({ gameAdapterKey: 'smash_ultimate' });
-    expect(
-      assignTeamGameAdapterSchema.safeParse({ gameAdapterKey: 'generic' }).success,
-    ).toBe(false);
+    expect(assignTeamGameAdapterSchema.parse({ gameAdapterKey: 'smash_ultimate' })).toEqual({
+      gameAdapterKey: 'smash_ultimate',
+    });
+    expect(assignTeamGameAdapterSchema.safeParse({ gameAdapterKey: 'generic' }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -362,5 +361,63 @@ describe('detalle de games en reportes de Smash Ultimate', () => {
         })),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('acceso sin cuenta y reporte de resultados', () => {
+  it('usa reporte bilateral como opción segura por defecto', () => {
+    expect(tournamentSettingsSchema.parse({})).toMatchObject({
+      reportingMode: 'bilateral',
+    });
+  });
+
+  it.each(['bilateral', 'winner_reports', 'staff_only'] as const)(
+    'acepta el modo de reporte %s',
+    (reportingMode) => {
+      expect(tournamentSettingsSchema.safeParse({ reportingMode }).success).toBe(true);
+    },
+  );
+
+  it('rechaza modos de reporte desconocidos', () => {
+    expect(tournamentSettingsSchema.safeParse({ reportingMode: 'anyone_reports' }).success).toBe(
+      false,
+    );
+  });
+
+  it('permite cambiar sólo el modo de reporte de un torneo existente', () => {
+    expect(updateTournamentSchema.parse({ reportingMode: 'staff_only' })).toEqual({
+      reportingMode: 'staff_only',
+    });
+  });
+
+  it('valida el equipo y la duración de un pase de participante', () => {
+    expect(
+      createParticipantAccessPassSchema.parse({
+        teamId: homeTeamId,
+        expiresInHours: '48',
+      }),
+    ).toEqual({ teamId: homeTeamId, expiresInHours: 48 });
+
+    expect(
+      createParticipantAccessPassSchema.safeParse({
+        teamId: 'no-es-un-uuid',
+        expiresInHours: 48,
+      }).success,
+    ).toBe(false);
+    expect(
+      createParticipantAccessPassSchema.safeParse({
+        teamId: homeTeamId,
+        expiresInHours: 24 * 366,
+      }).success,
+    ).toBe(false);
+  });
+
+  it('normaliza un token de acceso y rechaza tokens demasiado cortos', () => {
+    const token = 'a'.repeat(64);
+
+    expect(exchangeParticipantAccessPassSchema.parse({ token: `  ${token}  ` })).toEqual({
+      token,
+    });
+    expect(exchangeParticipantAccessPassSchema.safeParse({ token: 'corto' }).success).toBe(false);
   });
 });

@@ -28,6 +28,7 @@
 | --- | --- | --- |
 | POST | `/auth/register` | Registro con correo + contraseña |
 | POST | `/auth/login` | Inicio de sesión (correo) |
+| POST | `/auth/participant-pass` | Canjea un pase privado por una sesión restringida |
 | POST | `/auth/logout` | Cierre de sesión |
 | POST | `/auth/forgot-password` | Solicita recuperación |
 | POST | `/auth/reset-password` | Resetea contraseña con token |
@@ -74,6 +75,8 @@
 | GET | `/tournaments/:tournamentId/staff` | Público (roles visibles) |
 | POST | `/tournaments/:tournamentId/staff` | Org admin / torneo admin |
 | DELETE | `/tournaments/:tournamentId/staff/:userId` | Org admin / torneo admin |
+| GET/POST | `/tournaments/:tournamentId/access-passes` | Torneo admin; lista metadatos o crea/regenera un pase |
+| DELETE | `/tournaments/:tournamentId/access-passes/:passId` | Torneo admin; revoca el pase y sus sesiones |
 
 ### Inscripciones
 
@@ -109,7 +112,7 @@
 
 | Método | Ruta | Roles |
 | --- | --- | --- |
-| POST | `/matches/:matchId/results` | Capitán de equipo participante |
+| POST | `/matches/:matchId/results` | Capitán, pase del participante o staff, según `settings.reportingMode` |
 | GET | `/matches/:matchId/results` | Staff y partes |
 | POST | `/results/:resultId/evidence` | Capitán (sube captura/link) |
 | GET | `/results/:resultId/evidence` | Staff y partes |
@@ -119,7 +122,7 @@
 
 | Método | Ruta | Roles |
 | --- | --- | --- |
-| POST | `/disputes` | Capitán o sistema (diferencia de reportes) |
+| POST | `/disputes` | Capitán, pase del participante o sistema (diferencia de reportes) |
 | GET | `/disputes/:disputeId` | Staff, árbitros y partes |
 | POST | `/disputes/:disputeId/messages` | Partes y staff |
 | PATCH | `/disputes/:disputeId/assignee` | Torneo admin (asigna árbitro) |
