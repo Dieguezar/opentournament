@@ -1,11 +1,6 @@
 import { count, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import {
-  auditLogs,
-  evidence,
-  resultSubmissions,
-  teams,
-} from '@opentournament/database';
+import { auditLogs, evidence, resultSubmissions, teams } from '@opentournament/database';
 import { addEvidenceSchema, presignSchema } from '@opentournament/validation';
 import { env } from '../config.js';
 import { db } from '../db.js';
