@@ -4,7 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { adapters, getAdapter } from '@opentournament/game-adapters';
-import type { GameAdapterKey, OrganizationSummary } from '@opentournament/shared-types';
+import type {
+  GameAdapterKey,
+  OrganizationSummary,
+  ResultReportingMode,
+} from '@opentournament/shared-types';
 import { apiClient, ApiClientError } from '@/lib/api';
 import {
   applyGameTemplateSelection,
@@ -45,6 +49,7 @@ export default function NewTournamentPage() {
   const [capacity, setCapacity] = useState('16');
   const [bo, setBo] = useState('3');
   const [manualApproval, setManualApproval] = useState(false);
+  const [reportingMode, setReportingMode] = useState<ResultReportingMode>('bilateral');
   const [grandFinalReset, setGrandFinalReset] = useState(false);
   const [templateKey, setTemplateKey] = useState<string | null>(null);
   const [templateVersion, setTemplateVersion] = useState<number | null>(null);
@@ -114,19 +119,14 @@ export default function NewTournamentPage() {
     const selectedTemplate = getAdapter(gameAdapterKey).tournamentTemplate;
     if (!selectedTemplate) return;
 
-    updateTemplateFormState(
-      restoreGameTemplateDefaults(getTemplateFormState(), selectedTemplate),
-    );
+    updateTemplateFormState(restoreGameTemplateDefaults(getTemplateFormState(), selectedTemplate));
     setRuleErrors({});
     setError(null);
   }
 
   function clearRuleErrors(...fields: SmashUltimateRuleField[]) {
     setRuleErrors((currentErrors) =>
-      fields.reduce(
-        (nextErrors, field) => ({ ...nextErrors, [field]: undefined }),
-        currentErrors,
-      ),
+      fields.reduce((nextErrors, field) => ({ ...nextErrors, [field]: undefined }), currentErrors),
     );
   }
 
@@ -176,6 +176,7 @@ export default function NewTournamentPage() {
           checkinConfig: templateKey ? selectedTemplate?.defaults.checkinConfig : undefined,
           settings: {
             grandFinalReset,
+            reportingMode,
             presencial: templateKey
               ? (selectedTemplate?.defaults.settings.presencial ?? false)
               : false,
@@ -333,11 +334,7 @@ export default function NewTournamentPage() {
                 La configuración estándar sirve como punto de partida; tus datos de identidad no
                 cambian al restaurarla.
               </p>
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={restoreStandardTemplate}
-              >
+              <button className="button-secondary" type="button" onClick={restoreStandardTemplate}>
                 Restaurar plantilla estándar
               </button>
             </div>
@@ -447,9 +444,10 @@ export default function NewTournamentPage() {
                   <option value="modified_dsr">DSR modificado</option>
                   <option value="full_dsr">DSR completo</option>
                 </select>
-                <p className={styles.help}>Define si se restringe volver a escenarios ya ganados.</p>
+                <p className={styles.help}>
+                  Define si se restringe volver a escenarios ya ganados.
+                </p>
               </div>
-
             </div>
 
             <details className={styles.advancedRules} ref={advancedRulesRef}>
@@ -724,6 +722,27 @@ export default function NewTournamentPage() {
                 </small>
               </span>
             </label>
+          </div>
+          <div className={styles.formGrid}>
+            <div className={styles.fieldWide}>
+              <label htmlFor="reporting-mode">Quién confirma los resultados</label>
+              <select
+                id="reporting-mode"
+                value={reportingMode}
+                onChange={(event) => setReportingMode(event.target.value as ResultReportingMode)}
+              >
+                <option value="bilateral">Ambos participantes confirman</option>
+                <option value="winner_reports">El ganador reporta</option>
+                <option value="staff_only">Sólo el staff reporta</option>
+              </select>
+              <p className={styles.help}>
+                {reportingMode === 'bilateral'
+                  ? 'Recomendado: si los dos reportes coinciden, el bracket avanza automáticamente.'
+                  : reportingMode === 'winner_reports'
+                    ? 'Más rápido: un solo reporte confirma el resultado, pero requiere confianza entre participantes.'
+                    : 'Máximo control: participantes y capitanes no pueden cargar resultados.'}
+              </p>
+            </div>
           </div>
         </fieldset>
 

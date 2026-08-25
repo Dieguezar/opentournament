@@ -7,6 +7,7 @@ import { shouldShowRegistrationDecisionActions } from '@/lib/presentation';
 
 export interface RegistrationView {
   id: string;
+  teamId: string;
   status: string;
   teamName: string;
   teamTag: string | null;
@@ -47,7 +48,12 @@ export function RegistrationActions({
       <button type="button" className="button button-secondary" onClick={() => decide('rejected')}>
         Rechazar
       </button>
-      {error && <span className="error" role="alert"> {error}</span>}
+      {error && (
+        <span className="error" role="alert">
+          {' '}
+          {error}
+        </span>
+      )}
     </>
   );
 }
