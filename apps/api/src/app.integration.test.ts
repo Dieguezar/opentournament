@@ -1731,4 +1731,128 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       await app.close();
     }
   });
+
+  it(
+    'crea, canjea y revoca un pase de participante sin cuenta',
+    { timeout: INTEGRATION_TEST_TIMEOUT_MS },
+    async () => {
+      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+      const { runMigrations, seedDemoData } = await import('@opentournament/database');
+      const { initServer } = await import('./app.js');
+
+      await runMigrations(process.env.TEST_DATABASE_URL!);
+      const demo = await seedDemoData((await import('./db.js')).db);
+      const app = await initServer(false);
+
+      try {
+        const adminCsrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+        const adminCsrf = adminCsrfRes.json<{ token: string }>().token;
+        const adminCsrfCookie = adminCsrfRes.cookies.find((cookie) => cookie.name === 'csrf')!;
+        const loginRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/login',
+          payload: {
+            email: 'admin@opentournament.local',
+            password: 'demo-password-123',
+          },
+          headers: {
+            'x-csrf-token': adminCsrf,
+            cookie: `csrf=${adminCsrfCookie.value}`,
+          },
+        });
+        const adminSession = loginRes.cookies.find((cookie) => cookie.name === 'session')!;
+        const adminCookies = `session=${adminSession.value}; csrf=${adminCsrfCookie.value}`;
+
+        const createRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${demo.tournamentId}/access-passes`,
+          payload: {
+            teamId: '00000000-0000-4000-8000-000000000201',
+            expiresInHours: 48,
+          },
+          headers: { 'x-csrf-token': adminCsrf, cookie: adminCookies },
+        });
+        expect(createRes.statusCode).toBe(201);
+        const created = createRes.json<{
+          accessPass: { id: string; teamId: string };
+          token: string;
+          path: string;
+        }>();
+        expect(created.accessPass.teamId).toBe('00000000-0000-4000-8000-000000000201');
+        expect(created.path).toBe(`/access#token=${created.token}`);
+
+        const participantCsrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+        const participantCsrf = participantCsrfRes.json<{ token: string }>().token;
+        const participantCsrfCookie = participantCsrfRes.cookies.find(
+          (cookie) => cookie.name === 'csrf',
+        )!;
+        const exchangeRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/participant-pass',
+          payload: { token: created.token },
+          headers: {
+            'x-csrf-token': participantCsrf,
+            cookie: `csrf=${participantCsrfCookie.value}`,
+          },
+        });
+        expect(exchangeRes.statusCode).toBe(200);
+        expect(exchangeRes.json()).toMatchObject({
+          tournament: { id: demo.tournamentId, slug: 'copa-nexo-demo' },
+          team: { id: '00000000-0000-4000-8000-000000000201' },
+        });
+        const participantSession = exchangeRes.cookies.find((cookie) => cookie.name === 'session')!;
+        const participantCookies = `session=${participantSession.value}; csrf=${participantCsrfCookie.value}`;
+
+        const mineRes = await app.inject({
+          method: 'GET',
+          url: '/api/v1/teams/mine',
+          headers: { cookie: participantCookies },
+        });
+        expect(mineRes.statusCode).toBe(200);
+        expect(mineRes.json<{ teams: Array<{ id: string }> }>().teams).toEqual([
+          expect.objectContaining({ id: '00000000-0000-4000-8000-000000000201' }),
+        ]);
+
+        const reportRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/matches/00000000-0000-4000-8000-000000000433/results',
+          payload: { winnerTeamId: '00000000-0000-4000-8000-000000000201' },
+          headers: {
+            'x-csrf-token': participantCsrf,
+            cookie: participantCookies,
+          },
+        });
+        expect(reportRes.statusCode).toBe(201);
+        expect(reportRes.json()).toMatchObject({ confirmed: false, waiting: true });
+
+        const revokeRes = await app.inject({
+          method: 'DELETE',
+          url: `/api/v1/tournaments/${demo.tournamentId}/access-passes/${created.accessPass.id}`,
+          headers: { 'x-csrf-token': adminCsrf, cookie: adminCookies },
+        });
+        expect(revokeRes.statusCode).toBe(204);
+
+        const afterRevokeRes = await app.inject({
+          method: 'GET',
+          url: '/api/v1/teams/mine',
+          headers: { cookie: participantCookies },
+        });
+        expect(afterRevokeRes.statusCode).toBe(401);
+
+        const staffOverrideRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/matches/00000000-0000-4000-8000-000000000433/results',
+          payload: {
+            winnerTeamId: '00000000-0000-4000-8000-000000000201',
+            staffOverride: true,
+          },
+          headers: { 'x-csrf-token': adminCsrf, cookie: adminCookies },
+        });
+        expect(staffOverrideRes.statusCode).toBe(200);
+        expect(staffOverrideRes.json()).toMatchObject({ confirmed: true });
+      } finally {
+        await app.close();
+      }
+    },
+  );
 });
