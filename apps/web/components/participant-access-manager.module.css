@@ -46,23 +46,49 @@
 
 .secretBox {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 0.6rem;
-  padding: 0.85rem;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem;
   border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
   border-radius: 5px;
   background: var(--primary-soft);
 }
 
-.secretBox strong,
-.secretBox small {
-  grid-column: 1 / -1;
+.qrFrame {
+  display: grid;
+  place-items: center;
+  padding: 0.3rem;
+  border-radius: 4px;
+  background: #ffffff;
 }
 
-.secretBox input {
+.qrCode {
+  display: block;
+  width: min(192px, 100%);
+  height: auto;
+}
+
+.secretContent {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.secretContent p,
+.secretContent small {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.secretContent input {
   min-width: 0;
   margin: 0;
   font-family: var(--font-geist-mono), monospace;
+}
+
+.secretContent button {
+  justify-self: start;
 }
 
 .passList {
@@ -98,8 +124,7 @@
     grid-template-columns: 1fr;
   }
 
-  .secretBox strong,
-  .secretBox small {
-    grid-column: auto;
+  .qrFrame {
+    justify-self: center;
   }
 }
