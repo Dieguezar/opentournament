@@ -1,10 +1,19 @@
 import { and, eq, isNull, or } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import { auditLogs, teamMembers, teams, users } from '@opentournament/database';
-import { createTeamSchema } from '@opentournament/validation';
+import {
+  addTeamMemberSchema,
+  assignTeamGameAdapterSchema,
+  createTeamSchema,
+} from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { isOrgMember, isTeamCaptain } from '../services/permissions.js';
+import {
+  countRosterRoles,
+  getMemberCapacityIssue,
+  getRosterCompatibilityIssue,
+} from '../services/team-game-compatibility.js';
 
 export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
   app.post('/teams', async (request, reply) => {
@@ -24,7 +33,7 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
         tag: body.tag ?? null,
         captainId: request.user!.id,
         isPermanent: true,
-        gameAdapterKey: body.gameAdapterKey ?? null,
+        gameAdapterKey: body.gameAdapterKey ?? 'generic',
       })
       .returning();
     if (!team) {
@@ -78,26 +87,149 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
         error: { code: 'FORBIDDEN', message: 'Solo el capitán gestiona el roster' },
       });
     }
-    const body = request.body as { email?: string };
-    if (!body.email) {
-      return reply.status(400).send({
-        error: { code: 'VALIDATION_ERROR', message: 'email es obligatorio' },
-      });
-    }
+    const body = addTeamMemberSchema.parse(request.body);
     const [user] = await db
       .select({ id: users.id })
       .from(users)
-      .where(eq(users.email, body.email.toLowerCase()))
+      .where(eq(users.email, body.email))
       .limit(1);
     if (!user) {
       return reply.status(404).send({
         error: { code: 'USER_NOT_FOUND', message: 'No existe una cuenta con ese correo' },
       });
     }
-    await db
-      .insert(teamMembers)
-      .values({ teamId, userId: user.id, role: 'member' })
-      .onConflictDoNothing();
+
+    const outcome = await db.transaction(async (transaction) => {
+      const [team] = await transaction
+        .select({ gameAdapterKey: teams.gameAdapterKey })
+        .from(teams)
+        .where(and(eq(teams.id, teamId), isNull(teams.deletedAt)))
+        .limit(1)
+        .for('update');
+      if (!team) return { kind: 'not_found' as const };
+
+      const [existingMember] = await transaction
+        .select({ id: teamMembers.id })
+        .from(teamMembers)
+        .where(and(eq(teamMembers.teamId, teamId), eq(teamMembers.userId, user.id)))
+        .limit(1);
+      if (existingMember) return { kind: 'unchanged' as const };
+
+      const roster = await transaction
+        .select({ role: teamMembers.role })
+        .from(teamMembers)
+        .where(eq(teamMembers.teamId, teamId));
+      const capacityIssue = getMemberCapacityIssue(
+        team.gameAdapterKey,
+        { ...countRosterRoles(roster), requestedRole: body.role },
+      );
+      if (capacityIssue) return { kind: 'incompatible' as const, issue: capacityIssue };
+
+      await transaction
+        .insert(teamMembers)
+        .values({ teamId, userId: user.id, role: body.role });
+      return { kind: 'created' as const };
+    });
+
+    if (outcome.kind === 'not_found') {
+      return reply.status(404).send({
+        error: { code: 'TEAM_NOT_FOUND', message: 'El equipo no existe' },
+      });
+    }
+    if (outcome.kind === 'incompatible') {
+      return reply.status(outcome.issue.statusCode).send({
+        error: {
+          code: outcome.issue.code,
+          message: outcome.issue.message,
+          details: outcome.issue.details,
+        },
+      });
+    }
     return reply.status(201).send({ ok: true });
+  });
+
+  app.patch('/teams/:teamId/game-adapter', async (request, reply) => {
+    if (!requireAuth(request, reply)) return;
+    const { teamId } = request.params as { teamId: string };
+    const body = assignTeamGameAdapterSchema.parse(request.body);
+
+    const outcome = await db.transaction(async (transaction) => {
+      const [team] = await transaction
+        .select()
+        .from(teams)
+        .where(and(eq(teams.id, teamId), isNull(teams.deletedAt)))
+        .limit(1)
+        .for('update');
+      if (!team) return { kind: 'not_found' as const };
+      if (team.captainId !== request.user!.id) return { kind: 'forbidden' as const };
+      if (
+        team.gameAdapterKey &&
+        team.gameAdapterKey !== 'generic' &&
+        team.gameAdapterKey !== body.gameAdapterKey
+      ) {
+        return { kind: 'locked' as const, currentGameAdapterKey: team.gameAdapterKey };
+      }
+      if (team.gameAdapterKey === body.gameAdapterKey) {
+        return { kind: 'updated' as const, team };
+      }
+
+      const roster = await transaction
+        .select({ role: teamMembers.role })
+        .from(teamMembers)
+        .where(eq(teamMembers.teamId, teamId));
+      const compatibilityIssue = getRosterCompatibilityIssue(
+        body.gameAdapterKey,
+        countRosterRoles(roster),
+      );
+      if (compatibilityIssue) {
+        return { kind: 'incompatible' as const, issue: compatibilityIssue };
+      }
+
+      const [updatedTeam] = await transaction
+        .update(teams)
+        .set({ gameAdapterKey: body.gameAdapterKey, updatedAt: new Date() })
+        .where(eq(teams.id, teamId))
+        .returning();
+      if (!updatedTeam) return { kind: 'not_found' as const };
+
+      await transaction.insert(auditLogs).values({
+        organizationId: team.organizationId,
+        actorId: request.user!.id,
+        action: 'team.game_adapter_assigned',
+        resourceType: 'team',
+        resourceId: team.id,
+      });
+      return { kind: 'updated' as const, team: updatedTeam };
+    });
+
+    if (outcome.kind === 'not_found') {
+      return reply.status(404).send({
+        error: { code: 'TEAM_NOT_FOUND', message: 'El equipo no existe' },
+      });
+    }
+    if (outcome.kind === 'forbidden') {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'Solo el capitán configura el juego' },
+      });
+    }
+    if (outcome.kind === 'locked') {
+      return reply.status(409).send({
+        error: {
+          code: 'TEAM_GAME_LOCKED',
+          message: 'El equipo ya está configurado para otro juego',
+          details: { currentGameAdapterKey: outcome.currentGameAdapterKey },
+        },
+      });
+    }
+    if (outcome.kind === 'incompatible') {
+      return reply.status(outcome.issue.statusCode).send({
+        error: {
+          code: outcome.issue.code,
+          message: outcome.issue.message,
+          details: outcome.issue.details,
+        },
+      });
+    }
+    return reply.send({ team: outcome.team });
   });
 }

@@ -2,7 +2,7 @@ import {
   buildBracketWorkspacePresentation,
   type BracketMatchNode,
 } from '@opentournament/bracket-ui';
-import type { MatchStatus } from '@opentournament/shared-types';
+import type { MatchStatus, TournamentSettings } from '@opentournament/shared-types';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import {
@@ -11,6 +11,7 @@ import {
 } from '@/components/bracket-workspace';
 import styles from '@/components/bracket-workspace.module.css';
 import { RegistrationActions, type RegistrationView } from '@/components/registration-actions';
+import { RulesetSummary } from '@/components/ruleset-summary';
 import { TournamentActions } from '@/components/tournament-actions';
 import {
   formatGameAdapter,
@@ -32,6 +33,7 @@ interface TournamentView {
   gameAdapterKey: string;
   startsAt: string | null;
   seriesConfig: { bo?: number } | null;
+  settings: TournamentSettings | null;
 }
 
 interface MatchResultView {
@@ -176,10 +178,11 @@ function nextActionLabel(
   nextMatch: BracketMatchNode | null,
   workspaceMatches: readonly BracketWorkspaceMatch[],
   canManage: boolean,
+  matchLabel: string,
 ): string {
   if (!nextMatch) return 'Ver bracket';
   const details = workspaceMatches.find((match) => match.id === nextMatch.id);
-  if (!details) return canManage ? 'Gestionar partida' : 'Ver partida';
+  if (!details) return canManage ? `Gestionar ${matchLabel}` : `Ver ${matchLabel}`;
   const action = canManage ? 'Gestionar' : 'Ver';
   return `${action} ${details.roundName.toLocaleLowerCase('es')}`;
 }
@@ -214,6 +217,7 @@ export default async function TournamentAdminPage({
   const presentation = buildBracketWorkspacePresentation(workspaceMatches);
   const tournamentStatus = getTournamentStatus(tournament.status);
   const seriesBestOf = tournament.seriesConfig?.bo ?? 1;
+  const isSmash = tournament.gameAdapterKey === 'smash_ultimate';
   const publicTeamCount = new Set(
     workspaceMatches.flatMap((match) =>
       [match.home?.id, match.away?.id].filter((teamId): teamId is string => Boolean(teamId)),
@@ -222,7 +226,7 @@ export default async function TournamentAdminPage({
   const teamCount = isAdmin ? participants.length : publicTeamCount;
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} data-game={tournament.gameAdapterKey}>
       <nav className={styles.utilityLinks} aria-label="Navegación del torneo">
         <Link href="/dashboard">Panel de torneos</Link>
         <Link href={`/t/${tournament.slug}`}>Página pública</Link>
@@ -238,7 +242,9 @@ export default async function TournamentAdminPage({
           <p className={styles.meta}>
             <span>{formatGameAdapter(tournament.gameAdapterKey)}</span>
             <span>{tournamentFormatLabel(tournament.format)}</span>
-            <span>Cupo {tournament.capacity}</span>
+            <span>
+              Cupo {tournament.capacity} {isSmash ? 'jugadores' : 'equipos'}
+            </span>
             <span>BO{seriesBestOf}</span>
             {tournament.startsAt && (
               <span>
@@ -253,13 +259,13 @@ export default async function TournamentAdminPage({
         <div className={styles.metrics} aria-label="Resumen del torneo">
           <div className={styles.metric}>
             <strong>{teamCount}</strong>
-            <span>equipos</span>
+            <span>{isSmash ? 'jugadores' : 'equipos'}</span>
           </div>
           <div className={styles.metric}>
             <strong>
               {presentation.metrics.finalizedMatches} / {presentation.metrics.totalMatches}
             </strong>
-            <span>finalizadas</span>
+            <span>{isSmash ? 'sets finalizados' : 'finalizadas'}</span>
           </div>
           {isAdmin && (
             <div className={styles.metric}>
@@ -273,31 +279,43 @@ export default async function TournamentAdminPage({
           className={styles.primaryAction}
           href={presentation.metrics.totalMatches > 0 ? '#match-details' : '#bracket'}
         >
-          {nextActionLabel(presentation.nextActionableMatch, workspaceMatches, isAdmin)}
+          {nextActionLabel(
+            presentation.nextActionableMatch,
+            workspaceMatches,
+            isAdmin,
+            isSmash ? 'set' : 'partida',
+          )}
         </a>
       </header>
 
       <nav className={styles.tabs} aria-label="Secciones del torneo">
         <a href="#overview">Resumen</a>
         {isAdmin && <a href="#participants">Participantes</a>}
-        <a href={presentation.metrics.totalMatches > 0 ? '#match-details' : '#bracket'}>
-          Partidas
-        </a>
-        <a href="#bracket">Bracket</a>
+        <a href="#bracket">{isSmash ? 'Sets y bracket' : 'Partidas y bracket'}</a>
         {isAdmin && <a href="#settings">Configuración</a>}
       </nav>
+
+      <RulesetSummary
+        gameAdapterKey={tournament.gameAdapterKey}
+        format={tournament.format}
+        seriesBestOf={seriesBestOf}
+        settings={tournament.settings}
+      />
 
       <BracketWorkspace
         tournamentId={id}
         seriesBestOf={seriesBestOf}
         canManage={isAdmin}
+        isSmash={isSmash}
         matches={workspaceMatches}
       />
 
       {isAdmin && (
         <section id="participants" className={styles.supportGrid} aria-label="Participantes">
           <div className={styles.supportPanel}>
-            <h2>Inscripciones ({registrations.length})</h2>
+            <h2>
+              Inscripciones de {isSmash ? 'jugadores' : 'equipos'} ({registrations.length})
+            </h2>
             {registrations.length === 0 ? (
               <p>
                 Compartí la <Link href={`/t/${tournament.slug}`}>página pública</Link> para recibir
@@ -326,7 +344,10 @@ export default async function TournamentAdminPage({
           <div className={styles.supportPanel}>
             <h2>Check-in ({participants.length})</h2>
             {participants.length === 0 ? (
-              <p>Sin participantes confirmados. Aprobá inscripciones primero.</p>
+              <p>
+                Sin {isSmash ? 'jugadores' : 'participantes'} confirmados. Aprobá inscripciones
+                primero.
+              </p>
             ) : (
               <ul className={styles.supportList}>
                 {participants.map((participant) => (

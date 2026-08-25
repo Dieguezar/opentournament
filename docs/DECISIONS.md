@@ -348,6 +348,15 @@ Este documento registra las decisiones de producto, arquitectura y proceso de Op
 - **Consecuencias:** CODE_OF_CONDUCT, CONTRIBUTING, plantillas y política de seguridad ya publicados; versionado semver y Conventional Commits (supuesto AF-10).
 - **Estado:** aprobada.
 
+## ADR-039 — Plantillas de torneo versionadas por juego
+
+- **Tema:** Diferenciación real de torneos según el videojuego.
+- **Opciones:** Solo etiquetas visuales | Valores del formulario sin contrato | Plantillas versionadas dentro del adaptador.
+- **Decisión:** Los adaptadores pueden publicar una plantilla editable y versionada con defaults de torneo y reglas específicas; la API aplica el merge y valida sus invariantes. Super Smash Bros. Ultimate inaugura el contrato con `smash_ultimate.standard_v1`.
+- **Motivo:** Un torneo debe reflejar la cultura competitiva del juego sin duplicar el motor ni depender de que el frontend envíe valores correctos.
+- **Consecuencias:** La configuración queda persistida por torneo, el roster y la terminología pueden variar por juego, y los cambios futuros de reglas requieren una nueva versión de plantilla.
+- **Estado:** aprobada.
+
 ## Supuestos por defecto (estado: propuesta)
 
 Estos valores se tomaron por defecto durante el descubrimiento y se confirman en la revisión de la especificación:

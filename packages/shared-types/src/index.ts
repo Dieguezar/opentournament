@@ -7,8 +7,35 @@ export type TournamentRole = (typeof TOURNAMENT_ROLES)[number];
 export const TEAM_ROLES = ['captain', 'member', 'substitute'] as const;
 export type TeamRole = (typeof TEAM_ROLES)[number];
 
-export const GAME_ADAPTER_KEYS = ['generic', 'valorant', 'cs2', 'lol'] as const;
+export const GAME_ADAPTER_KEYS = ['generic', 'valorant', 'cs2', 'lol', 'smash_ultimate'] as const;
 export type GameAdapterKey = (typeof GAME_ADAPTER_KEYS)[number];
+
+export const SMASH_ULTIMATE_STAGE_CLAUSES = ['none', 'modified_dsr', 'full_dsr'] as const;
+export type SmashUltimateStageClause = (typeof SMASH_ULTIMATE_STAGE_CLAUSES)[number];
+
+export interface SmashUltimateRules {
+  game: 'smash_ultimate';
+  stocks: number;
+  timeLimitMinutes: number;
+  itemsEnabled: boolean;
+  finalSmashMeterEnabled: boolean;
+  stageHazardsEnabled: boolean;
+  launchRate: number;
+  starters: readonly string[];
+  counterpicks: readonly string[];
+  stageBans: number;
+  stageClause: SmashUltimateStageClause;
+}
+
+export type TournamentGameRules = SmashUltimateRules;
+
+export interface TournamentSettings {
+  grandFinalReset?: boolean;
+  presencial?: boolean;
+  templateKey?: string;
+  templateVersion?: number;
+  gameRules?: TournamentGameRules;
+}
 
 export const TOURNAMENT_STATUSES = [
   'draft',

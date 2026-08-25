@@ -24,6 +24,7 @@ interface BracketWorkspaceProps {
   tournamentId: string;
   seriesBestOf: number;
   canManage: boolean;
+  isSmash: boolean;
   matches: readonly BracketWorkspaceMatch[];
 }
 
@@ -67,10 +68,12 @@ function MatchCard({
   match,
   isSelected,
   onSelect,
+  matchLabel,
 }: {
   match: BracketMatchPresentation;
   isSelected: boolean;
   onSelect: (matchId: string) => void;
+  matchLabel: string;
 }) {
   return (
     <button
@@ -91,7 +94,7 @@ function MatchCard({
       />
       <span className={styles.matchFooter}>
         <span className={statusClassName(match.status)}>{formatMatchStatus(match.status)}</span>
-        <span>Partida {match.position + 1}</span>
+        <span>{matchLabel} {match.position + 1}</span>
       </span>
     </button>
   );
@@ -101,8 +104,12 @@ export function BracketWorkspace({
   tournamentId,
   seriesBestOf,
   canManage,
+  isSmash,
   matches,
 }: BracketWorkspaceProps) {
+  const matchLabel = isSmash ? 'Set' : 'Partida';
+  const matchLabelPlural = isSmash ? 'sets' : 'partidas';
+  const participantLabelPlural = isSmash ? 'jugadores' : 'equipos';
   const presentation = useMemo(() => buildBracketWorkspacePresentation(matches), [matches]);
   const matchesById = useMemo(
     () => new Map(matches.map((match) => [match.id, match])),
@@ -132,8 +139,10 @@ export function BracketWorkspace({
     return (
       <section id="bracket" className={styles.emptyState} aria-labelledby="bracket-title">
         <p className={styles.eyebrow}>Bracket</p>
-        <h2 id="bracket-title">Todavía no hay partidas</h2>
-        <p>Generá el bracket cuando haya al menos dos equipos con check-in.</p>
+        <h2 id="bracket-title">Todavía no hay {matchLabelPlural}</h2>
+        <p>
+          Generá el bracket cuando haya al menos dos {participantLabelPlural} con check-in.
+        </p>
       </section>
     );
   }
@@ -171,7 +180,7 @@ export function BracketWorkspace({
         className={styles.boardScroller}
         role="region"
         tabIndex={0}
-        aria-label="Cuadro de partidas desplazable"
+        aria-label={`Cuadro de ${matchLabelPlural} desplazable`}
       >
         <div className={styles.board}>
           {presentation.rounds.map((round, index) => {
@@ -193,7 +202,7 @@ export function BracketWorkspace({
               >
                 <header>
                   <p>{roundName}</p>
-                  <small>{round.matches.length} partidas</small>
+                  <small>{round.matches.length} {matchLabelPlural}</small>
                 </header>
                 <div className={styles.roundMatches}>
                   {round.matches.map((match) => (
@@ -202,6 +211,7 @@ export function BracketWorkspace({
                       match={match}
                       isSelected={match.id === resolvedSelectedId}
                       onSelect={setSelectedMatchId}
+                      matchLabel={matchLabel}
                     />
                   ))}
                 </div>
@@ -239,7 +249,7 @@ export function BracketWorkspace({
 
             <dl className={styles.definitionList}>
               <div>
-                <dt>Formato de serie</dt>
+                <dt>Formato de {isSmash ? 'set' : 'serie'}</dt>
                 <dd>BO{seriesBestOf}</dd>
               </div>
               <div>
@@ -278,7 +288,7 @@ export function BracketWorkspace({
           </>
         ) : (
           <div className={styles.detailsEmpty}>
-            <h2>Seleccioná una partida</h2>
+            <h2>Seleccioná {isSmash ? 'un set' : 'una partida'}</h2>
             <p>Elegí una tarjeta del bracket para ver sus datos y acciones disponibles.</p>
           </div>
         )}

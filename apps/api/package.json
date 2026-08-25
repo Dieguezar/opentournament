@@ -25,6 +25,7 @@
     "@opentournament/auth": "workspace:*",
     "@opentournament/config": "workspace:*",
     "@opentournament/database": "workspace:*",
+    "@opentournament/game-adapters": "workspace:*",
     "@opentournament/shared-types": "workspace:*",
     "@opentournament/tournament-engine": "workspace:*",
     "@opentournament/validation": "workspace:*",

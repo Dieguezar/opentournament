@@ -10,10 +10,7 @@ import {
   tournamentRegistrations,
   tournaments,
 } from '@opentournament/database';
-import {
-  createTournamentSchema,
-  updateTournamentSchema,
-} from '@opentournament/validation';
+import { updateTournamentSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import {
@@ -23,11 +20,12 @@ import {
 } from '../services/permissions.js';
 import { emitTournamentEvent } from '../services/realtime.js';
 import { sendDiscordWebhook } from '../services/discord.js';
+import { resolveTournamentCreationRequest } from '../services/tournament-creation.js';
 
 export async function registerTournamentRoutes(app: FastifyInstance): Promise<void> {
   app.post('/tournaments', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
-    const body = createTournamentSchema.parse(request.body);
+    const body = resolveTournamentCreationRequest(request.body);
     if (!(await isOrgMember(db, body.organizationId, request.user!.id))) {
       return reply.status(403).send({
         error: { code: 'FORBIDDEN', message: 'No perteneces a esta organización' },
@@ -158,22 +156,39 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
         error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
       });
     }
-    if (tournament.status === 'finalized' || tournament.status === 'cancelled') {
+    const outcome = await db.transaction(async (transaction) => {
+      const [lockedTournament] = await transaction
+        .select()
+        .from(tournaments)
+        .where(and(eq(tournaments.id, id), isNull(tournaments.deletedAt)))
+        .limit(1)
+        .for('update');
+      if (!lockedTournament) return { kind: 'not_found' as const };
+      if (lockedTournament.status === 'finalized' || lockedTournament.status === 'cancelled') {
+        return { kind: 'invalid_status' as const };
+      }
+
+      await transaction
+        .update(tournaments)
+        .set({ status: 'cancelled', cancelledAt: new Date() })
+        .where(eq(tournaments.id, id));
+      await transaction.insert(auditLogs).values({
+        organizationId: lockedTournament.organizationId,
+        actorId: request.user!.id,
+        action: 'tournament.cancelled',
+        resourceType: 'tournament',
+        resourceId: id,
+      });
+      return { kind: 'cancelled' as const };
+    });
+    if (outcome.kind === 'not_found') {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+    }
+    if (outcome.kind === 'invalid_status') {
       return reply.status(409).send({
         error: { code: 'INVALID_STATUS', message: 'El torneo no se puede cancelar' },
       });
     }
-    await db
-      .update(tournaments)
-      .set({ status: 'cancelled', cancelledAt: new Date() })
-      .where(eq(tournaments.id, id));
-    await db.insert(auditLogs).values({
-      organizationId: tournament.organizationId,
-      actorId: request.user!.id,
-      action: 'tournament.cancelled',
-      resourceType: 'tournament',
-      resourceId: id,
-    });
     emitTournamentEvent(id, 'tournament.updated', { status: 'cancelled' });
     return reply.send({ ok: true });
   });

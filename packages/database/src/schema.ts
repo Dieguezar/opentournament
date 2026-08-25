@@ -247,6 +247,29 @@ export const teamMembers = pgTable(
   ],
 );
 
+// Structurally mirrors TournamentSettings from @opentournament/shared-types.
+// The database package does not declare that workspace dependency; keeping this
+// document type local preserves its current manifest and package boundary.
+export interface TournamentSettingsDocument {
+  grandFinalReset?: boolean;
+  presencial?: boolean;
+  templateKey?: string;
+  templateVersion?: number;
+  gameRules?: {
+    game: 'smash_ultimate';
+    stocks: number;
+    timeLimitMinutes: number;
+    itemsEnabled: boolean;
+    finalSmashMeterEnabled: boolean;
+    stageHazardsEnabled: boolean;
+    launchRate: number;
+    starters: readonly string[];
+    counterpicks: readonly string[];
+    stageBans: number;
+    stageClause: 'none' | 'modified_dsr' | 'full_dsr';
+  };
+}
+
 export const tournaments = pgTable(
   'tournaments',
   {
@@ -280,7 +303,7 @@ export const tournaments = pgTable(
       .notNull()
       .default({ resultConfirmMinutes: 30, disputeWindowMinutes: 60 }),
     settings: jsonb('settings')
-      .$type<{ grandFinalReset?: boolean; presencial?: boolean }>()
+      .$type<TournamentSettingsDocument>()
       .notNull()
       .default({ grandFinalReset: false, presencial: false }),
     startsAt: timestamp('starts_at', { withTimezone: true }),

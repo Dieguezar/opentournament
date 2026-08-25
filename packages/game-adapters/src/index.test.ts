@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { adapters, getAdapter } from './index.js';
+import {
+  adapters,
+  getAdapter,
+  smashUltimateAdapter,
+  smashUltimateStandardTemplate,
+} from './index.js';
 
 describe('adaptadores de juegos', () => {
   it('expone los adaptadores del MVP', () => {
-    expect(Object.keys(adapters).sort()).toEqual(['cs2', 'generic', 'lol', 'valorant']);
+    expect(Object.keys(adapters).sort()).toEqual([
+      'cs2',
+      'generic',
+      'lol',
+      'smash_ultimate',
+      'valorant',
+    ]);
   });
 
   it('los juegos oficiales son 5v5 sin empate', () => {
@@ -19,5 +30,62 @@ describe('adaptadores de juegos', () => {
     expect(adapters.valorant.playerId.format.test('Diego#LAN1')).toBe(true);
     expect(adapters.valorant.playerId.format.test('sin-tag')).toBe(false);
     expect(adapters.cs2.playerId.format.test('76561198000000000')).toBe(true);
+  });
+
+  it('modela Smash Ultimate como singles competitivo sin empates', () => {
+    expect(smashUltimateAdapter).toMatchObject({
+      key: 'smash_ultimate',
+      name: 'Super Smash Bros. Ultimate',
+      platforms: ['nintendo_switch'],
+      team: { minPlayers: 1, maxPlayers: 1, substitutes: 0 },
+      playerId: { label: 'Tag' },
+      scoring: { type: 'series', drawAllowed: false, defaultSeries: [3, 5] },
+      terminology: {
+        participantSingular: 'competidor',
+        participantPlural: 'competidores',
+        teamSingular: 'jugador',
+        teamPlural: 'jugadores',
+      },
+    });
+  });
+
+  it('expone una plantilla estándar v1 editable con reglas competitivas', () => {
+    expect(smashUltimateStandardTemplate).toEqual({
+      key: 'smash_ultimate.standard_v1',
+      version: 1,
+      editable: true,
+      defaults: {
+        format: 'double_elimination',
+        capacity: 32,
+        seriesConfig: { bo: 3, drawsAllowed: false },
+        checkinConfig: { delayToleranceMinutes: 10 },
+        settings: {
+          grandFinalReset: true,
+          presencial: true,
+          templateKey: 'smash_ultimate.standard_v1',
+          templateVersion: 1,
+          gameRules: {
+            game: 'smash_ultimate',
+            stocks: 3,
+            timeLimitMinutes: 7,
+            itemsEnabled: false,
+            finalSmashMeterEnabled: false,
+            stageHazardsEnabled: false,
+            launchRate: 1,
+            starters: [
+              'Battlefield',
+              'Small Battlefield',
+              'Pokémon Stadium 2',
+              'Final Destination',
+              'Town & City',
+            ],
+            counterpicks: ['Kalos Pokémon League', 'Smashville', 'Hollow Bastion'],
+            stageBans: 3,
+            stageClause: 'none',
+          },
+        },
+      },
+    });
+    expect(smashUltimateAdapter.tournamentTemplate).toBe(smashUltimateStandardTemplate);
   });
 });

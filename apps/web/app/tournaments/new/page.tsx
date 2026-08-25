@@ -2,17 +2,36 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
-import type { OrganizationSummary } from '@opentournament/shared-types';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { adapters, getAdapter } from '@opentournament/game-adapters';
+import type { GameAdapterKey, OrganizationSummary } from '@opentournament/shared-types';
 import { apiClient, ApiClientError } from '@/lib/api';
+import {
+  applyGameTemplateSelection,
+  getSeriesBestOfOptions,
+  parseStageList,
+  restoreGameTemplateDefaults,
+  validateSmashUltimateRules,
+  type EditableSmashUltimateRules,
+  type SmashUltimateRuleErrors,
+  type SmashUltimateRuleField,
+  type TournamentTemplateFormState,
+} from '@/lib/tournament-template';
 import styles from '../../workspace-pages.module.css';
 
-const GAME_OPTIONS = [
-  { key: 'generic', label: 'Genérico' },
-  { key: 'valorant', label: 'Valorant' },
-  { key: 'cs2', label: 'Counter-Strike 2' },
-  { key: 'lol', label: 'League of Legends' },
-];
+const GAME_OPTIONS = Object.values(adapters).map((adapter) => ({
+  key: adapter.key,
+  label: adapter.name,
+}));
+
+const SMASH_RULE_FIELD_IDS: Record<SmashUltimateRuleField, string> = {
+  stocks: 'smash-stocks',
+  timeLimitMinutes: 'smash-time-limit',
+  stageBans: 'smash-stage-bans',
+  starters: 'smash-starters',
+  counterpicks: 'smash-counterpicks',
+  launchRate: 'smash-launch-rate',
+};
 
 export default function NewTournamentPage() {
   const router = useRouter();
@@ -21,17 +40,22 @@ export default function NewTournamentPage() {
   const [organizationId, setOrganizationId] = useState('');
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
-  const [gameAdapterKey, setGameAdapterKey] = useState('generic');
+  const [gameAdapterKey, setGameAdapterKey] = useState<GameAdapterKey>('generic');
   const [format, setFormat] = useState('single_elimination');
   const [capacity, setCapacity] = useState('16');
   const [bo, setBo] = useState('3');
   const [manualApproval, setManualApproval] = useState(false);
   const [grandFinalReset, setGrandFinalReset] = useState(false);
+  const [templateKey, setTemplateKey] = useState<string | null>(null);
+  const [templateVersion, setTemplateVersion] = useState<number | null>(null);
+  const [gameRules, setGameRules] = useState<EditableSmashUltimateRules | null>(null);
+  const [ruleErrors, setRuleErrors] = useState<SmashUltimateRuleErrors>({});
   const [startsAt, setStartsAt] = useState('');
   const [description, setDescription] = useState('');
   const [rules, setRules] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const advancedRulesRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,11 +75,93 @@ export default function NewTournamentPage() {
     return () => controller.abort();
   }, [router]);
 
+  function getTemplateFormState(): TournamentTemplateFormState {
+    return {
+      gameAdapterKey,
+      format,
+      capacity,
+      bo,
+      grandFinalReset,
+      templateKey,
+      templateVersion,
+      gameRules,
+    };
+  }
+
+  function updateTemplateFormState(nextState: TournamentTemplateFormState) {
+    setGameAdapterKey(nextState.gameAdapterKey);
+    setFormat(nextState.format);
+    setCapacity(nextState.capacity);
+    setBo(nextState.bo);
+    setGrandFinalReset(nextState.grandFinalReset);
+    setTemplateKey(nextState.templateKey);
+    setTemplateVersion(nextState.templateVersion);
+    setGameRules(nextState.gameRules);
+  }
+
+  function selectGame(nextGameAdapterKey: GameAdapterKey) {
+    const nextState = applyGameTemplateSelection(
+      nextGameAdapterKey,
+      getTemplateFormState(),
+      getAdapter(nextGameAdapterKey).tournamentTemplate,
+    );
+
+    updateTemplateFormState(nextState);
+    setRuleErrors({});
+  }
+
+  function restoreStandardTemplate() {
+    const selectedTemplate = getAdapter(gameAdapterKey).tournamentTemplate;
+    if (!selectedTemplate) return;
+
+    updateTemplateFormState(
+      restoreGameTemplateDefaults(getTemplateFormState(), selectedTemplate),
+    );
+    setRuleErrors({});
+    setError(null);
+  }
+
+  function clearRuleErrors(...fields: SmashUltimateRuleField[]) {
+    setRuleErrors((currentErrors) =>
+      fields.reduce(
+        (nextErrors, field) => ({ ...nextErrors, [field]: undefined }),
+        currentErrors,
+      ),
+    );
+  }
+
+  function focusInvalidRule(field: SmashUltimateRuleField) {
+    if (field === 'starters' || field === 'counterpicks' || field === 'launchRate') {
+      if (advancedRulesRef.current) advancedRulesRef.current.open = true;
+    }
+
+    requestAnimationFrame(() => {
+      const input = document.getElementById(SMASH_RULE_FIELD_IDS[field]);
+      if (!(input instanceof HTMLElement)) return;
+
+      input.focus({ preventScroll: true });
+      input.scrollIntoView({ block: 'center' });
+    });
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    setSubmitting(true);
     setError(null);
+
+    const validation = gameRules ? validateSmashUltimateRules(gameRules) : null;
+    if (validation) {
+      setGameRules(validation.rules);
+      setRuleErrors(validation.errors);
+      if (validation.firstInvalidField) {
+        focusInvalidRule(validation.firstInvalidField);
+        return;
+      }
+    }
+
+    setSubmitting(true);
     try {
+      const selectedTemplate = getAdapter(gameAdapterKey).tournamentTemplate;
+      const normalizedGameRules = validation?.rules ?? null;
       const result = await apiClient<{ tournament: { id: string } }>('/tournaments', {
         method: 'POST',
         body: JSON.stringify({
@@ -67,7 +173,16 @@ export default function NewTournamentPage() {
           capacity: Number(capacity),
           seriesConfig: { bo: Number(bo), drawsAllowed: false },
           registrationConfig: { manualApproval },
-          settings: { grandFinalReset, presencial: false },
+          checkinConfig: templateKey ? selectedTemplate?.defaults.checkinConfig : undefined,
+          settings: {
+            grandFinalReset,
+            presencial: templateKey
+              ? (selectedTemplate?.defaults.settings.presencial ?? false)
+              : false,
+            ...(templateKey
+              ? { templateKey, templateVersion, gameRules: normalizedGameRules }
+              : {}),
+          },
           startsAt: startsAt ? new Date(startsAt).toISOString() : undefined,
           description: description || undefined,
           rules: rules || undefined,
@@ -94,7 +209,20 @@ export default function NewTournamentPage() {
         </div>
       </header>
 
-      <form className={styles.formShell} onSubmit={onSubmit}>
+      <form
+        className={styles.formShell}
+        data-game={gameAdapterKey}
+        onInvalid={(event) => {
+          const invalidField = event.target;
+          if (
+            invalidField instanceof HTMLElement &&
+            advancedRulesRef.current?.contains(invalidField)
+          ) {
+            advancedRulesRef.current.open = true;
+          }
+        }}
+        onSubmit={onSubmit}
+      >
         <fieldset className={styles.formSection}>
           <legend>
             <h2>Identidad</h2>
@@ -145,7 +273,7 @@ export default function NewTournamentPage() {
               <select
                 id="gameAdapterKey"
                 value={gameAdapterKey}
-                onChange={(event) => setGameAdapterKey(event.target.value)}
+                onChange={(event) => selectGame(event.target.value as GameAdapterKey)}
               >
                 {GAME_OPTIONS.map((game) => (
                   <option key={game.key} value={game.key}>
@@ -153,7 +281,9 @@ export default function NewTournamentPage() {
                   </option>
                 ))}
               </select>
-              <p className={styles.help}>Usá Genérico si el juego todavía no tiene adaptador.</p>
+              <p className={styles.help}>
+                Al elegir un juego con plantilla se aplican defaults que podés editar.
+              </p>
             </div>
 
             <div className={styles.field}>
@@ -189,6 +319,304 @@ export default function NewTournamentPage() {
           </div>
         </fieldset>
 
+        {gameRules && (
+          <fieldset className={`${styles.formSection} ${styles.smashTemplate}`}>
+            <legend>
+              <h2>Plantilla competitiva de Smash Ultimate</h2>
+            </legend>
+            <p className={styles.sectionDescription}>
+              Podés ajustar estas reglas según tu comunidad.
+            </p>
+
+            <div className={styles.templateLead}>
+              <p>
+                La configuración estándar sirve como punto de partida; tus datos de identidad no
+                cambian al restaurarla.
+              </p>
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={restoreStandardTemplate}
+              >
+                Restaurar plantilla estándar
+              </button>
+            </div>
+
+            <div className={styles.formGrid}>
+              <div className={styles.field}>
+                <label htmlFor="smash-stocks">Stocks</label>
+                <input
+                  id="smash-stocks"
+                  type="number"
+                  min={1}
+                  max={10}
+                  required
+                  aria-describedby={
+                    ruleErrors.stocks ? 'smash-stocks-help smash-stocks-error' : 'smash-stocks-help'
+                  }
+                  aria-invalid={Boolean(ruleErrors.stocks)}
+                  value={gameRules.stocks}
+                  onChange={(event) => {
+                    setGameRules({ ...gameRules, stocks: Number(event.target.value) });
+                    clearRuleErrors('stocks');
+                  }}
+                />
+                <p className={styles.help} id="smash-stocks-help">
+                  Vidas disponibles por juego.
+                </p>
+                {ruleErrors.stocks && (
+                  <p className={styles.fieldError} id="smash-stocks-error" role="alert">
+                    {ruleErrors.stocks}
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="smash-time-limit">Tiempo límite</label>
+                <input
+                  id="smash-time-limit"
+                  type="number"
+                  min={1}
+                  max={60}
+                  required
+                  aria-describedby={
+                    ruleErrors.timeLimitMinutes
+                      ? 'smash-time-limit-help smash-time-limit-error'
+                      : 'smash-time-limit-help'
+                  }
+                  aria-invalid={Boolean(ruleErrors.timeLimitMinutes)}
+                  value={gameRules.timeLimitMinutes}
+                  onChange={(event) => {
+                    setGameRules({ ...gameRules, timeLimitMinutes: Number(event.target.value) });
+                    clearRuleErrors('timeLimitMinutes');
+                  }}
+                />
+                <p className={styles.help} id="smash-time-limit-help">
+                  Minutos por juego.
+                </p>
+                {ruleErrors.timeLimitMinutes && (
+                  <p className={styles.fieldError} id="smash-time-limit-error" role="alert">
+                    {ruleErrors.timeLimitMinutes}
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="smash-stage-bans">Bans de escenarios</label>
+                <input
+                  id="smash-stage-bans"
+                  type="number"
+                  min={0}
+                  max={10}
+                  required
+                  aria-describedby={
+                    ruleErrors.stageBans
+                      ? 'smash-stage-bans-help smash-stage-bans-error'
+                      : 'smash-stage-bans-help'
+                  }
+                  aria-invalid={Boolean(ruleErrors.stageBans)}
+                  value={gameRules.stageBans}
+                  onChange={(event) => {
+                    setGameRules({ ...gameRules, stageBans: Number(event.target.value) });
+                    clearRuleErrors('stageBans');
+                  }}
+                />
+                <p className={styles.help} id="smash-stage-bans-help">
+                  Cantidad de escenarios que puede vetar el ganador.
+                </p>
+                {ruleErrors.stageBans && (
+                  <p className={styles.fieldError} id="smash-stage-bans-error" role="alert">
+                    {ruleErrors.stageBans}
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="smash-stage-clause">Regla DSR</label>
+                <select
+                  id="smash-stage-clause"
+                  value={gameRules.stageClause}
+                  onChange={(event) =>
+                    setGameRules({
+                      ...gameRules,
+                      stageClause: event.target.value as EditableSmashUltimateRules['stageClause'],
+                    })
+                  }
+                >
+                  <option value="none">Sin DSR</option>
+                  <option value="modified_dsr">DSR modificado</option>
+                  <option value="full_dsr">DSR completo</option>
+                </select>
+                <p className={styles.help}>Define si se restringe volver a escenarios ya ganados.</p>
+              </div>
+
+            </div>
+
+            <details className={styles.advancedRules} ref={advancedRulesRef}>
+              <summary>
+                <span>Escenarios y opciones avanzadas</span>
+                <small>Editá pools, items, FS Meter, hazards y launch rate.</small>
+              </summary>
+
+              <div className={styles.advancedRulesContent}>
+                <div className={styles.formGrid}>
+                  <div className={styles.fieldWide}>
+                    <label htmlFor="smash-starters">Escenarios iniciales</label>
+                    <textarea
+                      id="smash-starters"
+                      rows={5}
+                      required
+                      aria-describedby={
+                        ruleErrors.starters
+                          ? 'smash-starters-help smash-starters-error'
+                          : 'smash-starters-help'
+                      }
+                      aria-invalid={Boolean(ruleErrors.starters)}
+                      value={gameRules.starters.join('\n')}
+                      onChange={(event) => {
+                        setGameRules({ ...gameRules, starters: event.target.value.split('\n') });
+                        clearRuleErrors('starters', 'counterpicks', 'stageBans');
+                      }}
+                      onBlur={(event) =>
+                        setGameRules({ ...gameRules, starters: parseStageList(event.target.value) })
+                      }
+                    />
+                    <p className={styles.help} id="smash-starters-help">
+                      Un escenario por línea. No puede repetirse en ninguno de los pools.
+                    </p>
+                    {ruleErrors.starters && (
+                      <p className={styles.fieldError} id="smash-starters-error" role="alert">
+                        {ruleErrors.starters}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className={styles.fieldWide}>
+                    <label htmlFor="smash-counterpicks">Escenarios counterpick</label>
+                    <textarea
+                      id="smash-counterpicks"
+                      rows={4}
+                      required
+                      aria-describedby={
+                        ruleErrors.counterpicks
+                          ? 'smash-counterpicks-help smash-counterpicks-error'
+                          : 'smash-counterpicks-help'
+                      }
+                      aria-invalid={Boolean(ruleErrors.counterpicks)}
+                      value={gameRules.counterpicks.join('\n')}
+                      onChange={(event) => {
+                        setGameRules({
+                          ...gameRules,
+                          counterpicks: event.target.value.split('\n'),
+                        });
+                        clearRuleErrors('starters', 'counterpicks', 'stageBans');
+                      }}
+                      onBlur={(event) =>
+                        setGameRules({
+                          ...gameRules,
+                          counterpicks: parseStageList(event.target.value),
+                        })
+                      }
+                    />
+                    <p className={styles.help} id="smash-counterpicks-help">
+                      Un escenario por línea. No repitas escenarios iniciales.
+                    </p>
+                    {ruleErrors.counterpicks && (
+                      <p className={styles.fieldError} id="smash-counterpicks-error" role="alert">
+                        {ruleErrors.counterpicks}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className={styles.optionStack}>
+                  <label className={styles.checkboxRow} htmlFor="smash-items-enabled">
+                    <input
+                      id="smash-items-enabled"
+                      type="checkbox"
+                      checked={gameRules.itemsEnabled}
+                      onChange={(event) =>
+                        setGameRules({ ...gameRules, itemsEnabled: event.target.checked })
+                      }
+                    />
+                    <span>
+                      Items habilitados
+                      <small>La plantilla competitiva estándar los mantiene desactivados.</small>
+                    </span>
+                  </label>
+
+                  <label className={styles.checkboxRow} htmlFor="smash-fs-meter-enabled">
+                    <input
+                      id="smash-fs-meter-enabled"
+                      type="checkbox"
+                      checked={gameRules.finalSmashMeterEnabled}
+                      onChange={(event) =>
+                        setGameRules({
+                          ...gameRules,
+                          finalSmashMeterEnabled: event.target.checked,
+                        })
+                      }
+                    />
+                    <span>
+                      FS Meter habilitado
+                      <small>Permite cargar el medidor de Final Smash durante el juego.</small>
+                    </span>
+                  </label>
+
+                  <label className={styles.checkboxRow} htmlFor="smash-hazards-enabled">
+                    <input
+                      id="smash-hazards-enabled"
+                      type="checkbox"
+                      checked={gameRules.stageHazardsEnabled}
+                      onChange={(event) =>
+                        setGameRules({
+                          ...gameRules,
+                          stageHazardsEnabled: event.target.checked,
+                        })
+                      }
+                    />
+                    <span>
+                      Hazards habilitados
+                      <small>Activa los elementos dinámicos propios de cada escenario.</small>
+                    </span>
+                  </label>
+                </div>
+
+                <div className={styles.field}>
+                  <label htmlFor="smash-launch-rate">Launch rate</label>
+                  <input
+                    id="smash-launch-rate"
+                    type="number"
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    required
+                    aria-describedby={
+                      ruleErrors.launchRate
+                        ? 'smash-launch-rate-help smash-launch-rate-error'
+                        : 'smash-launch-rate-help'
+                    }
+                    aria-invalid={Boolean(ruleErrors.launchRate)}
+                    value={gameRules.launchRate}
+                    onChange={(event) => {
+                      setGameRules({ ...gameRules, launchRate: Number(event.target.value) });
+                      clearRuleErrors('launchRate');
+                    }}
+                  />
+                  <p className={styles.help} id="smash-launch-rate-help">
+                    Entre 0.5× y 2×. El valor estándar es 1×.
+                  </p>
+                  {ruleErrors.launchRate && (
+                    <p className={styles.fieldError} id="smash-launch-rate-error" role="alert">
+                      {ruleErrors.launchRate}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </details>
+          </fieldset>
+        )}
+
         <fieldset className={styles.formSection}>
           <legend>
             <h2>Competencia</h2>
@@ -209,13 +637,15 @@ export default function NewTournamentPage() {
               </select>
               <p className={styles.help}>
                 {format === 'double_elimination'
-                  ? 'Cada equipo puede perder una vez antes de quedar eliminado.'
-                  : 'Una derrota elimina al equipo del torneo.'}
+                  ? `Cada ${gameAdapterKey === 'smash_ultimate' ? 'jugador' : 'equipo'} puede perder una vez antes de quedar eliminado.`
+                  : `Una derrota elimina al ${gameAdapterKey === 'smash_ultimate' ? 'jugador' : 'equipo'} del torneo.`}
               </p>
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="capacity">Cupo de equipos</label>
+              <label htmlFor="capacity">
+                Cupo de {gameAdapterKey === 'smash_ultimate' ? 'jugadores' : 'equipos'}
+              </label>
               <input
                 id="capacity"
                 type="number"
@@ -225,17 +655,27 @@ export default function NewTournamentPage() {
                 value={capacity}
                 onChange={(event) => setCapacity(event.target.value)}
               />
-              <p className={styles.help}>Entre 2 y 512 equipos.</p>
+              <p className={styles.help}>
+                Entre 2 y 512 {gameAdapterKey === 'smash_ultimate' ? 'jugadores' : 'equipos'}.
+              </p>
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="bo">Formato de series</label>
+              <label htmlFor="bo">
+                Formato de {gameAdapterKey === 'smash_ultimate' ? 'sets' : 'series'}
+              </label>
               <select id="bo" value={bo} onChange={(event) => setBo(event.target.value)}>
-                <option value="1">BO1</option>
-                <option value="3">BO3</option>
-                <option value="5">BO5</option>
+                {getSeriesBestOfOptions(gameAdapterKey).map((option) => (
+                  <option key={option} value={option}>
+                    BO{option}
+                  </option>
+                ))}
               </select>
-              <p className={styles.help}>Cantidad máxima de partidas por serie.</p>
+              <p className={styles.help}>
+                {gameAdapterKey === 'smash_ultimate'
+                  ? 'Cantidad máxima de juegos por set.'
+                  : 'Cantidad máxima de partidas por serie.'}
+              </p>
             </div>
 
             <div className={styles.field}>

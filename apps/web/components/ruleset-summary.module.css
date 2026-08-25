@@ -1,0 +1,119 @@
+.summary {
+  --game-accent: #b3294a;
+
+  margin-top: 1rem;
+  padding: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--game-accent) 42%, var(--border));
+  border-left: 3px solid var(--game-accent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--game-accent) 5%, var(--surface));
+}
+
+:global(:root[data-theme='dark']) .summary {
+  --game-accent: #ff8ba3;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.header h2,
+.stageGroups h3 {
+  margin: 0;
+}
+
+.header h2 {
+  font-size: 1.15rem;
+}
+
+.kicker {
+  margin: 0 0 0.3rem;
+  color: var(--game-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.switches {
+  max-width: 370px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-align: right;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 1rem 0 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--border);
+}
+
+.facts div {
+  min-width: 0;
+  padding: 0.7rem;
+  background: var(--surface-raised);
+}
+
+.facts dt {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.facts dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.stageGroups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stageGroups h3 {
+  font-size: 0.78rem;
+}
+
+.stageGroups ul {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stageGroups li {
+  padding: 0.28rem 0.48rem;
+  color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--game-accent) 28%, var(--border));
+  border-radius: 999px;
+  background: var(--surface-raised);
+  font-size: 0.7rem;
+}
+
+@media (max-width: 760px) {
+  .header {
+    flex-direction: column;
+  }
+
+  .switches {
+    text-align: left;
+  }
+
+  .facts,
+  .stageGroups {
+    grid-template-columns: 1fr;
+  }
+}

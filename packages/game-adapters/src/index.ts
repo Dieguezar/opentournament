@@ -1,4 +1,35 @@
-import type { GameAdapterKey } from '@opentournament/shared-types';
+import type {
+  GameAdapterKey,
+  SmashUltimateRules,
+  TournamentSettings,
+} from '@opentournament/shared-types';
+
+export interface GameTerminology {
+  participantSingular: string;
+  participantPlural: string;
+  teamSingular: string;
+  teamPlural: string;
+}
+
+export interface TournamentTemplateDefaults {
+  format: 'single_elimination' | 'double_elimination';
+  capacity: number;
+  seriesConfig: {
+    bo: number;
+    drawsAllowed: boolean;
+  };
+  checkinConfig: {
+    delayToleranceMinutes: number;
+  };
+  settings: TournamentSettings;
+}
+
+export interface GameTournamentTemplate {
+  key: string;
+  version: number;
+  editable: boolean;
+  defaults: TournamentTemplateDefaults;
+}
 
 export interface GameAdapterConfig {
   key: GameAdapterKey;
@@ -31,6 +62,8 @@ export interface GameAdapterConfig {
     mode: 'external';
     mapsRequired: boolean;
   };
+  terminology?: GameTerminology;
+  tournamentTemplate?: GameTournamentTemplate;
   customFields?: Array<{ key: string; label: string; type: 'text' | 'select'; options?: string[] }>;
   integrations?: string[];
 }
@@ -93,11 +126,76 @@ export const lolAdapter: GameAdapterConfig = {
   integrations: [],
 };
 
+export const smashUltimateStandardRules = {
+  game: 'smash_ultimate',
+  stocks: 3,
+  timeLimitMinutes: 7,
+  itemsEnabled: false,
+  finalSmashMeterEnabled: false,
+  stageHazardsEnabled: false,
+  launchRate: 1,
+  starters: [
+    'Battlefield',
+    'Small Battlefield',
+    'Pokémon Stadium 2',
+    'Final Destination',
+    'Town & City',
+  ],
+  counterpicks: ['Kalos Pokémon League', 'Smashville', 'Hollow Bastion'],
+  stageBans: 3,
+  stageClause: 'none',
+} as const satisfies SmashUltimateRules;
+
+export const smashUltimateStandardTemplate = {
+  key: 'smash_ultimate.standard_v1',
+  version: 1,
+  editable: true,
+  defaults: {
+    format: 'double_elimination',
+    capacity: 32,
+    seriesConfig: { bo: 3, drawsAllowed: false },
+    checkinConfig: { delayToleranceMinutes: 10 },
+    settings: {
+      grandFinalReset: true,
+      presencial: true,
+      templateKey: 'smash_ultimate.standard_v1',
+      templateVersion: 1,
+      gameRules: smashUltimateStandardRules,
+    },
+  },
+} as const satisfies GameTournamentTemplate;
+
+export const smashUltimateAdapter: GameAdapterConfig = {
+  key: 'smash_ultimate',
+  name: 'Super Smash Bros. Ultimate',
+  platforms: ['nintendo_switch'],
+  team: { minPlayers: 1, maxPlayers: 1, substitutes: 0 },
+  playerId: {
+    label: 'Tag',
+    format: /^.{1,32}$/,
+    hint: 'Tag usado por el competidor en el bracket',
+  },
+  modes: ['Singles'],
+  maps: [...smashUltimateStandardRules.starters, ...smashUltimateStandardRules.counterpicks],
+  scoring: { type: 'series', drawAllowed: false, defaultSeries: [3, 5] },
+  matchFormats: { series: true, timed: false },
+  veto: { mode: 'external', mapsRequired: true },
+  terminology: {
+    participantSingular: 'competidor',
+    participantPlural: 'competidores',
+    teamSingular: 'jugador',
+    teamPlural: 'jugadores',
+  },
+  tournamentTemplate: smashUltimateStandardTemplate,
+  integrations: [],
+};
+
 export const adapters: Record<GameAdapterKey, GameAdapterConfig> = {
   generic: genericAdapter,
   valorant: valorantAdapter,
   cs2: cs2Adapter,
   lol: lolAdapter,
+  smash_ultimate: smashUltimateAdapter,
 };
 
 export function getAdapter(key: GameAdapterKey): GameAdapterConfig {

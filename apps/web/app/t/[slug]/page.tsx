@@ -1,11 +1,18 @@
 import { notFound } from 'next/navigation';
+import type {
+  GameAdapterKey,
+  TournamentSettings,
+  TournamentStatus,
+} from '@opentournament/shared-types';
 import { LiveTournament } from '@/components/live-tournament';
 import { RegisterPanel } from '@/components/register-panel';
 import { ReportPanel } from '@/components/report-panel';
+import { RulesetSummary } from '@/components/ruleset-summary';
 import {
   formatGameAdapter,
   formatMatchStatus,
   formatRegistrationStatus,
+  getPublicRegistrationMessage,
   getTournamentStatus,
 } from '@/lib/presentation';
 import { serverFetch } from '@/lib/server-api';
@@ -53,16 +60,18 @@ function formatBracketName(type: string): string {
 function BracketSection({
   brackets,
   tournamentId,
+  isSmash,
 }: {
   brackets: BracketView[];
   tournamentId: string;
+  isSmash: boolean;
 }) {
   return (
     <section className={styles.bracketPanel} aria-labelledby="bracket-title">
       <div className={styles.bracketHeader}>
         <div>
           <p className={styles.eyebrow}>Competencia</p>
-          <h2 id="bracket-title">Bracket y partidas</h2>
+          <h2 id="bracket-title">Bracket y {isSmash ? 'sets' : 'partidas'}</h2>
         </div>
         <span className={styles.liveRegion}>
           <LiveTournament tournamentId={tournamentId} />
@@ -119,7 +128,7 @@ function BracketSection({
                                 </span>
                               </div>
                               <footer className={styles.matchFooter}>
-                                <span>Partida</span>
+                                <span>{isSmash ? 'Set' : 'Partida'}</span>
                                 <span>{formatMatchStatus(match.status)}</span>
                               </footer>
                             </article>
@@ -139,11 +148,13 @@ function BracketSection({
 }
 
 function JourneySection({
-  isRegistrationActive,
+  tournamentStatus,
   isTournamentRunning,
+  isSmash,
 }: {
-  isRegistrationActive: boolean;
+  tournamentStatus: TournamentStatus;
   isTournamentRunning: boolean;
+  isSmash: boolean;
 }) {
   return (
     <section className={styles.journeyPanel} aria-labelledby="journey-title">
@@ -158,13 +169,13 @@ function JourneySection({
       <ol className={styles.journeyList}>
         <li>
           <strong>Paso 1</strong>
-          Crear equipo
+          {isSmash ? 'Crear perfil de jugador' : 'Crear equipo'}
         </li>
-        <li className={isRegistrationActive ? styles.currentJourney : undefined}>
+        <li className={tournamentStatus === 'open' ? styles.currentJourney : undefined}>
           <strong>Paso 2</strong>
           Inscribirse
         </li>
-        <li>
+        <li className={tournamentStatus === 'checkin_open' ? styles.currentJourney : undefined}>
           <strong>Paso 3</strong>
           Completar check-in
         </li>
@@ -189,11 +200,13 @@ export default async function PublicTournamentPage({
       name: string;
       description: string | null;
       rules: string | null;
-      status: string;
+      status: TournamentStatus;
       format: string;
-      gameAdapterKey: string;
+      gameAdapterKey: GameAdapterKey;
       startsAt: string | null;
       capacity: number;
+      seriesConfig: { bo?: number } | null;
+      settings: TournamentSettings | null;
     };
     organization: { name: string } | null;
   }>(`/tournaments/by-slug/${slug}`);
@@ -222,9 +235,12 @@ export default async function PublicTournamentPage({
   const teams = teamsRes.data?.teams ?? [];
   const brackets = bracketRes.data?.brackets ?? [];
   const status = getTournamentStatus(tournament.status);
+  const isSmash = tournament.gameAdapterKey === 'smash_ultimate';
+  const seriesBestOf = tournament.seriesConfig?.bo ?? 1;
   const isRegistrationActive = tournament.status === 'open' || tournament.status === 'checkin_open';
   const isTournamentRunning =
     tournament.status === 'in_progress' || tournament.status === 'finalized';
+  const publicRegistrationMessage = getPublicRegistrationMessage(tournament.status, isSmash);
   const roundCount = brackets.reduce((total, bracket) => total + bracket.rounds.length, 0);
   const matchCount = brackets.reduce(
     (total, bracket) =>
@@ -233,7 +249,7 @@ export default async function PublicTournamentPage({
   );
 
   return (
-    <main className={`container ${styles.page}`}>
+    <main className={`container ${styles.page}`} data-game={tournament.gameAdapterKey}>
       <header className={`${styles.pageHeader} ${styles.tournamentHeader}`}>
         <div>
           <p className={styles.eyebrow}>
@@ -257,9 +273,16 @@ export default async function PublicTournamentPage({
         </div>
       </header>
 
+      <RulesetSummary
+        gameAdapterKey={tournament.gameAdapterKey}
+        format={tournament.format}
+        seriesBestOf={seriesBestOf}
+        settings={tournament.settings}
+      />
+
       <dl className={styles.metrics} aria-label="Resumen del torneo">
         <div>
-          <dt>Equipos inscritos</dt>
+          <dt>{isSmash ? 'Jugadores inscritos' : 'Equipos inscritos'}</dt>
           <dd>{teams.length}</dd>
         </div>
         <div>
@@ -267,30 +290,36 @@ export default async function PublicTournamentPage({
           <dd>{roundCount}</dd>
         </div>
         <div>
-          <dt>Partidas</dt>
+          <dt>{isSmash ? 'Sets' : 'Partidas'}</dt>
           <dd>{matchCount}</dd>
         </div>
       </dl>
 
-      {isTournamentRunning && <BracketSection brackets={brackets} tournamentId={tournament.id} />}
+      {isTournamentRunning && (
+        <BracketSection brackets={brackets} tournamentId={tournament.id} isSmash={isSmash} />
+      )}
 
       <JourneySection
-        isRegistrationActive={isRegistrationActive}
+        tournamentStatus={tournament.status}
         isTournamentRunning={isTournamentRunning}
+        isSmash={isSmash}
       />
 
       {isRegistrationActive ? (
-        <RegisterPanel tournamentId={tournament.id} />
+        <RegisterPanel
+          tournamentId={tournament.id}
+          gameAdapterKey={tournament.gameAdapterKey}
+          tournamentStatus={tournament.status}
+        />
       ) : (
         <div className={styles.panel}>
-          <p className={styles.meta}>
-            Las inscripciones finalizaron. Consultá las partidas y resultados publicados en el
-            bracket.
-          </p>
+          <p className={styles.meta}>{publicRegistrationMessage}</p>
         </div>
       )}
 
-      {!isTournamentRunning && <BracketSection brackets={brackets} tournamentId={tournament.id} />}
+      {!isTournamentRunning && (
+        <BracketSection brackets={brackets} tournamentId={tournament.id} isSmash={isSmash} />
+      )}
 
       <ReportPanel tournamentId={tournament.id} />
 
@@ -299,11 +328,15 @@ export default async function PublicTournamentPage({
           <div className={styles.sectionHeader}>
             <div>
               <p className={styles.eyebrow}>Participantes</p>
-              <h2 id="teams-title">Equipos inscritos ({teams.length})</h2>
+              <h2 id="teams-title">
+                {isSmash ? 'Jugadores' : 'Equipos'} inscritos ({teams.length})
+              </h2>
             </div>
           </div>
           {teams.length === 0 ? (
-            <p className={styles.emptyCopy}>Aún no hay equipos inscritos.</p>
+            <p className={styles.emptyCopy}>
+              Aún no hay {isSmash ? 'jugadores' : 'equipos'} inscritos.
+            </p>
           ) : (
             <ul className={styles.teamList}>
               {teams.map((team) => (

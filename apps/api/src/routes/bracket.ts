@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import {
   auditLogs,
@@ -8,6 +8,7 @@ import {
   stages,
   teams,
   tournamentParticipants,
+  tournaments,
 } from '@opentournament/database';
 import { seedsSchema } from '@opentournament/validation';
 import { db } from '../db.js';
@@ -29,21 +30,36 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
         error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
       });
     }
-    if (tournament.status !== 'open') {
+    const outcome = await db.transaction(async (transaction) => {
+      const [lockedTournament] = await transaction
+        .select()
+        .from(tournaments)
+        .where(and(eq(tournaments.id, id), isNull(tournaments.deletedAt)))
+        .limit(1)
+        .for('update');
+      if (!lockedTournament) return { kind: 'not_found' as const };
+      if (lockedTournament.status !== 'open') return { kind: 'invalid_status' as const };
+
+      const stage = await generateTournamentBracket(transaction, lockedTournament);
+      await transaction.insert(auditLogs).values({
+        organizationId: lockedTournament.organizationId,
+        actorId: request.user!.id,
+        action: 'bracket.generated',
+        resourceType: 'tournament',
+        resourceId: id,
+      });
+      return { kind: 'generated' as const, stage };
+    });
+    if (outcome.kind === 'not_found') {
+      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+    }
+    if (outcome.kind === 'invalid_status') {
       return reply.status(409).send({
         error: { code: 'INVALID_STATUS', message: 'El torneo debe estar abierto' },
       });
     }
-    const stage = await generateTournamentBracket(db, tournament);
-    await db.insert(auditLogs).values({
-      organizationId: tournament.organizationId,
-      actorId: request.user!.id,
-      action: 'bracket.generated',
-      resourceType: 'tournament',
-      resourceId: id,
-    });
-    emitTournamentEvent(id, 'bracket.updated', { stageId: stage.id });
-    return reply.send({ stageId: stage.id });
+    emitTournamentEvent(id, 'bracket.updated', { stageId: outcome.stage.id });
+    return reply.send({ stageId: outcome.stage.id });
   });
 
   app.get('/tournaments/:id/bracket', async (request, reply) => {

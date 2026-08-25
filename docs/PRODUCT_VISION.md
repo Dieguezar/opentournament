@@ -32,7 +32,7 @@ Ver [docs/USER_ROLES.md](USER_ROLES.md) para roles y [docs/PRD.md](PRD.md) para 
 - **Confianza**: reporte bilateral, evidencias privadas y arbitraje auditado.
 - **Libertad**: open source (MIT), autoalojable, datos bajo el control del organizador.
 - **Bajo costo**: una instancia pequeña corre en hardware modesto.
-- **Juego-agnóstico**: adaptador genérico + adaptadores oficiales de Valorant, CS2 y LoL.
+- **Juego-agnóstico**: adaptador genérico + adaptadores oficiales de Valorant, CS2, LoL y Super Smash Bros. Ultimate.
 - **Comunidad**: Discord nativo (OAuth, notificaciones y comandos slash).
 - **Público**: página pública del torneo con tiempo real y PWA instalable.
 

@@ -395,6 +395,14 @@
   overflow: hidden;
 }
 
+.formShell[data-game='smash_ultimate'] {
+  --game-accent: #b3294a;
+}
+
+:global(:root[data-theme='dark']) .formShell[data-game='smash_ultimate'] {
+  --game-accent: #ff8ba3;
+}
+
 .formSection {
   padding: 1rem;
   border: 0;
@@ -420,6 +428,114 @@
   font-size: 0.82rem;
 }
 
+.smashTemplate {
+  border-left: 3px solid var(--game-accent);
+  background: color-mix(in srgb, var(--game-accent) 6%, var(--surface));
+}
+
+.smashTemplate h2 {
+  color: var(--game-accent);
+}
+
+.templateLead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--game-accent) 28%, var(--border));
+  border-radius: 4px;
+  background: var(--surface-raised);
+}
+
+.templateLead p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.templateLead button {
+  flex: 0 0 auto;
+}
+
+.advancedRules {
+  margin-top: 0.25rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--game-accent) 34%, var(--border));
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.advancedRules summary {
+  padding: 0.8rem 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.advancedRules summary:hover {
+  background: color-mix(in srgb, var(--game-accent) 5%, var(--surface-raised));
+}
+
+.advancedRules summary:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+.advancedRules summary span,
+.advancedRules summary small {
+  margin-left: 0.25rem;
+}
+
+.advancedRules summary span {
+  font-weight: 700;
+}
+
+.advancedRules summary small {
+  display: block;
+  margin-top: 0.2rem;
+  margin-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.advancedRules[open] summary {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.advancedRulesContent {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.ruleSwitches {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 1px;
+  border: 1px solid color-mix(in srgb, var(--game-accent) 34%, var(--border));
+  border-radius: 4px;
+  background: var(--border);
+  list-style: none;
+}
+
+.ruleSwitches li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: var(--surface-raised);
+  font-size: 0.78rem;
+}
+
+.ruleSwitches span {
+  color: var(--text-muted);
+}
+
 .formGrid {
   display: grid;
   gap: 0 1rem;
@@ -443,6 +559,20 @@
   min-height: 1.25rem;
   margin: 0 0 0.85rem;
   font-size: 0.76rem;
+}
+
+.fieldError {
+  margin: -0.55rem 0 0.85rem;
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.field input[aria-invalid='true'],
+.field textarea[aria-invalid='true'],
+.fieldWide input[aria-invalid='true'],
+.fieldWide textarea[aria-invalid='true'] {
+  border-color: var(--danger);
 }
 
 .urlPreview {
@@ -567,6 +697,19 @@
 
   .journeyList {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .ruleSwitches {
+    grid-template-columns: 1fr;
+  }
+
+  .templateLead {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .templateLead button {
+    width: 100%;
   }
 
   .sectionHeader,

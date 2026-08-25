@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { afterAll, describe, expect, it } from 'vitest';
 
 const hasDb = Boolean(process.env.TEST_DATABASE_URL);
@@ -85,7 +85,15 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
 
   it('flujo completo: torneo → inscripción → check-in → bracket → reporte bilateral', { timeout: INTEGRATION_TEST_TIMEOUT_MS }, async () => {
     process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
-    const { runMigrations } = await import('@opentournament/database');
+    const {
+      runMigrations,
+      stages,
+      teams,
+      tournamentParticipants,
+      tournamentRegistrations,
+      tournaments,
+    } = await import('@opentournament/database');
+    const { db, pool } = await import('./db.js');
     const { initServer } = await import('./app.js');
 
     await runMigrations(process.env.TEST_DATABASE_URL!);
@@ -118,10 +126,53 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       cookie: `session=${session.session}; csrf=${session.csrf}`,
     });
 
+    async function waitForBlockedRequests(blockerPid: number, expectedCount: number) {
+      const timeoutAt = Date.now() + 5_000;
+      while (Date.now() < timeoutAt) {
+        const result = await pool.query<{ pid: number; blockingPids: number[] }>(
+          `select pid, pg_blocking_pids(pid) as "blockingPids"
+             from pg_stat_activity
+            where cardinality(pg_blocking_pids(pid)) > 0`,
+        );
+        const blockedByTournament = new Set([blockerPid]);
+        let discoveredBlockedRequest = true;
+        while (discoveredBlockedRequest) {
+          discoveredBlockedRequest = false;
+          for (const row of result.rows) {
+            if (
+              !blockedByTournament.has(row.pid) &&
+              row.blockingPids.some((blockingPid) => blockedByTournament.has(blockingPid))
+            ) {
+              blockedByTournament.add(row.pid);
+              discoveredBlockedRequest = true;
+            }
+          }
+        }
+        if (blockedByTournament.size - 1 >= expectedCount) return;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+      throw new Error(`No se bloquearon ${expectedCount} requests sobre el torneo`);
+    }
+
+    async function lockTournament(tournamentId: string) {
+      const client = await pool.connect();
+      await client.query('begin');
+      const pidResult = await client.query<{ pid: number }>('select pg_backend_pid() as pid');
+      await client.query('select id from tournaments where id = $1 for update', [tournamentId]);
+      return {
+        blockerPid: pidResult.rows[0]!.pid,
+        release: async () => {
+          await client.query('commit');
+          client.release();
+        },
+      };
+    }
+
     try {
       const userA = await registerUser('Captain A');
       const userB = await registerUser('Captain B');
       const userC = await registerUser('Captain C');
+      const userD = await registerUser('Captain D');
 
       const orgRes = await app.inject({
         method: 'POST',
@@ -146,7 +197,9 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
         headers: headersFor(userA),
       });
       expect(teamARes.statusCode).toBe(201);
-      const teamA = teamARes.json<{ team: { id: string } }>().team.id;
+      const teamAView = teamARes.json<{ team: { id: string; gameAdapterKey: string } }>().team;
+      const teamA = teamAView.id;
+      expect(teamAView.gameAdapterKey).toBe('generic');
 
       // B se une a la organización y crea su equipo.
       const inviteRes = await app.inject({
@@ -175,6 +228,150 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       const teamB = teamBRes.json<{ team: { id: string } }>().team.id;
 
       const t = Date.now();
+
+      const inviteSmashCaptainRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/organizations/${orgId}/members`,
+        payload: { email: userC.email, role: 'member' },
+        headers: headersFor(userA),
+      });
+      expect(inviteSmashCaptainRes.statusCode).toBe(201);
+
+      const inviteConcurrentCaptainRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/organizations/${orgId}/members`,
+        payload: { email: userD.email, role: 'member' },
+        headers: headersFor(userA),
+      });
+      expect(inviteConcurrentCaptainRes.statusCode).toBe(201);
+
+      const teamDRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/teams',
+        payload: { organizationId: orgId, name: 'Equipo D', tag: 'TD' },
+        headers: headersFor(userD),
+      });
+      expect(teamDRes.statusCode).toBe(201);
+      const teamD = teamDRes.json<{ team: { id: string } }>().team.id;
+
+      const smashTeamRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/teams',
+        payload: {
+          organizationId: orgId,
+          name: 'Smash Player',
+          tag: 'SP',
+          gameAdapterKey: 'smash_ultimate',
+        },
+        headers: headersFor(userC),
+      });
+      expect(smashTeamRes.statusCode).toBe(201);
+      const smashTeam = smashTeamRes.json<{ team: { id: string } }>().team.id;
+
+      const smashRosterOverflowRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/teams/${smashTeam}/members`,
+        payload: { email: userB.email },
+        headers: headersFor(userC),
+      });
+      expect(smashRosterOverflowRes.statusCode).toBe(409);
+      expect(smashRosterOverflowRes.json<{ error: { code: string } }>().error.code).toBe(
+        'TEAM_ROSTER_LIMIT',
+      );
+
+      const smashTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'smash_ultimate',
+          slug: `smash-${t}`,
+          name: 'Smash Local',
+        },
+        headers: headersFor(userA),
+      });
+      expect(smashTournamentRes.statusCode).toBe(201);
+      const smashTournament = smashTournamentRes.json<{
+        tournament: {
+          id: string;
+          format: string;
+          capacity: number;
+          seriesConfig: { bo: number; drawsAllowed: boolean };
+          settings: {
+            grandFinalReset: boolean;
+            templateKey: string;
+            gameRules: { game: string; stocks: number; timeLimitMinutes: number };
+          };
+        };
+      }>().tournament;
+      expect(smashTournament).toMatchObject({
+        format: 'double_elimination',
+        capacity: 32,
+        seriesConfig: { bo: 3, drawsAllowed: false },
+        settings: {
+          grandFinalReset: true,
+          templateKey: 'smash_ultimate.standard_v1',
+          gameRules: { game: 'smash_ultimate', stocks: 3, timeLimitMinutes: 7 },
+        },
+      });
+
+      const publishSmashRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${smashTournament.id}/publish`,
+        headers: headersFor(userA),
+      });
+      expect(publishSmashRes.statusCode).toBe(200);
+
+      const mismatchedSmashRegistrationRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${smashTournament.id}/registrations`,
+        payload: { teamId: teamA },
+        headers: headersFor(userA),
+      });
+      expect(mismatchedSmashRegistrationRes.statusCode).toBe(409);
+      expect(
+        mismatchedSmashRegistrationRes.json<{ error: { code: string } }>().error.code,
+      ).toBe('TEAM_GAME_MISMATCH');
+
+      await db.update(teams).set({ gameAdapterKey: null }).where(eq(teams.id, teamA));
+      const forbiddenLegacyAssignmentRes = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/teams/${teamA}/game-adapter`,
+        payload: { gameAdapterKey: 'smash_ultimate' },
+        headers: headersFor(userB),
+      });
+      expect(forbiddenLegacyAssignmentRes.statusCode).toBe(403);
+
+      const invalidRosterAssignmentRes = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/teams/${teamB}/game-adapter`,
+        payload: { gameAdapterKey: 'valorant' },
+        headers: headersFor(userB),
+      });
+      expect(invalidRosterAssignmentRes.statusCode).toBe(409);
+      expect(
+        invalidRosterAssignmentRes.json<{ error: { code: string } }>().error.code,
+      ).toBe('TEAM_ROSTER_SIZE_INVALID');
+
+      const legacyAssignmentRes = await app.inject({
+        method: 'PATCH',
+        url: `/api/v1/teams/${teamA}/game-adapter`,
+        payload: { gameAdapterKey: 'smash_ultimate' },
+        headers: headersFor(userA),
+      });
+      expect(legacyAssignmentRes.statusCode).toBe(200);
+      expect(
+        legacyAssignmentRes.json<{ team: { gameAdapterKey: string } }>().team.gameAdapterKey,
+      ).toBe('smash_ultimate');
+
+      const smashRegistrationRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${smashTournament.id}/registrations`,
+        payload: { teamId: smashTeam },
+        headers: headersFor(userC),
+      });
+      expect(smashRegistrationRes.statusCode).toBe(201);
+
       const tournamentRes = await app.inject({
         method: 'POST',
         url: '/api/v1/tournaments',
@@ -215,6 +412,603 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
         url: `/api/v1/tournaments/by-slug/${unlistedSlug}`,
       });
       expect(anonymousUnlistedRes.statusCode).toBe(401);
+
+      const concurrentTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: `concurrent-reg-${t}`,
+          name: 'Registro concurrente',
+          capacity: 2,
+        },
+        headers: headersFor(userA),
+      });
+      const concurrentTournamentId = concurrentTournamentRes.json<{
+        tournament: { id: string };
+      }>().tournament.id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${concurrentTournamentId}/publish`,
+        headers: headersFor(userA),
+      });
+      const concurrentRegistrations = await Promise.all([
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${concurrentTournamentId}/registrations`,
+          payload: { teamId: teamA },
+          headers: headersFor(userA),
+        }),
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${concurrentTournamentId}/registrations`,
+          payload: { teamId: teamB },
+          headers: headersFor(userB),
+        }),
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${concurrentTournamentId}/registrations`,
+          payload: { teamId: smashTeam },
+          headers: headersFor(userC),
+        }),
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${concurrentTournamentId}/registrations`,
+          payload: { teamId: teamD },
+          headers: headersFor(userD),
+        }),
+      ]);
+      expect(concurrentRegistrations.every((response) => response.statusCode === 201)).toBe(true);
+      const concurrentAllocation = concurrentRegistrations.map((response) =>
+        response.json<{
+          registration: { status: string; waitlistPosition: number | null };
+        }>().registration,
+      );
+      expect(concurrentAllocation.filter((entry) => entry.status === 'approved')).toHaveLength(2);
+      expect(
+        concurrentAllocation
+          .filter((entry) => entry.status === 'waitlisted')
+          .map((entry) => entry.waitlistPosition)
+          .sort(),
+      ).toEqual([1, 2]);
+
+      const closedRegistrationTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: `closed-registration-${t}`,
+          name: 'Registro cerrado por fecha',
+          registrationConfig: {
+            closesAt: new Date(Date.now() - 60_000).toISOString(),
+          },
+        },
+        headers: headersFor(userA),
+      });
+      const closedRegistrationTournamentId = closedRegistrationTournamentRes.json<{
+        tournament: { id: string };
+      }>().tournament.id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${closedRegistrationTournamentId}/publish`,
+        headers: headersFor(userA),
+      });
+      const closedRegistrationRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${closedRegistrationTournamentId}/registrations`,
+        payload: { teamId: teamD },
+        headers: headersFor(userD),
+      });
+      expect(closedRegistrationRes.statusCode).toBe(409);
+      expect(closedRegistrationRes.json<{ error: { code: string } }>().error.code).toBe(
+        'REGISTRATION_CLOSED',
+      );
+
+      const raceTeamRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/teams',
+        payload: { organizationId: orgId, name: 'Equipo Race', tag: 'RCE' },
+        headers: headersFor(userC),
+      });
+      expect(raceTeamRes.statusCode).toBe(201);
+      const raceTeamId = raceTeamRes.json<{ team: { id: string } }>().team.id;
+
+      const raceTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: `registration-bracket-race-${t}`,
+          name: 'Registro contra bracket',
+          capacity: 8,
+        },
+        headers: headersFor(userA),
+      });
+      const raceTournamentId = raceTournamentRes.json<{
+        tournament: { id: string };
+      }>().tournament.id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${raceTournamentId}/publish`,
+        headers: headersFor(userA),
+      });
+      for (const [teamId, session] of [
+        [teamB, userB],
+        [teamD, userD],
+      ] as const) {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${raceTournamentId}/registrations`,
+          payload: { teamId },
+          headers: headersFor(session),
+        });
+        expect(response.statusCode).toBe(201);
+      }
+
+      const registrationBracketLock = await lockTournament(raceTournamentId);
+      const racingRegistration = app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${raceTournamentId}/registrations`,
+        payload: { teamId: raceTeamId },
+        headers: headersFor(userC),
+      });
+      let racingBracket: Promise<Awaited<typeof racingRegistration>>;
+      try {
+        await waitForBlockedRequests(registrationBracketLock.blockerPid, 1);
+        racingBracket = app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${raceTournamentId}/bracket/generate`,
+          headers: headersFor(userA),
+        });
+        await waitForBlockedRequests(registrationBracketLock.blockerPid, 2);
+      } finally {
+        await registrationBracketLock.release();
+      }
+
+      const [racingRegistrationRes, racingBracketRes] = await Promise.all([
+        racingRegistration,
+        racingBracket,
+      ]);
+      expect(racingRegistrationRes.statusCode).toBe(201);
+      expect(racingBracketRes.statusCode).toBe(200);
+
+      const [racingParticipant] = await db
+        .select({ id: tournamentParticipants.id })
+        .from(tournamentParticipants)
+        .where(
+          and(
+            eq(tournamentParticipants.tournamentId, raceTournamentId),
+            eq(tournamentParticipants.teamId, raceTeamId),
+          ),
+        );
+      const [racingStage] = await db
+        .select({ config: stages.config })
+        .from(stages)
+        .where(eq(stages.tournamentId, raceTournamentId));
+      const racingEngine = racingStage!.config.engineBracket as {
+        byes: string[];
+        matches: Array<{ home: string | null; away: string | null }>;
+      };
+      const bracketParticipantIds = new Set([
+        ...racingEngine.byes,
+        ...racingEngine.matches.flatMap((match) => [match.home, match.away]),
+      ]);
+      expect(bracketParticipantIds.has(racingParticipant!.id)).toBe(true);
+
+      const cancellationRaceTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: `cancellation-race-${t}`,
+          name: 'Cancelación concurrente',
+          capacity: 8,
+        },
+        headers: headersFor(userA),
+      });
+      const cancellationRaceTournamentId = cancellationRaceTournamentRes.json<{
+        tournament: { id: string };
+      }>().tournament.id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${cancellationRaceTournamentId}/publish`,
+        headers: headersFor(userA),
+      });
+      for (const [teamId, session] of [
+        [teamB, userB],
+        [teamD, userD],
+      ] as const) {
+        await app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${cancellationRaceTournamentId}/registrations`,
+          payload: { teamId },
+          headers: headersFor(session),
+        });
+      }
+
+      const cancellationLock = await lockTournament(cancellationRaceTournamentId);
+      const racingCancellation = app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${cancellationRaceTournamentId}/cancel`,
+        headers: headersFor(userA),
+      });
+      let registrationAfterCancellation: Promise<Awaited<typeof racingCancellation>>;
+      let bracketAfterCancellation: Promise<Awaited<typeof racingCancellation>>;
+      try {
+        await waitForBlockedRequests(cancellationLock.blockerPid, 1);
+        registrationAfterCancellation = app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${cancellationRaceTournamentId}/registrations`,
+          payload: { teamId: raceTeamId },
+          headers: headersFor(userC),
+        });
+        await waitForBlockedRequests(cancellationLock.blockerPid, 2);
+        bracketAfterCancellation = app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${cancellationRaceTournamentId}/bracket/generate`,
+          headers: headersFor(userA),
+        });
+        await waitForBlockedRequests(cancellationLock.blockerPid, 3);
+      } finally {
+        await cancellationLock.release();
+      }
+
+      const [racingCancellationRes, registrationAfterCancellationRes, bracketAfterCancellationRes] =
+        await Promise.all([
+          racingCancellation,
+          registrationAfterCancellation,
+          bracketAfterCancellation,
+        ]);
+      expect(racingCancellationRes.statusCode).toBe(200);
+      expect(registrationAfterCancellationRes.statusCode).toBe(409);
+      expect(bracketAfterCancellationRes.statusCode).toBe(409);
+      const [cancelledTournament] = await db
+        .select({ status: tournaments.status })
+        .from(tournaments)
+        .where(eq(tournaments.id, cancellationRaceTournamentId));
+      const cancelledTournamentStages = await db
+        .select({ id: stages.id })
+        .from(stages)
+        .where(eq(stages.tournamentId, cancellationRaceTournamentId));
+      expect(cancelledTournament?.status).toBe('cancelled');
+      expect(cancelledTournamentStages).toHaveLength(0);
+
+      const cancelledResultsTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: `cancelled-results-${t}`,
+          name: 'Resultados tras cancelar',
+          format: 'single_elimination',
+          capacity: 8,
+        },
+        headers: headersFor(userA),
+      });
+      const cancelledResultsTournamentId = cancelledResultsTournamentRes.json<{
+        tournament: { id: string };
+      }>().tournament.id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${cancelledResultsTournamentId}/publish`,
+        headers: headersFor(userA),
+      });
+      for (const [teamId, session] of [
+        [teamB, userB],
+        [teamD, userD],
+      ] as const) {
+        const response = await app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${cancelledResultsTournamentId}/registrations`,
+          payload: { teamId },
+          headers: headersFor(session),
+        });
+        expect(response.statusCode).toBe(201);
+      }
+      const cancelledResultsBracketRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${cancelledResultsTournamentId}/bracket/generate`,
+        headers: headersFor(userA),
+      });
+      expect(cancelledResultsBracketRes.statusCode).toBe(200);
+      const cancelledResultsMatchesRes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${cancelledResultsTournamentId}/matches`,
+      });
+      const cancelledResultsMatch = cancelledResultsMatchesRes
+        .json<{
+          matches: Array<{
+            id: string;
+            homeTeamId: string | null;
+            awayTeamId: string | null;
+          }>;
+        }>()
+        .matches.find((match) => match.homeTeamId && match.awayTeamId)!;
+      const sessionByTeamId = new Map<string, Session>([
+        [teamB, userB],
+        [teamD, userD],
+      ]);
+      const firstResultBeforeCancellation = await app.inject({
+        method: 'POST',
+        url: `/api/v1/matches/${cancelledResultsMatch.id}/results`,
+        payload: { winnerTeamId: cancelledResultsMatch.homeTeamId },
+        headers: headersFor(sessionByTeamId.get(cancelledResultsMatch.homeTeamId!)!),
+      });
+      expect(firstResultBeforeCancellation.statusCode).toBe(201);
+
+      const cancelledResultLock = await lockTournament(cancelledResultsTournamentId);
+      const cancellationBeforeConfirmation = app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${cancelledResultsTournamentId}/cancel`,
+        headers: headersFor(userA),
+      });
+      let confirmationDuringCancellation: Promise<Awaited<typeof cancellationBeforeConfirmation>>;
+      let disputeDuringCancellation: Promise<Awaited<typeof cancellationBeforeConfirmation>>;
+      try {
+        await waitForBlockedRequests(cancelledResultLock.blockerPid, 1);
+        confirmationDuringCancellation = app.inject({
+          method: 'POST',
+          url: `/api/v1/matches/${cancelledResultsMatch.id}/results`,
+          payload: { winnerTeamId: cancelledResultsMatch.homeTeamId },
+          headers: headersFor(sessionByTeamId.get(cancelledResultsMatch.awayTeamId!)!),
+        });
+        await waitForBlockedRequests(cancelledResultLock.blockerPid, 2);
+        disputeDuringCancellation = app.inject({
+          method: 'POST',
+          url: '/api/v1/disputes',
+          payload: {
+            matchId: cancelledResultsMatch.id,
+            reason: 'captain_request',
+            message: 'Revisión antes de cancelar',
+          },
+          headers: headersFor(sessionByTeamId.get(cancelledResultsMatch.homeTeamId!)!),
+        });
+        await waitForBlockedRequests(cancelledResultLock.blockerPid, 3);
+      } finally {
+        await cancelledResultLock.release();
+      }
+      const [
+        cancellationBeforeConfirmationRes,
+        confirmationDuringCancellationRes,
+        disputeDuringCancellationRes,
+      ] = await Promise.all([
+        cancellationBeforeConfirmation,
+        confirmationDuringCancellation,
+        disputeDuringCancellation,
+      ]);
+      expect(cancellationBeforeConfirmationRes.statusCode).toBe(200);
+      expect(confirmationDuringCancellationRes.statusCode).toBe(409);
+      expect(
+        confirmationDuringCancellationRes.json<{ error: { code: string } }>().error.code,
+      ).toBe('INVALID_TOURNAMENT_STATUS');
+      expect(disputeDuringCancellationRes.statusCode).toBe(409);
+      expect(disputeDuringCancellationRes.json<{ error: { code: string } }>().error.code).toBe(
+        'INVALID_TOURNAMENT_STATUS',
+      );
+
+      const walkoverAfterCancellationRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/matches/${cancelledResultsMatch.id}/walkover`,
+        payload: { winnerTeamId: cancelledResultsMatch.homeTeamId },
+        headers: headersFor(userA),
+      });
+      expect(walkoverAfterCancellationRes.statusCode).toBe(409);
+      expect(walkoverAfterCancellationRes.json<{ error: { code: string } }>().error.code).toBe(
+        'INVALID_TOURNAMENT_STATUS',
+      );
+
+      const cancelledResultsTournamentView = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${cancelledResultsTournamentId}`,
+      });
+      expect(
+        cancelledResultsTournamentView.json<{ tournament: { status: string } }>().tournament.status,
+      ).toBe('cancelled');
+      const cancelledResultsDisputes = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${cancelledResultsTournamentId}/disputes`,
+        headers: headersFor(userA),
+      });
+      expect(cancelledResultsDisputes.json<{ disputes: unknown[] }>().disputes).toEqual([]);
+      const cancelledResultsMatchesAfterRace = await app.inject({
+        method: 'GET',
+        url: `/api/v1/tournaments/${cancelledResultsTournamentId}/matches`,
+      });
+      expect(
+        cancelledResultsMatchesAfterRace
+          .json<{ matches: Array<{ id: string; status: string }> }>()
+          .matches.find((match) => match.id === cancelledResultsMatch.id)?.status,
+      ).toBe('scheduled');
+
+      const duplicateTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: `duplicate-reg-${t}`,
+          name: 'Registro duplicado',
+          capacity: 2,
+        },
+        headers: headersFor(userA),
+      });
+      const duplicateTournamentId = duplicateTournamentRes.json<{
+        tournament: { id: string };
+      }>().tournament.id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${duplicateTournamentId}/publish`,
+        headers: headersFor(userA),
+      });
+      const duplicateAttempts = await Promise.all([
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${duplicateTournamentId}/registrations`,
+          payload: { teamId: teamD },
+          headers: headersFor(userD),
+        }),
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${duplicateTournamentId}/registrations`,
+          payload: { teamId: teamD },
+          headers: headersFor(userD),
+        }),
+      ]);
+      expect(duplicateAttempts.map((response) => response.statusCode).sort()).toEqual([201, 409]);
+
+      const decisionTournamentRes = await app.inject({
+        method: 'POST',
+        url: '/api/v1/tournaments',
+        payload: {
+          organizationId: orgId,
+          gameAdapterKey: 'generic',
+          slug: `registration-decisions-${t}`,
+          name: 'Decisiones de inscripción',
+          capacity: 2,
+          registrationConfig: { manualApproval: true },
+        },
+        headers: headersFor(userA),
+      });
+      expect(decisionTournamentRes.statusCode).toBe(201);
+      const decisionTournamentId = decisionTournamentRes.json<{
+        tournament: { id: string };
+      }>().tournament.id;
+      await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${decisionTournamentId}/publish`,
+        headers: headersFor(userA),
+      });
+
+      const [pendingARes, pendingBRes] = await Promise.all([
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${decisionTournamentId}/registrations`,
+          payload: { teamId: teamA },
+          headers: headersFor(userA),
+        }),
+        app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${decisionTournamentId}/registrations`,
+          payload: { teamId: teamB },
+          headers: headersFor(userB),
+        }),
+      ]);
+      const registrationAId = pendingARes.json<{ registration: { id: string } }>().registration.id;
+      const registrationBId = pendingBRes.json<{ registration: { id: string } }>().registration.id;
+
+      const decideRegistration = (registrationId: string, status: 'approved' | 'rejected') =>
+        app.inject({
+          method: 'PATCH',
+          url: `/api/v1/tournaments/${decisionTournamentId}/registrations/${registrationId}`,
+          payload: { status },
+          headers: headersFor(userA),
+        });
+      const participantRows = () =>
+        db
+          .select({
+            id: tournamentParticipants.id,
+            teamId: tournamentParticipants.teamId,
+            checkedIn: tournamentParticipants.checkedIn,
+            status: tournamentParticipants.status,
+          })
+          .from(tournamentParticipants)
+          .where(eq(tournamentParticipants.tournamentId, decisionTournamentId));
+
+      expect((await decideRegistration(registrationAId, 'approved')).statusCode).toBe(200);
+      const [initialParticipantA] = await participantRows();
+      expect(initialParticipantA).toMatchObject({ teamId: teamA, status: 'active' });
+
+      const decisionCheckInRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${decisionTournamentId}/check-in`,
+        payload: { teamId: teamA },
+        headers: headersFor(userA),
+      });
+      expect(decisionCheckInRes.statusCode).toBe(200);
+
+      expect((await decideRegistration(registrationAId, 'approved')).statusCode).toBe(200);
+      expect(await participantRows()).toEqual([
+        expect.objectContaining({
+          id: initialParticipantA!.id,
+          teamId: teamA,
+          checkedIn: true,
+          status: 'active',
+        }),
+      ]);
+
+      await db
+        .update(tournamentParticipants)
+        .set({ status: 'eliminated' })
+        .where(eq(tournamentParticipants.id, initialParticipantA!.id));
+      expect((await decideRegistration(registrationAId, 'approved')).statusCode).toBe(200);
+      expect(await participantRows()).toEqual([
+        expect.objectContaining({
+          id: initialParticipantA!.id,
+          teamId: teamA,
+          checkedIn: true,
+          status: 'eliminated',
+        }),
+      ]);
+
+      expect((await decideRegistration(registrationAId, 'rejected')).statusCode).toBe(200);
+      expect(await participantRows()).toEqual([
+        expect.objectContaining({ id: initialParticipantA!.id, teamId: teamA, status: 'inactive' }),
+      ]);
+
+      expect((await decideRegistration(registrationAId, 'approved')).statusCode).toBe(200);
+      expect(await participantRows()).toEqual([
+        expect.objectContaining({ id: initialParticipantA!.id, teamId: teamA, status: 'active' }),
+      ]);
+
+      expect((await decideRegistration(registrationAId, 'rejected')).statusCode).toBe(200);
+      expect((await decideRegistration(registrationBId, 'approved')).statusCode).toBe(200);
+      expect((await decideRegistration(registrationAId, 'approved')).statusCode).toBe(200);
+
+      const decisionRegistrations = await db
+        .select({ teamId: tournamentRegistrations.teamId, status: tournamentRegistrations.status })
+        .from(tournamentRegistrations)
+        .where(eq(tournamentRegistrations.tournamentId, decisionTournamentId));
+      expect(decisionRegistrations).toEqual(
+        expect.arrayContaining([
+          { teamId: teamA, status: 'approved' },
+          { teamId: teamB, status: 'approved' },
+        ]),
+      );
+      expect(await participantRows()).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ teamId: teamA, status: 'active' }),
+          expect.objectContaining({ teamId: teamB, status: 'active' }),
+        ]),
+      );
+
+      await db
+        .update(tournaments)
+        .set({ status: 'checkin_open' })
+        .where(eq(tournaments.id, decisionTournamentId));
+      expect((await decideRegistration(registrationBId, 'rejected')).statusCode).toBe(200);
+      expect((await decideRegistration(registrationBId, 'approved')).statusCode).toBe(200);
+
+      for (const status of ['in_progress', 'finalized', 'cancelled'] as const) {
+        await db
+          .update(tournaments)
+          .set({ status })
+          .where(eq(tournaments.id, decisionTournamentId));
+        const approveResponse = await decideRegistration(registrationBId, 'approved');
+        const rejectResponse = await decideRegistration(registrationBId, 'rejected');
+        expect(approveResponse.statusCode).toBe(409);
+        expect(rejectResponse.statusCode).toBe(409);
+        expect(approveResponse.json<{ error: { code: string } }>().error.code).toBe(
+          'INVALID_STATUS',
+        );
+        expect(rejectResponse.json<{ error: { code: string } }>().error.code).toBe(
+          'INVALID_STATUS',
+        );
+      }
 
       const publishRes = await app.inject({
         method: 'POST',
@@ -260,6 +1054,17 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
         headers: headersFor(userA),
       });
       expect(bracketRes.statusCode).toBe(200);
+
+      const checkInAfterBracketRes = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${tournament}/check-in`,
+        payload: { teamId: teamA },
+        headers: headersFor(userA),
+      });
+      expect(checkInAfterBracketRes.statusCode).toBe(409);
+      expect(checkInAfterBracketRes.json<{ error: { code: string } }>().error.code).toBe(
+        'INVALID_STATUS',
+      );
 
       const duplicateBracketRes = await app.inject({
         method: 'POST',
@@ -650,6 +1455,12 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     await runMigrations(process.env.TEST_DATABASE_URL!);
     const firstSeed = await seedDemoData(db);
     const secondSeed = await seedDemoData(db);
+    const expectedDemoTeamIds = [
+      '00000000-0000-4000-8000-000000000201',
+      '00000000-0000-4000-8000-000000000202',
+      '00000000-0000-4000-8000-000000000203',
+      '00000000-0000-4000-8000-000000000204',
+    ] as const;
 
     expect(secondSeed).toEqual(firstSeed);
 
@@ -666,7 +1477,12 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
     const demoTeams = await db
       .select({ id: teams.id })
       .from(teams)
-      .where(eq(teams.organizationId, firstSeed.organizationId));
+      .where(
+        and(
+          eq(teams.organizationId, firstSeed.organizationId),
+          inArray(teams.id, expectedDemoTeamIds),
+        ),
+      );
     const registrations = await db
       .select({ id: tournamentRegistrations.id })
       .from(tournamentRegistrations)
@@ -697,7 +1513,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       .innerJoin(matches, eq(matches.id, disputes.matchId))
       .where(eq(matches.tournamentId, firstSeed.tournamentId));
 
-    expect(demoTeams).toHaveLength(4);
+    expect(demoTeams.map((team) => team.id).sort()).toEqual([...expectedDemoTeamIds].sort());
     expect(registrations).toHaveLength(4);
     expect(participants).toHaveLength(4);
     expect(bracketRows).toHaveLength(1);

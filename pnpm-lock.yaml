@@ -74,6 +74,9 @@ importers:
       '@opentournament/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@opentournament/game-adapters':
+        specifier: workspace:*
+        version: link:../../packages/game-adapters
       '@opentournament/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
@@ -120,6 +123,9 @@ importers:
       '@opentournament/bracket-ui':
         specifier: workspace:*
         version: link:../../packages/bracket-ui
+      '@opentournament/game-adapters':
+        specifier: workspace:*
+        version: link:../../packages/game-adapters
       '@opentournament/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
