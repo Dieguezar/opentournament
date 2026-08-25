@@ -29,9 +29,13 @@ export interface SmashUltimateRules {
 
 export type TournamentGameRules = SmashUltimateRules;
 
+export const RESULT_REPORTING_MODES = ['bilateral', 'winner_reports', 'staff_only'] as const;
+export type ResultReportingMode = (typeof RESULT_REPORTING_MODES)[number];
+
 export interface TournamentSettings {
   grandFinalReset?: boolean;
   presencial?: boolean;
+  reportingMode?: ResultReportingMode;
   templateKey?: string;
   templateVersion?: number;
   gameRules?: TournamentGameRules;

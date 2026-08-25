@@ -10,7 +10,8 @@
 
 ## 2. Autenticación (quién eres)
 
-- Sesión: cookie httpOnly `session` firmada; payload mínimo (`userId`, `sessionId`, expiración).
+- Sesión: cookie httpOnly con token opaco; en base de datos sólo se conserva su hash, actor, alcance opcional y expiración.
+- Pase de participante: token aleatorio mostrado una sola vez, almacenado como hash y limitado a un torneo/equipo. Crea un actor seudónimo para auditoría, puede expirar o revocarse y nunca hereda membresías de organización ni permisos del capitán real.
 - CSRF: token por sesión en cabecera `X-CSRF-Token` para métodos mutantes.
 - Contraseñas: Argon2id (memoria 19 MiB, iteraciones 2, paralelismo 1).
 - Discord OAuth: intercambio `authorization_code`; la identidad se vincula por correo verificado coincidente (si el correo de Discord no coincide con una cuenta existente, se crea una nueva).
@@ -31,7 +32,7 @@ Permisos granulares asignados a roles:
 | `tournament.bracket.generate` | Generar/regenerar bracket |
 | `tournament.finalize` | Publicar resultados finales |
 | `match.manage` | Reprogramar, walkover, DQ, anular |
-| `match.report` | Reportar resultado (capitán de la partida) |
+| `match.report` | Reportar resultado (capitán o pase restringido de la partida) |
 | `match.results.confirm` | Confirmar/escalar resultados (staff) |
 | `evidence.view` | Ver evidencias (staff/árbitro/partes) |
 | `dispute.manage` | Asignar árbitros, gestionar disputas |
@@ -49,11 +50,13 @@ Permisos granulares asignados a roles:
 | Árbitro | `dispute.resolve`, `dispute.manage` (asignado), `evidence.view`, `match.results.confirm` |
 | Moderador | `registrations.manage`, `checkin.manage`, mensajes de disputas |
 | Capitán | `match.report` (solo en sus partidas), `team.manage`, ver evidencias propias |
+| Participante con pase | `match.report` y disputas sólo para su torneo/equipo; sin permisos de organización o roster |
 
 ## 5. Reglas de alcance de datos
 
 - `organization_id` en todas las tablas de la organización; consultas siempre filtradas por membresía.
 - Partidas: el capitán solo opera sobre partidas donde su equipo participa.
+- Pases: cada request vuelve a comprobar torneo, equipo, expiración y revocación; el token viaja inicialmente en el fragmento `#token=` para no quedar en logs HTTP ni cabeceras `Referer`.
 - Evidencias: privadas; acceso a staff del torneo, árbitro asignado y equipos de la partida.
 - Disputas: acceso a staff, árbitro asignado y partes.
 - Perfiles públicos: solo datos marcados públicos.

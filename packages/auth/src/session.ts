@@ -19,11 +19,17 @@ export async function createSession(
   db: Db,
   userId: string,
   ttlHours: number,
+  options: { participantAccessPassId?: string; expiresAtLimit?: Date } = {},
 ): Promise<{ token: string; expiresAt: Date }> {
   const token = generateSessionToken();
-  const expiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  const ttlExpiresAt = new Date(Date.now() + ttlHours * 60 * 60 * 1000);
+  const expiresAt =
+    options.expiresAtLimit && options.expiresAtLimit < ttlExpiresAt
+      ? options.expiresAtLimit
+      : ttlExpiresAt;
   await db.insert(sessions).values({
     userId,
+    participantAccessPassId: options.participantAccessPassId,
     tokenHash: hashSessionToken(token),
     expiresAt,
   });
@@ -33,10 +39,18 @@ export async function createSession(
 export async function findSessionByToken(
   db: Db,
   token: string,
-): Promise<{ userId: string; expiresAt: Date } | null> {
+): Promise<{
+  userId: string;
+  participantAccessPassId: string | null;
+  expiresAt: Date;
+} | null> {
   const tokenHash = hashSessionToken(token);
   const [row] = await db
-    .select({ userId: sessions.userId, expiresAt: sessions.expiresAt })
+    .select({
+      userId: sessions.userId,
+      participantAccessPassId: sessions.participantAccessPassId,
+      expiresAt: sessions.expiresAt,
+    })
     .from(sessions)
     .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, new Date())))
     .limit(1);

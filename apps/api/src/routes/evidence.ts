@@ -36,7 +36,7 @@ async function canAccessEvidence(
   if (await isTournamentAdmin(db, ctx.tournament.id, userId)) {
     return { allowed: true, tournamentId: ctx.tournament.id };
   }
-  if (await isTeamCaptain(db, submission.teamId, userId)) {
+  if (submission.teamId && (await isTeamCaptain(db, submission.teamId, userId))) {
     return { allowed: true, tournamentId: ctx.tournament.id };
   }
   return { allowed: false };
@@ -145,7 +145,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance): Promise<void
       })
       .from(evidence)
       .innerJoin(resultSubmissions, eq(resultSubmissions.id, evidence.resultSubmissionId))
-      .innerJoin(teams, eq(teams.id, resultSubmissions.teamId))
+      .leftJoin(teams, eq(teams.id, resultSubmissions.teamId))
       .where(eq(evidence.resultSubmissionId, resultId));
 
     const items = await Promise.all(

@@ -1,10 +1,11 @@
 import cookie from '@fastify/cookie';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, gt, isNull } from 'drizzle-orm';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { csrfTokensMatch, findSessionByToken } from '@opentournament/auth';
 import {
   organizationMembers,
   organizations,
+  participantAccessPasses,
   users,
   type Db,
 } from '@opentournament/database';
@@ -24,6 +25,29 @@ export async function registerAuthPlugins(app: FastifyInstance, db: Db): Promise
     if (!session) {
       reply.clearCookie('session', { path: '/' });
       return;
+    }
+    if (session.participantAccessPassId) {
+      const [participantAccess] = await db
+        .select({
+          id: participantAccessPasses.id,
+          tournamentId: participantAccessPasses.tournamentId,
+          teamId: participantAccessPasses.teamId,
+        })
+        .from(participantAccessPasses)
+        .where(
+          and(
+            eq(participantAccessPasses.id, session.participantAccessPassId),
+            eq(participantAccessPasses.actorUserId, session.userId),
+            isNull(participantAccessPasses.revokedAt),
+            gt(participantAccessPasses.expiresAt, new Date()),
+          ),
+        )
+        .limit(1);
+      if (!participantAccess) {
+        reply.clearCookie('session', { path: '/' });
+        return;
+      }
+      request.participantAccess = participantAccess;
     }
     request.sessionToken = token;
     const user = await loadSessionUser(db, session.userId);
@@ -69,9 +93,7 @@ export async function loadSessionUser(db: Db, userId: string): Promise<SessionUs
     })
     .from(organizationMembers)
     .innerJoin(organizations, eq(organizations.id, organizationMembers.organizationId))
-    .where(
-      and(eq(organizationMembers.userId, userId), isNull(organizations.deletedAt)),
-    );
+    .where(and(eq(organizationMembers.userId, userId), isNull(organizations.deletedAt)));
 
   return {
     id: user.id,
@@ -99,11 +121,7 @@ export function requireAuth(request: FastifyRequest, reply: FastifyReply): boole
   return true;
 }
 
-export function setSessionCookies(
-  reply: FastifyReply,
-  token: string,
-  expiresAt: Date,
-): void {
+export function setSessionCookies(reply: FastifyReply, token: string, expiresAt: Date): void {
   const secure = env.NODE_ENV === 'production';
   reply.setCookie('session', token, {
     httpOnly: true,

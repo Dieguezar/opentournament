@@ -43,6 +43,20 @@
       "when": 1787354750884,
       "tag": "0005_low_silver_sable",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787638887631,
+      "tag": "0006_careful_wendell_rand",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787639267602,
+      "tag": "0007_watery_bushwacker",
+      "breakpoints": true
     }
   ]
 }
