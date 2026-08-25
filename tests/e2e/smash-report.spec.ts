@@ -156,8 +156,8 @@ test('capitán completa y envía un set guiado de Smash Ultimate', async ({ page
     await expect(page.getByLabel('Escenario').first()).toBeFocused();
 
     const stageFields = page.getByLabel('Escenario');
-    const ownerCharacterFields = page.getByLabel('Smash A');
-    const rivalCharacterFields = page.getByLabel('Smash B');
+    const ownerCharacterFields = page.getByRole('textbox', { name: 'Smash A', exact: true });
+    const rivalCharacterFields = page.getByRole('textbox', { name: 'Smash B', exact: true });
     for (let index = 0; index < 3; index += 1) {
       await stageFields.nth(index).selectOption('Battlefield');
       await ownerCharacterFields.nth(index).fill('Mario');
