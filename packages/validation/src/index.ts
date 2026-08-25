@@ -344,11 +344,23 @@ export const seedsSchema = z.object({
 });
 export type SeedsInput = z.infer<typeof seedsSchema>;
 
+export const smashGameResultSchema = z.object({
+  number: z.preprocess(normalizeSmashNumericInput, z.number().int().min(1).max(5)),
+  stage: smashStageNameSchema,
+  homeCharacter: z.string().trim().min(1).max(80),
+  awayCharacter: z.string().trim().min(1).max(80),
+  winnerTeamId: z.string().uuid(),
+  homeStocks: z.preprocess(normalizeSmashNumericInput, z.number().int().min(0).max(10)),
+  awayStocks: z.preprocess(normalizeSmashNumericInput, z.number().int().min(0).max(10)),
+});
+export type SmashGameResultInput = z.infer<typeof smashGameResultSchema>;
+
 export const reportResultSchema = z.object({
   winnerTeamId: z.string().uuid().nullable().optional(),
   draw: z.boolean().default(false),
   homeScore: z.coerce.number().int().min(0).max(99).optional(),
   awayScore: z.coerce.number().int().min(0).max(99).optional(),
+  games: z.array(smashGameResultSchema).min(1).max(5).optional(),
 });
 export type ReportResultInput = z.infer<typeof reportResultSchema>;
 

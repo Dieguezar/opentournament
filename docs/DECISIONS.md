@@ -357,6 +357,15 @@ Este documento registra las decisiones de producto, arquitectura y proceso de Op
 - **Consecuencias:** La configuración queda persistida por torneo, el roster y la terminología pueden variar por juego, y los cambios futuros de reglas requieren una nueva versión de plantilla.
 - **Estado:** aprobada.
 
+## ADR-040 — Resultados específicos dentro del documento del match
+
+- **Tema:** Persistencia de detalles competitivos que varían según el juego.
+- **Opciones:** Columnas específicas en el núcleo | Tabla polimórfica | Documento tipado dentro de `matches.result`.
+- **Decisión:** Conservar el resumen común (`winnerId`, marcador) y agregar detalles tipados por adaptador dentro del JSONB del resultado. Smash Ultimate inaugura el contrato con games, escenario, personajes, ganador y stocks.
+- **Motivo:** El bracket necesita una lectura atómica del resultado sin acoplar el esquema relacional central a cada videojuego.
+- **Consecuencias:** Cada adaptador debe validar su documento antes de persistirlo; futuras consultas analíticas por campos específicos podrían requerir índices JSONB o una proyección dedicada.
+- **Estado:** aprobada.
+
 ## Supuestos por defecto (estado: propuesta)
 
 Estos valores se tomaron por defecto durante el descubrimiento y se confirman en la revisión de la especificación:

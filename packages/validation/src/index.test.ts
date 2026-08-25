@@ -4,9 +4,11 @@ import {
   assignTeamGameAdapterSchema,
   createTeamSchema,
   createTournamentSchema,
+  reportResultSchema,
 } from './index.js';
 
 const organizationId = '550e8400-e29b-41d4-a716-446655440000';
+const homeTeamId = '11111111-1111-4111-8111-111111111111';
 
 const smashRules = {
   game: 'smash_ultimate' as const,
@@ -299,6 +301,66 @@ describe('validación del roster por juego', () => {
     ).toEqual({ gameAdapterKey: 'smash_ultimate' });
     expect(
       assignTeamGameAdapterSchema.safeParse({ gameAdapterKey: 'generic' }).success,
+    ).toBe(false);
+  });
+});
+
+describe('detalle de games en reportes de Smash Ultimate', () => {
+  const validGame = {
+    number: 1,
+    stage: ' Battlefield ',
+    homeCharacter: ' Mario ',
+    awayCharacter: ' Link ',
+    winnerTeamId: homeTeamId,
+    homeStocks: 2,
+    awayStocks: 0,
+  };
+
+  it('normaliza un game estructurado válido', () => {
+    const result = reportResultSchema.parse({
+      winnerTeamId: homeTeamId,
+      homeScore: 2,
+      awayScore: 0,
+      games: [validGame],
+    });
+
+    expect(result.games).toEqual([
+      {
+        ...validGame,
+        stage: 'Battlefield',
+        homeCharacter: 'Mario',
+        awayCharacter: 'Link',
+      },
+    ]);
+  });
+
+  it.each(['number', 'homeStocks', 'awayStocks'] as const)(
+    'rechaza booleanos en el campo numérico %s',
+    (field) => {
+      expect(
+        reportResultSchema.safeParse({
+          winnerTeamId: homeTeamId,
+          games: [{ ...validGame, [field]: true }],
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it('rechaza personajes vacíos y más de cinco games', () => {
+    expect(
+      reportResultSchema.safeParse({
+        winnerTeamId: homeTeamId,
+        games: [{ ...validGame, homeCharacter: '   ' }],
+      }).success,
+    ).toBe(false);
+    expect(
+      reportResultSchema.safeParse({
+        winnerTeamId: homeTeamId,
+        games: Array.from({ length: 6 }, (_, index) => ({
+          ...validGame,
+          number: index + 1,
+        })),
+      }).success,
     ).toBe(false);
   });
 });
