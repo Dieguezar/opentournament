@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultReportingMode } from '@opentournament/shared-types';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { ParticipantAccessSecret } from './participant-access-secret';
 import styles from './participant-access-manager.module.css';
 
 interface EligibleTeam {
@@ -187,14 +188,11 @@ export function ParticipantAccessManager({
         )}
 
         {latestLink && (
-          <div className={styles.secretBox}>
-            <strong>Enlace nuevo para {latestLink.teamName}</strong>
-            <input aria-label="Enlace privado recién generado" readOnly value={latestLink.url} />
-            <button type="button" className="button button-secondary" onClick={copyLatestLink}>
-              Copiar enlace
-            </button>
-            <small>Guardalo ahora: por seguridad no podremos volver a mostrar el token.</small>
-          </div>
+          <ParticipantAccessSecret
+            teamName={latestLink.teamName}
+            url={latestLink.url}
+            onCopy={copyLatestLink}
+          />
         )}
 
         {activePasses.length > 0 && (
