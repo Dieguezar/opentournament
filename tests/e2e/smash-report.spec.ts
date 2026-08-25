@@ -34,7 +34,7 @@ function mutationHeaders(user: ApiUser) {
 test('capitán completa y envía un set guiado de Smash Ultimate', async ({ page }) => {
   const owner = await registerApiUser('Smash A');
   const rival = await registerApiUser('Smash B');
-  const suffix = crypto.randomUUID();
+  const suffix = crypto.randomUUID().replaceAll('-', '').slice(0, 12);
 
   try {
     const organizationResponse = await owner.api.post('/api/v1/organizations', {
