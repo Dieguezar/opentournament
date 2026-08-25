@@ -67,13 +67,7 @@ export const inviteMemberSchema = z.object({
 });
 export type InviteMemberInput = z.infer<typeof inviteMemberSchema>;
 
-export const gameAdapterKeySchema = z.enum([
-  'generic',
-  'valorant',
-  'cs2',
-  'lol',
-  'smash_ultimate',
-]);
+export const gameAdapterKeySchema = z.enum(['generic', 'valorant', 'cs2', 'lol', 'smash_ultimate']);
 
 const smashStageNameSchema = z.string().trim().min(1).max(80);
 
@@ -85,34 +79,21 @@ function normalizeSmashNumericInput(value: unknown): unknown {
 }
 
 function normalizeStageName(stageName: string): string {
-  return stageName
-    .normalize('NFKC')
-    .trim()
-    .replace(/\s+/gu, ' ')
-    .toLocaleLowerCase('en-US');
+  return stageName.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-US');
 }
 
 export const smashUltimateRulesSchema = z
   .object({
     game: z.literal('smash_ultimate'),
-    stocks: z.preprocess(
-      normalizeSmashNumericInput,
-      z.number().int().min(1).max(10),
-    ),
-    timeLimitMinutes: z.preprocess(
-      normalizeSmashNumericInput,
-      z.number().int().min(1).max(60),
-    ),
+    stocks: z.preprocess(normalizeSmashNumericInput, z.number().int().min(1).max(10)),
+    timeLimitMinutes: z.preprocess(normalizeSmashNumericInput, z.number().int().min(1).max(60)),
     itemsEnabled: z.boolean(),
     finalSmashMeterEnabled: z.boolean(),
     stageHazardsEnabled: z.boolean(),
     launchRate: z.preprocess(normalizeSmashNumericInput, z.number().min(0.5).max(2)),
     starters: z.array(smashStageNameSchema).min(1).max(20),
     counterpicks: z.array(smashStageNameSchema).min(1).max(20),
-    stageBans: z.preprocess(
-      normalizeSmashNumericInput,
-      z.number().int().min(0).max(10),
-    ),
+    stageBans: z.preprocess(normalizeSmashNumericInput, z.number().int().min(0).max(10)),
     stageClause: z.enum(['none', 'modified_dsr', 'full_dsr']),
   })
   .superRefine((rules, ctx) => {
@@ -154,13 +135,14 @@ export const smashUltimateRulesSchema = z
     }
   });
 
-export const tournamentGameRulesSchema = z.discriminatedUnion('game', [
-  smashUltimateRulesSchema,
-]);
+export const tournamentGameRulesSchema = z.discriminatedUnion('game', [smashUltimateRulesSchema]);
+
+export const resultReportingModeSchema = z.enum(['bilateral', 'winner_reports', 'staff_only']);
 
 export const tournamentSettingsSchema = z.object({
   grandFinalReset: z.boolean().default(false),
   presencial: z.boolean().default(false),
+  reportingMode: resultReportingModeSchema.default('bilateral'),
   templateKey: z.string().trim().min(1).max(100).optional(),
   templateVersion: z.coerce.number().int().min(1).max(999).optional(),
   gameRules: tournamentGameRulesSchema.optional(),
@@ -245,6 +227,7 @@ export const createTournamentSchema = z
     settings: tournamentSettingsSchema.default({
       grandFinalReset: false,
       presencial: false,
+      reportingMode: 'bilateral',
     }),
     startsAt: z.string().datetime().optional(),
     endsAt: z.string().datetime().optional(),
@@ -259,10 +242,7 @@ export const createTournamentSchema = z
       });
     }
 
-    if (
-      tournament.gameAdapterKey === 'smash_ultimate' &&
-      tournament.seriesConfig.drawsAllowed
-    ) {
+    if (tournament.gameAdapterKey === 'smash_ultimate' && tournament.seriesConfig.drawsAllowed) {
       ctx.addIssue({
         code: 'custom',
         message: 'Smash Ultimate no admite empates',
@@ -302,6 +282,7 @@ export const updateTournamentSchema = z.object({
   visibility: tournamentVisibilitySchema.optional(),
   startsAt: z.string().datetime().nullable().optional(),
   endsAt: z.string().datetime().nullable().optional(),
+  reportingMode: resultReportingModeSchema.optional(),
 });
 export type UpdateTournamentInput = z.infer<typeof updateTournamentSchema>;
 
@@ -309,6 +290,24 @@ export const registerTeamSchema = z.object({
   teamId: z.string().uuid(),
 });
 export type RegisterTeamInput = z.infer<typeof registerTeamSchema>;
+
+export const createParticipantAccessPassSchema = z.object({
+  teamId: z.string().uuid(),
+  expiresInHours: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(24 * 365)
+    .default(24 * 7),
+});
+export type CreateParticipantAccessPassInput = z.infer<typeof createParticipantAccessPassSchema>;
+
+export const exchangeParticipantAccessPassSchema = z.object({
+  token: z.string().trim().min(43).max(256),
+});
+export type ExchangeParticipantAccessPassInput = z.infer<
+  typeof exchangeParticipantAccessPassSchema
+>;
 
 export const registrationDecisionSchema = z.object({
   status: z.enum(['approved', 'rejected']),
@@ -358,6 +357,7 @@ export type SmashGameResultInput = z.infer<typeof smashGameResultSchema>;
 export const reportResultSchema = z.object({
   winnerTeamId: z.string().uuid().nullable().optional(),
   draw: z.boolean().default(false),
+  staffOverride: z.boolean().optional(),
   homeScore: z.coerce.number().int().min(0).max(99).optional(),
   awayScore: z.coerce.number().int().min(0).max(99).optional(),
   games: z.array(smashGameResultSchema).min(1).max(5).optional(),

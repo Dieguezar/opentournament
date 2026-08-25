@@ -17,11 +17,15 @@ import {
   auditLogs,
   emailVerificationTokens,
   identities,
+  participantAccessPasses,
   passwordResetTokens,
   sessions,
+  teams,
+  tournaments,
   users,
 } from '@opentournament/database';
 import {
+  exchangeParticipantAccessPassSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
@@ -39,91 +43,102 @@ async function createSessionForUser(reply: FastifyReply, userId: string) {
 }
 
 export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
-  app.post('/auth/register', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request, reply) => {
-    const body = registerSchema.parse(request.body);
-    const existing = await db
-      .select({ id: users.id })
-      .from(users)
-      .where(eq(users.email, body.email))
-      .limit(1);
-    if (existing.length > 0) {
-      return reply.status(409).send({
-        error: { code: 'EMAIL_TAKEN', message: 'Ya existe una cuenta con ese correo' },
-      });
-    }
+  app.post(
+    '/auth/register',
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const body = registerSchema.parse(request.body);
+      const existing = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, body.email))
+        .limit(1);
+      if (existing.length > 0) {
+        return reply.status(409).send({
+          error: { code: 'EMAIL_TAKEN', message: 'Ya existe una cuenta con ese correo' },
+        });
+      }
 
-    const verified = env.ALLOW_UNVERIFIED_EMAILS;
-    const passwordHash = await hashPassword(body.password);
-    const [user] = await db
-      .insert(users)
-      .values({
-        email: body.email,
-        passwordHash,
-        displayName: body.displayName,
-        emailVerifiedAt: verified ? new Date() : null,
-      })
-      .returning();
-    if (!user) {
-      return reply.status(500).send({
-        error: { code: 'REGISTER_FAILED', message: 'No se pudo crear la cuenta' },
-      });
-    }
+      const verified = env.ALLOW_UNVERIFIED_EMAILS;
+      const passwordHash = await hashPassword(body.password);
+      const [user] = await db
+        .insert(users)
+        .values({
+          email: body.email,
+          passwordHash,
+          displayName: body.displayName,
+          emailVerifiedAt: verified ? new Date() : null,
+        })
+        .returning();
+      if (!user) {
+        return reply.status(500).send({
+          error: { code: 'REGISTER_FAILED', message: 'No se pudo crear la cuenta' },
+        });
+      }
 
-    if (!verified) {
-      const resetToken = generateResetToken();
-      await db.insert(emailVerificationTokens).values({
-        userId: user.id,
-        tokenHash: hashSessionToken(resetToken),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      });
-      await sendMail({
-        to: body.email,
-        subject: 'Verifica tu correo en OpenTournament',
-        text: `Tu enlace de verificación (válido 24 h): ${env.API_URL}/api/v1/auth/verify?token=${resetToken}`,
-      });
-    }
+      if (!verified) {
+        const resetToken = generateResetToken();
+        await db.insert(emailVerificationTokens).values({
+          userId: user.id,
+          tokenHash: hashSessionToken(resetToken),
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        });
+        await sendMail({
+          to: body.email,
+          subject: 'Verifica tu correo en OpenTournament',
+          text: `Tu enlace de verificación (válido 24 h): ${env.API_URL}/api/v1/auth/verify?token=${resetToken}`,
+        });
+      }
 
-    if (verified) await createSessionForUser(reply, user.id);
-    await db.insert(auditLogs).values({
-      actorId: user.id,
-      action: 'auth.register',
-      resourceType: 'user',
-      resourceId: user.id,
-    });
-    return reply.status(201).send({
-      user: { id: user.id, email: user.email },
-      requiresEmailVerification: !verified,
-    });
-  });
-
-  app.post('/auth/login', { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } }, async (request, reply) => {
-    const body = loginSchema.parse(request.body);
-    const [user] = await db
-      .select()
-      .from(users)
-      .where(and(eq(users.email, body.email), isNull(users.deletedAt)))
-      .limit(1);
-
-    if (!user?.passwordHash || !(await verifyPassword(user.passwordHash, body.password))) {
-      return reply.status(401).send({
-        error: { code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos' },
+      if (verified) await createSessionForUser(reply, user.id);
+      await db.insert(auditLogs).values({
+        actorId: user.id,
+        action: 'auth.register',
+        resourceType: 'user',
+        resourceId: user.id,
       });
-    }
-    if (!user.emailVerifiedAt && !env.ALLOW_UNVERIFIED_EMAILS) {
-      return reply.status(403).send({
-        error: { code: 'EMAIL_NOT_VERIFIED', message: 'Debes verificar tu correo antes de ingresar' },
+      return reply.status(201).send({
+        user: { id: user.id, email: user.email },
+        requiresEmailVerification: !verified,
       });
-    }
+    },
+  );
 
-    await createSessionForUser(reply, user.id);
-    await db.insert(auditLogs).values({
-      actorId: user.id,
-      action: 'auth.login',
-      resourceType: 'user',
-      resourceId: user.id,
-    });
-    return reply.send({ user: { id: user.id, email: user.email } });
-  });
+  app.post(
+    '/auth/login',
+    { config: { rateLimit: { max: 20, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const body = loginSchema.parse(request.body);
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(and(eq(users.email, body.email), isNull(users.deletedAt)))
+        .limit(1);
+
+      if (!user?.passwordHash || !(await verifyPassword(user.passwordHash, body.password))) {
+        return reply.status(401).send({
+          error: { code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos' },
+        });
+      }
+      if (!user.emailVerifiedAt && !env.ALLOW_UNVERIFIED_EMAILS) {
+        return reply.status(403).send({
+          error: {
+            code: 'EMAIL_NOT_VERIFIED',
+            message: 'Debes verificar tu correo antes de ingresar',
+          },
+        });
+      }
+
+      await createSessionForUser(reply, user.id);
+      await db.insert(auditLogs).values({
+        actorId: user.id,
+        action: 'auth.login',
+        resourceType: 'user',
+        resourceId: user.id,
+      });
+      return reply.send({ user: { id: user.id, email: user.email } });
+    },
+  );
 
   app.post('/auth/logout', async (request, reply) => {
     if (request.sessionToken) {
@@ -132,6 +147,79 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     reply.clearCookie('session', { path: '/' });
     return reply.status(204).send();
   });
+
+  app.post(
+    '/auth/participant-pass',
+    { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } },
+    async (request, reply) => {
+      const body = exchangeParticipantAccessPassSchema.parse(request.body);
+      const [accessPass] = await db
+        .select({
+          id: participantAccessPasses.id,
+          tournamentId: participantAccessPasses.tournamentId,
+          teamId: participantAccessPasses.teamId,
+          actorUserId: participantAccessPasses.actorUserId,
+          expiresAt: participantAccessPasses.expiresAt,
+          tournamentSlug: tournaments.slug,
+          tournamentName: tournaments.name,
+          teamName: teams.name,
+          teamTag: teams.tag,
+        })
+        .from(participantAccessPasses)
+        .innerJoin(tournaments, eq(tournaments.id, participantAccessPasses.tournamentId))
+        .innerJoin(teams, eq(teams.id, participantAccessPasses.teamId))
+        .where(
+          and(
+            eq(participantAccessPasses.tokenHash, hashSessionToken(body.token)),
+            isNull(participantAccessPasses.revokedAt),
+            gt(participantAccessPasses.expiresAt, new Date()),
+            isNull(tournaments.deletedAt),
+            isNull(teams.deletedAt),
+          ),
+        )
+        .limit(1);
+      if (!accessPass) {
+        return reply.status(401).send({
+          error: { code: 'INVALID_PARTICIPANT_PASS', message: 'El pase es inválido o expiró' },
+        });
+      }
+
+      const { token, expiresAt } = await createSession(
+        db,
+        accessPass.actorUserId,
+        env.SESSION_TTL_HOURS,
+        {
+          participantAccessPassId: accessPass.id,
+          expiresAtLimit: accessPass.expiresAt,
+        },
+      );
+      setSessionCookies(reply, token, expiresAt);
+      await db
+        .update(participantAccessPasses)
+        .set({ lastUsedAt: new Date() })
+        .where(eq(participantAccessPasses.id, accessPass.id));
+      await db.insert(auditLogs).values({
+        actorId: accessPass.actorUserId,
+        action: 'participant_access_pass.exchanged',
+        resourceType: 'participant_access_pass',
+        resourceId: accessPass.id,
+        after: { tournamentId: accessPass.tournamentId, teamId: accessPass.teamId },
+      });
+
+      return reply.send({
+        tournament: {
+          id: accessPass.tournamentId,
+          slug: accessPass.tournamentSlug,
+          name: accessPass.tournamentName,
+        },
+        team: {
+          id: accessPass.teamId,
+          name: accessPass.teamName,
+          tag: accessPass.teamTag,
+        },
+      });
+    },
+  );
 
   app.get('/auth/me', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
@@ -309,12 +397,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     const [existingIdentity] = await db
       .select({ userId: identities.userId })
       .from(identities)
-      .where(
-        and(
-          eq(identities.provider, 'discord'),
-          eq(identities.providerSub, discordUser.id),
-        ),
-      )
+      .where(and(eq(identities.provider, 'discord'), eq(identities.providerSub, discordUser.id)))
       .limit(1);
 
     let userId: string;
@@ -326,12 +409,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         ? await db
             .select({ id: users.id })
             .from(users)
-            .where(
-              and(
-                eq(users.email, verifiedEmail),
-                isNull(users.deletedAt),
-              ),
-            )
+            .where(and(eq(users.email, verifiedEmail), isNull(users.deletedAt)))
             .limit(1)
         : [];
 
