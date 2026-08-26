@@ -18,7 +18,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el v
 
 ### Agregado
 
-- Workflow manual de OWASP ZAP para análisis pasivo de una instalación aislada.
+- Workflow manual de OWASP ZAP validado para análisis pasivo de una instalación aislada.
 - Pipeline semver para publicar imágenes AMD64/ARM64 de API y web en GHCR con SBOM y procedencia.
 - Workflow manual para validar una instalación limpia y completa con Docker Compose.
 - Plantilla competitiva `lol.standard_v1` con región, política de parche, Tournament/Fearless Draft, selección de lado, pausas y retraso de espectadores.

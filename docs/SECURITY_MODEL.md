@@ -97,4 +97,4 @@ Clasificación: Impacto (A=alto, M=medio, B=bajo) × Probabilidad (A=alta, M=med
 - Tests automatizados de autorización (IDOR, escalamiento) en integración.
 - Escaneo estático en CI.
 - Pruebas manuales pre-release: sesión, CSRF, subida de archivos, cabeceras.
-- Pentest/OWASP ZAP diferido a fase 5 (documentado en riesgos).
+- Baseline pasivo de OWASP ZAP manual y aislado, validado antes del primer release.

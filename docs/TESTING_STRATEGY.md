@@ -52,7 +52,8 @@ Accesibilidad: `@axe-core/playwright` en páginas clave.
 - Automatizados: IDOR, escalamiento, CSRF, subida maliciosa, rate limiting, cabeceras.
 - Estáticos: `pnpm audit`, CodeQL.
 - Manuales pre-release: sesión, cookies, rich text, URLs firmadas.
-- OWASP ZAP/pentest: diferido a fase 5.
+- OWASP ZAP: baseline pasivo manual contra una instalación aislada de Docker Compose.
+- Pentest manual: previo a releases mayores o cambios sensibles de autenticación/autorización.
 
 ## 6. Carga y rendimiento
 
@@ -76,4 +77,4 @@ Accesibilidad: `@axe-core/playwright` en páginas clave.
 | Integración | `pnpm test:integration` (compose de test) |
 | E2E | `pnpm test:e2e` (Playwright) |
 | Build | `pnpm build` |
-| Seguridad | `pnpm audit --prod` + CodeQL |
+| Seguridad | `pnpm audit --prod` + CodeQL + baseline manual OWASP ZAP |
