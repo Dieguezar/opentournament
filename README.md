@@ -1,106 +1,109 @@
 # OpenTournament
 
-Plataforma open source para crear, administrar y publicar torneos de esports.
+[English](README.md) · [Español](README.es.md)
 
-OpenTournament permite a comunidades, cibercafés, universidades, streamers y organizadores independientes gestionar el ciclo completo de un torneo: creación, publicación de reglas, inscripción de participantes, formación de equipos, check-in, generación de brackets, coordinación de partidas, reporte de resultados, evidencias, disputas, arbitraje y publicación de resultados finales.
+Open-source platform for creating, managing, and publishing esports tournaments.
 
-> **Estado actual:** `v1.0.0` publicada. Las fases de base técnica, torneos, resultados, arbitraje y preparación open source están operativas; Discord permanece opcional. Ver el [release](https://github.com/Dieguezar/opentournament/releases/tag/v1.0.0), el [checklist](docs/RELEASE_CHECKLIST.md), el [roadmap](docs/ROADMAP.md) y las [decisiones registradas](docs/DECISIONS.md).
+OpenTournament gives communities, gaming cafés, universities, streamers, and independent organizers one place to manage the full tournament lifecycle: setup, public rules, registration, teams, check-in, brackets, match coordination, result reporting, evidence, disputes, arbitration, and final standings.
 
-## Demo funcional
+> **Current status:** `v1.0.0` is available. The technical foundation, tournament management, results, arbitration, and open-source release phases are operational; Discord remains optional. See the [release](https://github.com/Dieguezar/opentournament/releases/tag/v1.0.0), [release checklist](docs/RELEASE_CHECKLIST.md), [roadmap](docs/ROADMAP.md), and [decision log](docs/DECISIONS.md).
 
-La semilla de demostración crea de forma idempotente una experiencia lista para recorrer:
+## Quick start with demo data
 
-- **Copa Nexo 2026**, torneo público de Valorant en curso.
-- **Liga Nexo LoL**, torneo 5v5 finalizado con ocho equipos, Tournament Draft, Fearless Draft y detalle por partida.
-- **Smash Random Showdown**, doble eliminación finalizada con ocho jugadores y detalle por game.
-- Cuatro equipos inscritos y con check-in confirmado.
-- Dos semifinales finalizadas y una gran final programada.
-- Reportes de resultados y una disputa resuelta con conversación y decisión arbitral.
+The idempotent demo seed creates a ready-to-explore environment:
 
-Para levantarla localmente:
+- **Copa Nexo 2026**, an active public Valorant tournament.
+- **Liga Nexo LoL**, a completed eight-team 5v5 tournament with Tournament Draft, Fearless Draft, and per-game details.
+- **Smash Random Showdown**, a completed eight-player double-elimination tournament with per-game details.
+- Four registered teams with confirmed check-in.
+- Two completed semifinals and one scheduled grand final.
+- Result reports and one resolved dispute with its conversation and ruling.
+
+Run it locally:
 
 ```bash
 cp .env.example .env
-# Cambia SEED_DEMO_DATA=false por SEED_DEMO_DATA=true en .env
+# Change SEED_DEMO_DATA=false to SEED_DEMO_DATA=true in .env
 pnpm install
 docker compose up -d postgres minio
 pnpm dev
 ```
 
-Después abre `http://localhost:3000`, inicia sesión con:
+Open `http://localhost:3000` and sign in with:
 
-- Correo: `admin@opentournament.local`
-- Contraseña: `demo-password-123`
-- Torneo público: `http://localhost:3000/t/copa-nexo-demo`
-- Demo LoL: `http://localhost:3000/t/liga-nexo-lol`
-- Demo Smash: `http://localhost:3000/t/smash-random-showdown`
+- Email: `admin@opentournament.local`
+- Password: `demo-password-123`
+- Public tournament: `http://localhost:3000/t/copa-nexo-demo`
+- LoL demo: `http://localhost:3000/t/liga-nexo-lol`
+- Smash demo: `http://localhost:3000/t/smash-random-showdown`
 
-La API aplica las migraciones y crea la demo automáticamente al arrancar con `SEED_DEMO_DATA=true`. También se puede ejecutar explícitamente con `pnpm db:seed`.
+With `SEED_DEMO_DATA=true`, the API applies migrations and creates the demo automatically on startup. You can also run it explicitly with `pnpm db:seed`.
 
-## Características del MVP
+## MVP features
 
-- Torneos de eliminación sencilla y doble eliminación, de 8 a 128 participantes (arquitectura preparada para 512+ sin rediseño).
-- Inscripción abierta con lista de espera y aprobación manual opcional.
-- Equipos permanentes y equipos efímeros por torneo; torneos individuales modelados como "equipo de 1".
-- Check-in general con tolerancia configurable y walkover automático.
-- Series BO1/BO3/BO5 configurables, con empates permitidos según el juego.
-- Reportes configurables: confirmación bilateral, reporte único del ganador o carga exclusiva del staff.
-- Evidencias (capturas y enlaces externos) privadas por defecto.
-- Disputas con panel de árbitros, resolución registrada y auditoría.
-- Página pública del torneo con bracket, resultados y clasificación en tiempo real (SSE).
-- PWA instalable con caché de lectura (sin acciones offline).
-- Identidad progresiva: lectura pública sin cuenta, pases privados revocables para participantes y cuentas permanentes opcionales con correo/Discord.
-- Bot de Discord con notificaciones y comandos slash.
-- Adaptador genérico + adaptadores oficiales de Valorant, CS2, League of Legends y Super Smash Bros. Ultimate; LoL y Smash incluyen plantillas competitivas versionadas y reportes guiados propios.
-- Instalación autoalojable con `docker compose up -d`.
+- Single- and double-elimination tournaments for 8 to 128 participants, with an architecture designed to scale beyond 512 without a redesign.
+- Open registration with a waiting list and optional manual approval.
+- Permanent and tournament-specific teams; individual tournaments use a one-player team model internally.
+- Configurable check-in windows and automatic walkovers.
+- Configurable BO1, BO3, and BO5 series, with game-specific draw support.
+- Configurable reporting: bilateral confirmation, winner-only reporting, or staff-only reporting.
+- Private-by-default evidence through screenshots and external links.
+- Referee dispute panel with recorded rulings and an audit trail.
+- Public tournament pages with live brackets, results, and standings through SSE.
+- Installable PWA with read caching; actions remain online-only.
+- Progressive identity: public viewing without an account, revocable private participant passes, and optional permanent accounts through email or Discord.
+- Optional Discord bot with notifications and slash commands.
+- Generic, Valorant, CS2, League of Legends, and Super Smash Bros. Ultimate adapters. LoL and Smash include versioned competitive templates and guided reporting flows.
+- Self-hosted installation through Docker Compose.
+- Spanish and English user interfaces with a persistent language selector.
 
-Para autoalojar una instancia, seguí la guía de [self-hosting](docs/SELF_HOSTING.md). Docker exige
-un `SESSION_SECRET` único, no carga datos demo por defecto y espera a que cada servicio esté
-saludable antes de iniciar el siguiente.
+For a production instance, follow the [self-hosting guide](docs/SELF_HOSTING.md). Docker requires a unique `SESSION_SECRET`, does not load demo data by default, and waits for each service to become healthy before starting its dependents.
 
-## Stack previsto
+## Technology
 
-| Capa           | Tecnología                                               |
-| -------------- | -------------------------------------------------------- |
-| Frontend       | Next.js (TypeScript)                                     |
-| Backend / API  | Fastify (TypeScript)                                     |
-| Base de datos  | PostgreSQL + Drizzle ORM                                 |
-| Almacenamiento | S3-compatible (MinIO en desarrollo; R2/S3 en producción) |
-| Tiempo real    | Server-Sent Events (SSE)                                 |
-| Monorepo       | pnpm + Turborepo                                         |
-| Pruebas        | Vitest + Playwright                                      |
-| Licencia       | MIT                                                      |
+| Layer             | Technology                                                         |
+| ----------------- | ------------------------------------------------------------------ |
+| Frontend          | Next.js + TypeScript                                               |
+| Backend / API     | Fastify + TypeScript                                               |
+| Database          | PostgreSQL + Drizzle ORM                                           |
+| Storage           | S3-compatible storage; MinIO for development, R2/S3 for production |
+| Real-time updates | Server-Sent Events (SSE)                                           |
+| Monorepo          | pnpm + Turborepo                                                   |
+| Tests             | Vitest + Playwright                                                |
+| License           | MIT                                                                |
 
-## Documentación
+## Documentation
 
-- [Visión de producto](docs/PRODUCT_VISION.md)
-- [PRD](docs/PRD.md)
-- [Alcance del MVP](docs/MVP_SCOPE.md)
-- [Arquitectura](docs/ARCHITECTURE.md)
-- [Modelo de datos](docs/DATA_MODEL.md)
-- [Diseño de API](docs/API_DESIGN.md)
-- [Modelo de autorización](docs/AUTHORIZATION_MODEL.md)
-- [Motor de torneos](docs/TOURNAMENT_ENGINE.md)
-- [Adaptadores de juegos](docs/GAME_ADAPTERS.md)
-- [Integración con Discord](docs/DISCORD_INTEGRATION.md)
+The extended design documentation is currently written in Spanish. The application and this setup guide are available in both languages.
+
+- [Product vision](docs/PRODUCT_VISION.md)
+- [Product requirements](docs/PRD.md)
+- [MVP scope](docs/MVP_SCOPE.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Data model](docs/DATA_MODEL.md)
+- [API design](docs/API_DESIGN.md)
+- [Authorization model](docs/AUTHORIZATION_MODEL.md)
+- [Tournament engine](docs/TOURNAMENT_ENGINE.md)
+- [Game adapters](docs/GAME_ADAPTERS.md)
+- [Discord integration](docs/DISCORD_INTEGRATION.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Backlog](docs/BACKLOG.md)
-- [Decisiones](docs/DECISIONS.md)
-- [Riesgos](docs/RISKS.md)
-- [Checklist del release](docs/RELEASE_CHECKLIST.md)
+- [Decision log](docs/DECISIONS.md)
+- [Risks](docs/RISKS.md)
+- [Release checklist](docs/RELEASE_CHECKLIST.md)
 
-## Estado del repositorio
+## Repository status
 
-| Fase                           | Estado                        |
-| ------------------------------ | ----------------------------- |
-| 0 — Definición y documentación | Completada                    |
-| 1 — Base técnica               | Completada                    |
-| 2 — MVP de torneos             | Completada                    |
-| 3 — Resultados y arbitraje     | Completada                    |
-| 4 — Discord y tiempo real      | Parcial — SSE/PWA operativos  |
-| 5 — Preparación open source    | Completada — v1.0.0 publicada |
-| 6 — Expansión                  | Pendiente                     |
+| Phase                             | Status                        |
+| --------------------------------- | ----------------------------- |
+| 0 — Definition and documentation  | Complete                      |
+| 1 — Technical foundation          | Complete                      |
+| 2 — Tournament MVP                | Complete                      |
+| 3 — Results and arbitration       | Complete                      |
+| 4 — Discord and real-time updates | Partial — SSE/PWA operational |
+| 5 — Open-source readiness         | Complete — v1.0.0 released    |
+| 6 — Expansion                     | Pending                       |
 
-## Licencia
+## License
 
-MIT. Ver [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
