@@ -3,10 +3,14 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { formatMessage } from '@/lib/i18n';
 import styles from './page.module.css';
 
 export default function ParticipantAccessPage() {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.secondaryFlows;
   const router = useRouter();
   const [state, setState] = useState<
     | { kind: 'checking' | 'exchanging' }
@@ -31,13 +35,13 @@ export default function ParticipantAccessPage() {
         setState({
           kind: 'error',
           message:
-            exchangeError instanceof ApiClientError
+            exchangeError instanceof ApiClientError && locale === 'es'
               ? exchangeError.message
-              : 'No pudimos abrir el pase. Intentá de nuevo.',
+              : copy.accessOpenError,
         });
       }
     },
-    [router],
+    [copy.accessOpenError, locale, router],
   );
 
   useEffect(() => {
@@ -46,7 +50,7 @@ export default function ParticipantAccessPage() {
     if (!token) {
       setState({
         kind: 'error',
-        message: 'Este enlace no contiene un pase válido. Pedile uno nuevo a la organización.',
+        message: copy.invalidPass,
       });
       return;
     }
@@ -62,10 +66,10 @@ export default function ParticipantAccessPage() {
         }
         setState({
           kind: 'error',
-          message: 'No pudimos comprobar la sesión actual. Intentá de nuevo.',
+          message: copy.sessionCheckError,
         });
       });
-  }, [exchangePass]);
+  }, [copy.invalidPass, copy.sessionCheckError, exchangePass]);
 
   const isError = state.kind === 'error';
   const isConfirm = state.kind === 'confirm';
@@ -73,38 +77,33 @@ export default function ParticipantAccessPage() {
   return (
     <main className={`container narrow ${styles.page}`}>
       <section className={`card ${styles.card}`} aria-live="polite">
-        <p className={styles.eyebrow}>Acceso de participante</p>
+        <p className={styles.eyebrow}>{copy.accessEyebrow}</p>
         <h1>
           {isError
-            ? 'No pudimos abrir el pase'
+            ? copy.unableToOpenPass
             : isConfirm
-              ? '¿Reemplazar la sesión activa?'
-              : 'Preparando tu torneo…'}
+              ? copy.replaceSession
+              : copy.preparingTournament}
         </h1>
         {isConfirm ? (
           <>
             <p className={styles.warning} role="alert">
-              Este pase reemplazará la sesión activa en este navegador y en todas sus pestañas.
-              Ahora estás como {state.currentUser}.
+              {formatMessage(copy.sessionWarning, { name: state.currentUser })}
             </p>
             <div className={styles.actions}>
               <button type="button" onClick={() => void exchangePass(state.token)}>
-                Continuar con el pase
+                {copy.continueWithPass}
               </button>
-              <Link href="/">Cancelar</Link>
+              <Link href="/">{copy.cancel}</Link>
             </div>
           </>
         ) : (
-          <p>
-            {isError
-              ? state.message
-              : 'Estamos verificando el enlace y limitando la sesión a tu participante.'}
-          </p>
+          <p>{isError ? state.message : copy.verifyingPass}</p>
         )}
         {(state.kind === 'checking' || state.kind === 'exchanging') && (
           <div className={styles.progress} aria-hidden="true" />
         )}
-        {isError && <Link href="/">Volver al inicio</Link>}
+        {isError && <Link href="/">{copy.backHome}</Link>}
       </section>
     </main>
   );

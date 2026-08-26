@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 
 export function DisputeResolveForm({
@@ -17,6 +18,8 @@ export function DisputeResolveForm({
   homeName: string | null;
   awayName: string | null;
 }) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.disputes;
   const router = useRouter();
   const [winnerTeamId, setWinnerTeamId] = useState('');
   const [rationale, setRationale] = useState('');
@@ -32,24 +35,24 @@ export function DisputeResolveForm({
       });
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Error');
+      setError(err instanceof ApiClientError && locale === 'es' ? err.message : copy.actionError);
     }
   }
 
   if (!homeTeamId || !awayTeamId) {
-    return <p className="muted">La resolución estará disponible cuando ambos participantes estén asignados.</p>;
+    return <p className="muted">{copy.resolutionUnavailable}</p>;
   }
 
   return (
     <form onSubmit={onSubmit}>
-      <h3>Resolver disputa</h3>
-      <label htmlFor="winner">Ganador</label>
+      <h3>{copy.resolveDispute}</h3>
+      <label htmlFor="winner">{copy.winner}</label>
       <select id="winner" value={winnerTeamId} onChange={(e) => setWinnerTeamId(e.target.value)}>
-        <option value="">— Sin ganador (empate) —</option>
+        <option value="">{copy.noWinner}</option>
         <option value={homeTeamId}>{homeName}</option>
         <option value={awayTeamId}>{awayName}</option>
       </select>
-      <label htmlFor="rationale">Motivo (mínimo 10 caracteres)</label>
+      <label htmlFor="rationale">{copy.rationale}</label>
       <textarea
         id="rationale"
         rows={4}
@@ -58,8 +61,12 @@ export function DisputeResolveForm({
         required
         minLength={10}
       />
-      {error && <p className="error" role="alert">{error}</p>}
-      <button type="submit">Registrar resolución</button>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="submit">{copy.registerResolution}</button>
     </form>
   );
 }

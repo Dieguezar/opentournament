@@ -4,15 +4,18 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type FormEvent } from 'react';
 import { adapters } from '@opentournament/game-adapters';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { formatGameAdapter } from '@/lib/presentation';
 import type { GameAdapterKey, OrganizationSummary } from '@opentournament/shared-types';
 
 const GAME_OPTIONS = Object.values(adapters).map((adapter) => ({
   key: adapter.key,
-  label: adapter.name,
 }));
 
 export default function NewTeamPage() {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.secondaryFlows;
   const router = useRouter();
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [organizationId, setOrganizationId] = useState('');
@@ -47,7 +50,9 @@ export default function NewTeamPage() {
       });
       router.push('/dashboard');
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Error al crear el equipo');
+      setError(
+        err instanceof ApiClientError && locale === 'es' ? err.message : copy.createTeamError,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -57,9 +62,9 @@ export default function NewTeamPage() {
 
   return (
     <main className="container">
-      <h1>Crear {isSmash ? 'jugador' : 'equipo'}</h1>
+      <h1>{isSmash ? copy.createPlayer : copy.createTeam}</h1>
       <form className="card" onSubmit={onSubmit}>
-        <label htmlFor="organizationId">Organización</label>
+        <label htmlFor="organizationId">{copy.organization}</label>
         <select
           id="organizationId"
           value={organizationId}
@@ -71,7 +76,7 @@ export default function NewTeamPage() {
             </option>
           ))}
         </select>
-        <label htmlFor="gameAdapterKey">Juego</label>
+        <label htmlFor="gameAdapterKey">{copy.game}</label>
         <select
           id="gameAdapterKey"
           value={gameAdapterKey}
@@ -79,17 +84,12 @@ export default function NewTeamPage() {
         >
           {GAME_OPTIONS.map((game) => (
             <option key={game.key} value={game.key}>
-              {game.label}
+              {formatGameAdapter(game.key, locale)}
             </option>
           ))}
         </select>
-        {isSmash && (
-          <p className="muted">
-            En Smash Ultimate cada participante es individual: este perfil representa a un solo
-            jugador. Podés usar un nombre visible distinto de su tag competitivo.
-          </p>
-        )}
-        <label htmlFor="name">Nombre visible {isSmash ? 'del jugador' : 'del equipo'}</label>
+        {isSmash && <p className="muted">{copy.smashProfileHelp}</p>}
+        <label htmlFor="name">{isSmash ? copy.playerDisplayName : copy.teamDisplayName}</label>
         <input
           id="name"
           required
@@ -100,35 +100,35 @@ export default function NewTeamPage() {
           onChange={(e) => setName(e.target.value)}
         />
         <p className="muted" id="team-name-help">
-          {isSmash
-            ? 'Es el nombre que verá el staff para identificar al jugador.'
-            : 'Es el nombre completo que aparecerá en torneos y resultados.'}
+          {isSmash ? copy.playerNameHelp : copy.teamNameHelp}
         </p>
         <label htmlFor="tag">
-          {isSmash ? 'Tag competitivo' : 'Identificador corto'} (opcional)
+          {isSmash ? copy.competitiveTag : copy.shortIdentifier} ({copy.optional})
         </label>
         <input
           id="tag"
           minLength={isSmash ? 1 : 2}
           maxLength={isSmash ? 32 : 8}
           pattern={isSmash ? undefined : '[A-Za-z0-9]+'}
-          placeholder={isSmash ? 'Ej. MkLeo' : 'Ej. OTGG'}
+          placeholder={isSmash ? copy.playerTagPlaceholder : copy.teamTagPlaceholder}
           aria-describedby="team-tag-help"
           value={tag}
           onChange={(e) => setTag(e.target.value)}
         />
         <p className="muted" id="team-tag-help">
-          {isSmash
-            ? 'Entre 1 y 32 caracteres; se permiten espacios y símbolos.'
-            : 'Entre 2 y 8 letras o números, sin espacios.'}
+          {isSmash ? copy.playerTagHelp : copy.teamTagHelp}
         </p>
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={submitting || organizations.length === 0}>
-          {submitting ? 'Creando…' : `Crear ${isSmash ? 'jugador' : 'equipo'}`}
+          {submitting ? copy.creating : isSmash ? copy.createPlayer : copy.createTeam}
         </button>
       </form>
       <p className="muted">
-        <Link href="/dashboard">← Volver al panel</Link>
+        <Link href="/dashboard">← {copy.backDashboard}</Link>
       </p>
     </main>
   );

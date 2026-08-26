@@ -2,9 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 
 export default function WizardPage() {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.secondaryFlows;
   const router = useRouter();
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
@@ -23,7 +26,11 @@ export default function WizardPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Error al crear la organización');
+      setError(
+        err instanceof ApiClientError && locale === 'es'
+          ? err.message
+          : copy.createOrganizationError,
+      );
     } finally {
       setSubmitting(false);
     }
@@ -31,12 +38,10 @@ export default function WizardPage() {
 
   return (
     <main className="container">
-      <h1>Crear tu organización</h1>
-      <p className="muted">
-        Las organizaciones agrupan tus torneos y equipos. Este es el primer paso.
-      </p>
+      <h1>{copy.createOrganizationTitle}</h1>
+      <p className="muted">{copy.createOrganizationIntro}</p>
       <form className="card" onSubmit={onSubmit}>
-        <label htmlFor="name">Nombre de la organización</label>
+        <label htmlFor="name">{copy.organizationName}</label>
         <input
           id="name"
           required
@@ -44,18 +49,22 @@ export default function WizardPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <label htmlFor="slug">Slug (URL)</label>
+        <label htmlFor="slug">{copy.slug}</label>
         <input
           id="slug"
           required
           pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-          placeholder="mi-comunidad"
+          placeholder={copy.organizationPlaceholder}
           value={slug}
           onChange={(e) => setSlug(e.target.value)}
         />
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={submitting}>
-          {submitting ? 'Creando…' : 'Crear organización'}
+          {submitting ? copy.creating : copy.createOrganization}
         </button>
       </form>
     </main>

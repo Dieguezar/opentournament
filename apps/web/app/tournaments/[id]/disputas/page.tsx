@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { serverFetch } from '@/lib/server-api';
 import { formatDisputeReason, formatDisputeStatus } from '@/lib/presentation';
+import { formatMessage, getDictionary } from '@/lib/i18n';
+import { getRequestLocale } from '@/lib/i18n-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,11 +17,9 @@ interface DisputeView {
   awayTeam: string | null;
 }
 
-export default async function DisputesPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function DisputesPage({ params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale();
+  const copy = getDictionary(locale).disputes;
   const { id } = await params;
   const res = await serverFetch<{ disputes: DisputeView[] }>(`/tournaments/${id}/disputes`);
   if (res.status === 401) redirect('/login');
@@ -29,33 +29,39 @@ export default async function DisputesPage({
   return (
     <main className="container">
       <p>
-        <Link href={`/tournaments/${id}`}>← Torneo</Link>
+        <Link href={`/tournaments/${id}`}>← {copy.backTournament}</Link>
       </p>
       <header className="page-heading compact-hero">
         <div>
-          <p className="eyebrow">Arbitraje</p>
-          <h1>Disputas</h1>
-          <p className="muted">Conflictos, conversaciones y decisiones registradas.</p>
+          <p className="eyebrow">{copy.arbitration}</p>
+          <h1>{copy.title}</h1>
+          <p className="muted">{copy.intro}</p>
         </div>
-        <span className="badge">{disputes.length} casos</span>
+        <span className="badge">{formatMessage(copy.caseCount, { count: disputes.length })}</span>
       </header>
       {disputes.length === 0 ? (
-        <p className="muted">No hay disputas.</p>
+        <p className="muted">{copy.noDisputes}</p>
       ) : (
         <ul className="dispute-list">
           {disputes.map((dispute) => (
             <li className="dispute-item" key={dispute.id}>
               <div>
                 <Link href={`/disputas/${dispute.id}`}>
-                  <strong>{dispute.homeTeam ?? 'TBD'} vs {dispute.awayTeam ?? 'TBD'}</strong>
+                  <strong>
+                    {dispute.homeTeam ?? 'TBD'} vs {dispute.awayTeam ?? 'TBD'}
+                  </strong>
                 </Link>
-                <small>{formatDisputeReason(dispute.reason)}</small>
+                <small>{formatDisputeReason(dispute.reason, locale)}</small>
               </div>
               <div className="dispute-meta">
-                <span className={`badge ${dispute.status === 'resolved' ? 'badge-success' : 'badge-warn'}`}>
-                  {formatDisputeStatus(dispute.status)}
+                <span
+                  className={`badge ${dispute.status === 'resolved' ? 'badge-success' : 'badge-warn'}`}
+                >
+                  {formatDisputeStatus(dispute.status, locale)}
                 </span>
-                {dispute.assigneeName && <small>Árbitro: {dispute.assigneeName}</small>}
+                {dispute.assigneeName && (
+                  <small>{formatMessage(copy.referee, { name: dispute.assigneeName })}</small>
+                )}
               </div>
             </li>
           ))}

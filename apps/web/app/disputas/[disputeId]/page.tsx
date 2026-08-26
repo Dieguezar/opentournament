@@ -4,6 +4,8 @@ import { DisputeMessageForm } from '@/components/dispute-message-form';
 import { DisputeResolveForm } from '@/components/dispute-resolve-form';
 import { serverFetch } from '@/lib/server-api';
 import { formatDisputeReason, formatDisputeStatus } from '@/lib/presentation';
+import { formatMessage, getDictionary } from '@/lib/i18n';
+import { getRequestLocale } from '@/lib/i18n-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +22,9 @@ interface RulingView {
   decision: { winnerId?: string };
 }
 
-export default async function DisputePage({
-  params,
-}: {
-  params: Promise<{ disputeId: string }>;
-}) {
+export default async function DisputePage({ params }: { params: Promise<{ disputeId: string }> }) {
+  const locale = await getRequestLocale();
+  const copy = getDictionary(locale).disputes;
   const { disputeId } = await params;
   const res = await serverFetch<{
     dispute: {
@@ -52,23 +52,25 @@ export default async function DisputePage({
   return (
     <main className="container">
       <p>
-        <Link href="/dashboard">← Panel</Link>
+        <Link href="/dashboard">← {copy.backDashboard}</Link>
       </p>
       <header className="page-heading compact-hero">
         <div>
-          <p className="eyebrow">Caso {dispute.id.slice(0, 8)}</p>
-          <h1>{res.data?.match?.homeTeamName ?? 'TBD'} vs {res.data?.match?.awayTeamName ?? 'TBD'}</h1>
-          <p className="muted">{formatDisputeReason(dispute.reason)}</p>
+          <p className="eyebrow">{formatMessage(copy.case, { id: dispute.id.slice(0, 8) })}</p>
+          <h1>
+            {res.data?.match?.homeTeamName ?? 'TBD'} vs {res.data?.match?.awayTeamName ?? 'TBD'}
+          </h1>
+          <p className="muted">{formatDisputeReason(dispute.reason, locale)}</p>
         </div>
         <span className={`badge ${dispute.status === 'resolved' ? 'badge-success' : 'badge-warn'}`}>
-          {formatDisputeStatus(dispute.status)}
+          {formatDisputeStatus(dispute.status, locale)}
         </span>
       </header>
 
       <div className="card">
-        <h2>Conversación</h2>
+        <h2>{copy.conversation}</h2>
         {messages.length === 0 ? (
-          <p className="muted">Sin mensajes todavía.</p>
+          <p className="muted">{copy.noMessages}</p>
         ) : (
           <ul className="message-list">
             {messages.map((message) => (
@@ -96,8 +98,8 @@ export default async function DisputePage({
 
       {ruling && (
         <div className="card ruling-card">
-          <p className="eyebrow">Decisión final</p>
-          <h2>Resolución</h2>
+          <p className="eyebrow">{copy.finalDecision}</p>
+          <h2>{copy.resolution}</h2>
           <p>{ruling.rationale}</p>
         </div>
       )}
