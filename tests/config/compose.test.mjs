@@ -8,6 +8,14 @@ const composeSmoke = await readFile(
   new URL('../../.github/workflows/compose-smoke.yml', import.meta.url),
   'utf8',
 ).catch(() => '');
+const ciWorkflow = await readFile(
+  new URL('../../.github/workflows/ci.yml', import.meta.url),
+  'utf8',
+);
+const codeqlWorkflow = await readFile(
+  new URL('../../.github/workflows/codeql.yml', import.meta.url),
+  'utf8',
+);
 const envExampleEntries = Object.fromEntries(
   envExample
     .split(/\r?\n/u)
@@ -144,4 +152,18 @@ test('provides a safe manual smoke test for a clean Compose installation', () =>
   assert.match(composeSmoke, /if: always\(\)/u);
   assert.match(composeSmoke, /docker compose down --volumes --remove-orphans/u);
   assert.doesNotMatch(composeSmoke, /SEED_DEMO_DATA=true/u);
+});
+
+test('uses GitHub Actions backed by the supported Node 24 runtime', () => {
+  const workflows = [ciWorkflow, codeqlWorkflow, composeSmoke].join('\n');
+
+  assert.doesNotMatch(workflows, /actions\/checkout@v[1-6]\b/u);
+  assert.doesNotMatch(workflows, /actions\/setup-node@v[1-6]\b/u);
+  assert.doesNotMatch(workflows, /pnpm\/action-setup@v[1-5]\b/u);
+  assert.doesNotMatch(workflows, /github\/codeql-action\/(?:init|analyze)@v[1-3]\b/u);
+  assert.match(workflows, /actions\/checkout@v7/u);
+  assert.match(workflows, /actions\/setup-node@v7/u);
+  assert.match(workflows, /pnpm\/action-setup@v6/u);
+  assert.match(workflows, /github\/codeql-action\/init@v4/u);
+  assert.match(workflows, /github\/codeql-action\/analyze@v4/u);
 });
