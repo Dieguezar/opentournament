@@ -314,7 +314,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         text: `Tu enlace de recuperación (válido 1 h): ${env.API_URL}/api/v1/auth/reset-password?token=${resetToken}`,
       });
     }
-    // Respuesta genérica: no revelar si el correo existe.
+    // Keep the response generic so it does not reveal whether the email exists.
     return reply.send({ ok: true });
   });
 

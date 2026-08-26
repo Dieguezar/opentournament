@@ -2,7 +2,7 @@
   "name": "@opentournament/tournament-engine",
   "version": "1.0.0",
   "private": true,
-  "description": "Motor de torneos de OpenTournament: lógica pura, determinista y tipada.",
+  "description": "Pure, deterministic, typed tournament bracket engine for OpenTournament.",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",

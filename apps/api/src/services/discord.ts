@@ -15,7 +15,7 @@ import { performCheckIn } from './checkin.js';
 const DISCORD_API = 'https://discord.com/api/v10';
 const SPKI_PREFIX = '302a300506032b6570032100';
 
-/** Verifica la firma Ed25519 de una interacción de Discord. */
+/** Verify the Ed25519 signature of a Discord interaction. */
 export function verifyDiscordRequest(
   publicKey: string,
   signature: string,
@@ -23,10 +23,7 @@ export function verifyDiscordRequest(
   rawBody: string,
 ): boolean {
   try {
-    const spki = Buffer.concat([
-      Buffer.from(SPKI_PREFIX, 'hex'),
-      Buffer.from(publicKey, 'hex'),
-    ]);
+    const spki = Buffer.concat([Buffer.from(SPKI_PREFIX, 'hex'), Buffer.from(publicKey, 'hex')]);
     const key = createPublicKey({ key: spki, format: 'der', type: 'spki' });
     const message = Buffer.from(`${timestamp}${rawBody}`, 'utf8');
     const sig = Buffer.from(signature, 'hex');
@@ -36,10 +33,7 @@ export function verifyDiscordRequest(
   }
 }
 
-export async function registerSlashCommands(
-  clientId: string,
-  botToken: string,
-): Promise<void> {
+export async function registerSlashCommands(clientId: string, botToken: string): Promise<void> {
   const res = await fetch(`${DISCORD_API}/applications/${clientId}/commands`, {
     method: 'PUT',
     headers: {
@@ -113,12 +107,7 @@ export async function handleInteraction(
   const [identity] = await db
     .select({ userId: identities.userId })
     .from(identities)
-    .where(
-      and(
-        eq(identities.provider, 'discord'),
-        eq(identities.providerSub, discordId),
-      ),
-    )
+    .where(and(eq(identities.provider, 'discord'), eq(identities.providerSub, discordId)))
     .limit(1);
   if (!identity) {
     return {
@@ -137,9 +126,7 @@ export async function handleInteraction(
 
   if (data.name === 'checkin') {
     const result = await performCheckIn(db, tournamentId, team.id, identity.userId);
-    const content = result.ok
-      ? '✅ Check-in completado.'
-      : `❌ ${result.message}`;
+    const content = result.ok ? '✅ Check-in completado.' : `❌ ${result.message}`;
     return { type: 4, data: { content } };
   }
 

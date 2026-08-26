@@ -2,7 +2,7 @@
   "name": "opentournament",
   "version": "1.0.0",
   "private": true,
-  "description": "Plataforma open source para crear, administrar y publicar torneos de esports.",
+  "description": "Open-source platform for creating, managing, and publishing esports tournaments.",
   "license": "MIT",
   "packageManager": "pnpm@11.9.0",
   "engines": {

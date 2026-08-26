@@ -2,7 +2,7 @@
   "name": "@opentournament/config",
   "version": "1.0.0",
   "private": true,
-  "description": "Carga y validación de configuración de entorno de OpenTournament.",
+  "description": "Typed OpenTournament environment configuration and validation.",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",

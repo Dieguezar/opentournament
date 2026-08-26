@@ -40,9 +40,7 @@ function simulate(bracket: EngineBracket, homeWins = true): SimResult {
   let progress = true;
   while (progress) {
     progress = false;
-    const pending = b.matches.filter(
-      (m) => m.status === 'scheduled' && m.home && m.away,
-    );
+    const pending = b.matches.filter((m) => m.status === 'scheduled' && m.home && m.away);
     for (const match of pending) {
       const winner = homeWins ? match.home! : match.away!;
       record(match.home!, winner === match.home);
@@ -102,7 +100,7 @@ describe('eliminación sencilla', () => {
       expect(champion).not.toBeNull();
       expect(result.losses.get(champion!) ?? 0).toBe(0);
 
-      // Todos los demás pierden exactamente una vez.
+      // Every other participant loses exactly once.
       for (const p of participants(n)) {
         const losses = result.losses.get(p.id) ?? 0;
         if (p.id === champion) {
@@ -135,7 +133,7 @@ describe('doble eliminación', () => {
       expect(champion).not.toBeNull();
       expect(result.losses.get(champion!) ?? 0).toBeLessThanOrEqual(1);
 
-      // Nadie pierde más de 2 veces.
+      // No participant loses more than twice.
       for (const p of participants(n)) {
         expect(result.losses.get(p.id) ?? 0).toBeLessThanOrEqual(2);
       }

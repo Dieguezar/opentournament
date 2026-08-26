@@ -214,7 +214,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
         const teamA = teamAView.id;
         expect(teamAView.gameAdapterKey).toBe('generic');
 
-        // B se une a la organización y crea su equipo.
+        // User B joins the organization and creates a team.
         const inviteRes = await app.inject({
           method: 'POST',
           url: `/api/v1/organizations/${orgId}/members`,

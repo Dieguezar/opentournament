@@ -2,7 +2,7 @@
   "name": "@opentournament/api",
   "version": "1.0.0",
   "private": true,
-  "description": "API de OpenTournament (Fastify): REST, SSE, worker y módulo de Discord.",
+  "description": "OpenTournament Fastify API with REST, SSE, worker, and optional Discord module.",
   "license": "MIT",
   "type": "module",
   "scripts": {

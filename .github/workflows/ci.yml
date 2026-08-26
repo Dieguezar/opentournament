@@ -31,7 +31,7 @@ jobs:
       - run: pnpm audit
 
   integration:
-    name: Pruebas de integración (PostgreSQL)
+    name: Integration tests (PostgreSQL)
     runs-on: ubuntu-latest
     services:
       postgres:

@@ -1,9 +1,9 @@
 /**
- * Motor de torneos de OpenTournament.
+ * OpenTournament tournament engine.
  *
- * Lógica pura y determinista: recibe participantes y devuelve la estructura
- * de brackets (partidas con punteros de avance). No depende de HTTP, base de
- * datos ni Discord.
+ * Pure deterministic logic: receives participants and returns a bracket
+ * structure with advancement pointers. It does not depend on HTTP, databases,
+ * or Discord.
  */
 
 export interface EngineParticipant {
@@ -18,9 +18,9 @@ export type SeatRef =
 export interface EngineBracketMatch {
   id: string;
   bracket: 'winners' | 'losers' | 'final';
-  /** Número de ronda dentro de su bracket, 1-based. */
+  /** One-based round number within this bracket. */
   round: number;
-  /** Posición dentro de la ronda, 0-based. */
+  /** Zero-based position within the round. */
   position: number;
   home: string | null;
   away: string | null;
@@ -29,7 +29,7 @@ export interface EngineBracketMatch {
   awayFrom?: SeatRef;
   winnerNext?: { matchId: string; slot: 'home' | 'away' };
   loserNext?: { matchId: string; slot: 'home' | 'away' };
-  /** GF-1 con reset: solo se juega GF-2 si gana el equipo de perdedores (home). */
+  /** With a reset, GF-2 is played only when the losers-side home participant wins GF-1. */
   gfReset?: boolean;
   winner?: string | null;
   status: 'scheduled' | 'finalized';
@@ -66,8 +66,8 @@ export function roundCountForSingleElimination(participantCount: number): number
 }
 
 /**
- * Ordenamiento estándar de seeds para un bracket de potencia de 2.
- * Devuelve la posición (1-based) del seed i.
+ * Standard seed order for a power-of-two bracket.
+ * Returns each seed's one-based position.
  */
 export function seedOrder(size: number): number[] {
   if (!isPowerOfTwo(size)) {
@@ -83,7 +83,7 @@ export function seedOrder(size: number): number[] {
   return order;
 }
 
-/** Ordena participantes por seed ascendente (sin seed al final, estable). */
+/** Sort participants by ascending seed, leaving unseeded entries last and stable. */
 export function orderParticipants(participants: EngineParticipant[]): EngineParticipant[] {
   return [...participants].sort((a, b) => {
     const sa = a.seed ?? Number.POSITIVE_INFINITY;
@@ -147,10 +147,11 @@ function createMatch(
   };
 }
 
-/** Crea las rondas del bracket de ganadores (estructura de sencilla). */
-function buildWinnersBracket(
-  participants: EngineParticipant[],
-): { matches: EngineBracketMatch[]; byeMatches: EngineBracketMatch[] } {
+/** Build winners-bracket rounds using the single-elimination structure. */
+function buildWinnersBracket(participants: EngineParticipant[]): {
+  matches: EngineBracketMatch[];
+  byeMatches: EngineBracketMatch[];
+} {
   const n = participants.length;
   const effective = nextPowerOfTwo(n);
   const order = seedOrder(effective);
@@ -210,7 +211,7 @@ function matchesInRound(
   return matches.filter((m) => m.id.startsWith(prefix) && m.round === round);
 }
 
-/** Empareja seats en una nueva ronda del bracket de perdedores. */
+/** Pair seats into a new losers-bracket round. */
 function pairSeats(
   matches: EngineBracketMatch[],
   seats: SeatRef[],
@@ -223,7 +224,7 @@ function pairSeats(
     const a = seats[i]!;
     const b = seats[i + 1];
     if (!b) {
-      winners.push(a); // espera (BYE de perdedores)
+      winners.push(a); // Carry an odd seat forward without creating a match.
       continue;
     }
     const id = `L${roundNumber}-${position + 1}`;
@@ -238,12 +239,10 @@ function pairSeats(
 }
 
 /**
- * Genera un bracket de eliminación sencilla.
- * Los BYEs se representan como partidas de la ronda 1 con `isBye`.
+ * Generate a single-elimination bracket.
+ * BYEs are represented by first-round matches with `isBye`.
  */
-export function generateSingleElimination(
-  participants: EngineParticipant[],
-): EngineBracket {
+export function generateSingleElimination(participants: EngineParticipant[]): EngineBracket {
   if (participants.length < 2) {
     throw new Error('Se necesitan al menos 2 participantes');
   }
@@ -253,11 +252,10 @@ export function generateSingleElimination(
 }
 
 /**
- * Genera un bracket de doble eliminación.
- * - Los BYEs de la ronda 1 son auto-avances.
- * - El bracket de perdedores empareja perdedores de cada ronda de ganadores
- *   contra sobrevivientes previos (algoritmo general, válido para cualquier N).
- * - La gran final es 1 partida por defecto; con `grandFinalReset` se genera GF-2.
+ * Generate a double-elimination bracket.
+ * - First-round BYEs advance automatically.
+ * - Each winners-round loser is paired with surviving losers-bracket seats.
+ * - The grand final is one match by default; `grandFinalReset` adds GF-2.
  */
 export function generateDoubleElimination(
   participants: EngineParticipant[],
@@ -277,7 +275,7 @@ export function generateDoubleElimination(
   let losersRound = 0;
   let survivors: SeatRef[] = [];
 
-  // Ronda 1 de perdedores: empareja perdedores reales de W1.
+  // First losers round: pair actual W1 losers.
   const w1Real = winners.matches.filter((m) => m.round === 1 && !m.isBye);
   if (w1Real.length > 0) {
     losersRound += 1;
@@ -286,7 +284,7 @@ export function generateDoubleElimination(
     survivors = result.winners;
   }
 
-  // Rondas siguientes: perdedores de W_r contra sobrevivientes del bracket L.
+  // Later rounds: pair W_r losers with surviving losers-bracket seats.
   for (let r = 2; r <= rounds; r++) {
     const incoming = matchesInRound(matches, 'W', r).map((m) => loserSeat(m.id));
     const pool = [...survivors, ...incoming];
@@ -295,19 +293,19 @@ export function generateDoubleElimination(
     survivors = result.winners;
   }
 
-  // Sobrevivientes restantes se emparejan entre sí hasta quedar 1.
+  // Pair remaining survivors until only one remains.
   while (survivors.length > 1) {
     losersRound += 1;
     const result = pairSeats(matches, survivors, losersRound);
     survivors = result.winners;
   }
 
-  // Gran final.
+  // Grand final.
   const winnersFinal = matches.find((m) => m.bracket === 'winners' && m.round === rounds)!;
   let gfHome: SeatRef | undefined;
   let gfAway: SeatRef | undefined;
   if (rounds === 1) {
-    // 2 participantes: perdedor vs ganador de la final de ganadores.
+    // Two participants: winners-final loser versus winners-final winner.
     gfHome = loserSeat(winnersFinal.id);
     gfAway = winnerSeat(winnersFinal.id);
   } else {
@@ -326,7 +324,7 @@ export function generateDoubleElimination(
     matches.push(gf1);
   }
 
-  // Cableado de la final de ganadores hacia la gran final.
+  // Wire the winners final into the grand final.
   if (rounds === 1) {
     winnersFinal.loserNext = { matchId: 'GF-1', slot: 'home' };
     winnersFinal.winnerNext = { matchId: 'GF-1', slot: 'away' };
@@ -338,10 +336,7 @@ export function generateDoubleElimination(
   return { matches, byes };
 }
 
-function resolveSeat(
-  matches: EngineBracketMatch[],
-  seat: SeatRef | undefined,
-): string | null {
+function resolveSeat(matches: EngineBracketMatch[], seat: SeatRef | undefined): string | null {
   if (!seat) return null;
   if (seat.source === 'participant') return seat.participantId;
   const match = matches.find((m) => m.id === seat.matchId);
@@ -350,7 +345,7 @@ function resolveSeat(
   return match.home === match.winner ? match.away : match.home;
 }
 
-/** Aplica los BYEs (auto-avance) y completa los slots de la siguiente ronda. */
+/** Finalize BYEs and fill their next-round slots. */
 export function finalizeByes(bracket: EngineBracket): EngineBracket {
   const matches = bracket.matches.map((m) => ({ ...m }));
   for (const bye of matches.filter((m) => m.isBye && m.home)) {
@@ -376,8 +371,8 @@ export interface AdvanceResult {
 }
 
 /**
- * Registra el ganador de una partida, actualiza los punteros de avance
- * (ganador y, si aplica, perdedor) y devuelve el bracket actualizado.
+ * Record a match winner, update winner/loser destinations, and return the
+ * updated bracket.
  */
 export function advanceMatch(
   bracket: EngineBracket,
@@ -414,8 +409,8 @@ export function advanceMatch(
     }
   }
 
-  // Gran final con reset: si gana el equipo de perdedores (home), ambos
-  // continúan a GF-2; si gana el invicto (away), es campeón.
+  // Grand-final reset: a losers-side home win sends both participants to GF-2;
+  // an undefeated away win decides the champion immediately.
   if (gfResetWin) {
     const target = matches.findIndex((m) => m.id === 'GF-2');
     if (target >= 0) {
@@ -427,15 +422,14 @@ export function advanceMatch(
     }
   }
 
-  // Campeón: partida final sin winnerNext (o GF-1 con reset ganada por away).
-  const isChampion = updated.gfReset === true
-    ? winnerId !== updated.home
-    : updated.winnerNext === undefined;
+  // Champion: a final match with no winner destination, or GF-1 won by away.
+  const isChampion =
+    updated.gfReset === true ? winnerId !== updated.home : updated.winnerNext === undefined;
 
   return { bracket: { matches, byes: bracket.byes }, champion: isChampion ? winnerId : null };
 }
 
-/** Resuelve los participantes reales de una partida siguiendo sus seats. */
+/** Resolve a match's actual participants by following its seat references. */
 export function resolveMatchParticipants(
   bracket: EngineBracket,
   match: EngineBracketMatch,

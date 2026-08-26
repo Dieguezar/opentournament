@@ -2,7 +2,7 @@
   "name": "@opentournament/game-adapters",
   "version": "1.0.0",
   "private": true,
-  "description": "Adaptadores de juegos de OpenTournament: configuración tipada + genérico.",
+  "description": "Typed generic and official game adapters for OpenTournament.",
   "license": "MIT",
   "type": "module",
   "main": "./src/index.ts",
