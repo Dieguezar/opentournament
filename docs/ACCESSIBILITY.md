@@ -40,7 +40,7 @@ Cumplir **WCAG 2.1 nivel AA** en todo el frontend (NFR-A11Y-01). La accesibilida
 ## 4. Herramientas y CI
 
 - `@axe-core/playwright` en páginas clave dentro de los E2E.
-- Lighthouse (accesibilidad ≥ 90) como chequeo en CI de la página pública.
+- Lighthouse como diagnóstico manual complementario antes del release.
 - Revisión manual con lectores de pantalla (NVDA/VoiceOver) antes del release.
 
 ## 5. Criterios de aceptación por historia

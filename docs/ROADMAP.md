@@ -51,7 +51,7 @@ ya tiene SSE/PWA operativos. La fase 5 está en progreso; la fase 6 es expansió
 ## Fase 5 — Preparación open source (en progreso)
 
 - **Objetivo:** primer release y comunidad.
-- **Entregables:** documentación final verificada; instalación limpia validada en GitHub Actions; datos demo; plantillas y política de seguridad; baseline manual de OWASP ZAP validado sin advertencias bloqueantes; pipeline semver de imágenes GHCR implementado (pendiente primer tag y visibilidad pública); release 1.0.0; observabilidad (Grafana opcional).
+- **Entregables:** documentación final verificada; instalación limpia validada en GitHub Actions; datos demo; plantillas y política de seguridad; baseline manual de OWASP ZAP validado sin advertencias bloqueantes; axe WCAG A/AA validado sobre los brackets públicos de LoL y Smash; pipeline semver de imágenes GHCR implementado (pendiente primer tag y visibilidad pública); release 1.0.0; observabilidad (Grafana opcional).
 - **Dependencias:** Fases 1–4.
 - **Riesgos:** bugs de integración; documentación desactualizada.
 - **Pruebas:** smoke completo en entorno limpio; pentest básico; E2E completo en CI.
