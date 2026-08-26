@@ -112,6 +112,12 @@ test('forwards every documented API runtime setting', () => {
   }
 });
 
+test('probes Node services through the IPv4 loopback inside Alpine containers', () => {
+  assert.match(compose, /wget -q -O - http:\/\/127\.0\.0\.1:4000\/healthz/u);
+  assert.match(compose, /wget -q -O - http:\/\/127\.0\.0\.1:3000/u);
+  assert.doesNotMatch(compose, /wget[^\n]*http:\/\/localhost:(?:3000|4000)/u);
+});
+
 test('does not advertise environment variables ignored by the runtime', () => {
   for (const variable of [
     'JWT_SECRET',

@@ -6,6 +6,10 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el v
 
 ## [Sin publicar]
 
+### Corregido
+
+- Health checks de API y web fijados al loopback IPv4 para evitar falsos negativos en Alpine.
+
 ### Cambiado
 
 - Autoalojamiento endurecido con secreto de sesión obligatorio, demo opt-in, verificación segura y health checks encadenados.
