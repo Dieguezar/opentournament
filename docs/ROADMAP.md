@@ -1,6 +1,7 @@
 # Roadmap
 
-Estado: la Fase 0 está completada. Las fases 1–5 corresponden al MVP; la fase 6 es expansión.
+Estado: las fases 0–3 están completadas. La fase 4 conserva Discord como integración opcional y
+ya tiene SSE/PWA operativos. La fase 5 está en progreso; la fase 6 es expansión.
 
 ## Fase 0 — Definición (completada)
 
@@ -11,7 +12,7 @@ Estado: la Fase 0 está completada. Las fases 1–5 corresponden al MVP; la fase
 - **Pruebas:** revisión de la especificación por el producto.
 - **Criterio de finalización:** documentación completa y aprobación para iniciar la Fase 1.
 
-## Fase 1 — Base técnica
+## Fase 1 — Base técnica (completada)
 
 - **Objetivo:** monorepo funcional, calidad, base de datos, auth, organizaciones/roles, Docker y CI.
 - **Entregables:** estructura pnpm + Turborepo; TS estricto; ESLint/Prettier; Vitest/Playwright; Drizzle + migraciones + seeds; auth (correo + Discord); organizaciones y roles; wizard; Docker Compose (web, api, postgres, minio); GitHub Actions (lint, typecheck, tests, build, CodeQL, Dependabot); health checks; logs pino.
@@ -20,7 +21,7 @@ Estado: la Fase 0 está completada. Las fases 1–5 corresponden al MVP; la fase
 - **Pruebas:** integración de auth y roles; E2E de onboarding.
 - **Criterio de finalización:** `docker compose up -d` levanta la instancia, el wizard crea la primera organización y el pipeline CI está verde.
 
-## Fase 2 — MVP de torneos
+## Fase 2 — MVP de torneos (completada)
 
 - **Objetivo:** crear y administrar torneos completos con brackets.
 - **Entregables:** CRUD de torneo y reglas; inscripciones (espera, aprobación); check-in general con walkover; motor de sencilla y doble eliminación; sorteo/seeds/BYEs; partidas (programación, lobby, mapas, reprogramación); página pública del torneo; bracket público.
@@ -29,7 +30,7 @@ Estado: la Fase 0 está completada. Las fases 1–5 corresponden al MVP; la fase
 - **Pruebas:** propiedades del motor; integración del flujo de torneo; E2E crear→inscribir→check-in→bracket.
 - **Criterio de finalización:** un torneo real (demo seed) recorre inscripción, check-in y bracket hasta resultados sin intervención manual del staff más allá de lo previsto.
 
-## Fase 3 — Resultados y arbitraje
+## Fase 3 — Resultados y arbitraje (completada)
 
 - **Objetivo:** verificación de resultados, evidencias y disputas.
 - **Entregables:** reporte bilateral y confirmación; timeouts; evidencias (presign, límites, privacidad); disputas con panel de árbitros; resoluciones; auditoría.
@@ -38,16 +39,16 @@ Estado: la Fase 0 está completada. Las fases 1–5 corresponden al MVP; la fase
 - **Pruebas:** tests de concurrencia; integración de disputas; E2E de conflicto→disputa→resolución.
 - **Criterio de finalización:** cualquier resultado disputado se resuelve con trazabilidad completa y el bracket avanza correctamente.
 
-## Fase 4 — Discord y tiempo real
+## Fase 4 — Discord y tiempo real (parcial)
 
-- **Objetivo:** integración comunitaria y actualizaciones en vivo.
-- **Entregables:** Discord OAuth completo; bot de notificaciones y slash (`/checkin`, `/status`); SSE para bracket/resultados/notificaciones; PWA instalable con caché de lectura.
+- **Objetivo:** actualizaciones en vivo e integración comunitaria opcional.
+- **Entregables:** SSE para bracket/resultados/notificaciones y PWA instalable con caché de lectura; Discord OAuth, webhooks y comandos slash (`/checkin`, `/status`) habilitables por instancia.
 - **Dependencias:** Fase 2 (bot requiere check-in) y Fase 3 (resultados).
 - **Riesgos:** rate limits de Discord; complejidad de reconexión SSE.
 - **Pruebas:** integración del bot (mock gateway); SSE con reconexión; E2E de notificaciones.
-- **Criterio de finalización:** los participantes reciben notificaciones, hacen check-in con `/checkin` y el bracket público se actualiza en vivo.
+- **Criterio de finalización:** el bracket público se actualiza en vivo y la ausencia de credenciales de Discord no bloquea ningún flujo principal; la integración Discord habilitada se valida con mocks.
 
-## Fase 5 — Preparación open source
+## Fase 5 — Preparación open source (en progreso)
 
 - **Objetivo:** primer release y comunidad.
 - **Entregables:** documentación final verificada; instalación probada desde cero; datos demo; plantillas y política de seguridad; escaneo de seguridad (ZAP); release 1.0.0 (semver) con imágenes en GHCR; observabilidad (Grafana opcional).

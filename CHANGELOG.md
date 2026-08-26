@@ -6,6 +6,11 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el v
 
 ## [Sin publicar]
 
+### Cambiado
+
+- Autoalojamiento endurecido con secreto de sesión obligatorio, demo opt-in, verificación segura y health checks encadenados.
+- Compose conecta SMTP, límites de evidencia, rate limiting y credenciales compartidas de MinIO con la configuración real de la API.
+
 ### Agregado
 
 - Plantilla competitiva `lol.standard_v1` con región, política de parche, Tournament/Fearless Draft, selección de lado, pausas y retraso de espectadores.

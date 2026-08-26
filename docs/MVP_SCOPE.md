@@ -6,7 +6,7 @@ Este documento define exactamente qué entra y qué queda fuera del MVP de OpenT
 
 ### Organizaciones y usuarios
 
-- Cuenta con correo + contraseña (verificación opcional según SMTP) y Discord OAuth con vinculación de identidades por correo verificado.
+- Cuenta con correo + contraseña (verificación opcional según SMTP) y Discord OAuth opcional por instancia, con vinculación de identidades por correo verificado.
 - Organizaciones con owner, admin y miembro; wizard de primer uso crea la primera organización.
 - Perfil público básico: nombre, avatar, IDs de juego y resultados de torneos.
 - Sin rol global de plataforma.
@@ -37,16 +37,16 @@ Este documento define exactamente qué entra y qué queda fuera del MVP de OpenT
 - Página pública del torneo: descripción, reglas, bracket, resultados, clasificación, equipos, jugadores y enlaces de streaming; en tiempo real (SSE) y con SSR/SEO.
 - PWA instalable con caché de lectura (sin acciones offline).
 
-### Discord
+### Discord (integración opcional)
 
-- Discord OAuth para login.
-- Bot con notificaciones (recordatorios de partida y check-in, resultados, disputas) y comandos slash (`/checkin`, `/status`).
-- Configuración por token en la instancia.
+- La instalación y todos los flujos principales funcionan sin credenciales de Discord.
+- Si la instancia lo habilita: Discord OAuth para login, webhooks de notificación y comandos slash (`/checkin`, `/status`).
+- Configuración opt-in por variables de entorno.
 
 ### Adaptadores
 
 - Adaptador genérico para cualquier juego.
-- Adaptadores oficiales de Valorant, CS2 y League of Legends (configuración tipada, sin integraciones externas).
+- Adaptadores oficiales de Valorant, CS2, League of Legends y Super Smash Bros. Ultimate (configuración tipada, sin integraciones externas obligatorias).
 
 ### Operación
 
@@ -76,16 +76,16 @@ Este documento define exactamente qué entra y qué queda fuera del MVP de OpenT
 
 ## 3. Límites numéricos de diseño
 
-| Parámetro | Valor |
-| --- | --- |
-| Participantes por torneo (objetivo) | 8–128 |
-| Participantes por torneo (soporte sin rediseño) | 512+ |
-| Evidencia por archivo | ≤ 10 MB |
-| Evidencias por resultado | ≤ 5 |
-| Tolerancia de retraso (defecto) | 10 min (configurable) |
-| Confirmación de resultados (defecto) | 30 min (configurable) |
-| Ventana de disputa (defecto) | 60 min (configurable) |
-| Usuarios concurrentes (smoke) | 256 |
+| Parámetro                                       | Valor                 |
+| ----------------------------------------------- | --------------------- |
+| Participantes por torneo (objetivo)             | 8–128                 |
+| Participantes por torneo (soporte sin rediseño) | 512+                  |
+| Evidencia por archivo                           | ≤ 10 MB               |
+| Evidencias por resultado                        | ≤ 5                   |
+| Tolerancia de retraso (defecto)                 | 10 min (configurable) |
+| Confirmación de resultados (defecto)            | 30 min (configurable) |
+| Ventana de disputa (defecto)                    | 60 min (configurable) |
+| Usuarios concurrentes (smoke)                   | 256                   |
 
 ## 4. Criterio de aceptación del alcance
 

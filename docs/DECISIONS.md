@@ -366,6 +366,24 @@ Este documento registra las decisiones de producto, arquitectura y proceso de Op
 - **Consecuencias:** Cada adaptador debe validar su documento antes de persistirlo; futuras consultas analíticas por campos específicos podrían requerir índices JSONB o una proyección dedicada.
 - **Estado:** aprobada.
 
+## ADR-041 — Autoalojamiento seguro por defecto
+
+- **Tema:** Defaults operativos de una instalación Docker nueva.
+- **Opciones:** Demo y autenticación relajada por defecto | Perfil de producción seguro con opt-in explícito para demo | Dos Compose independientes.
+- **Decisión:** Compose usa perfil de producción, exige un `SESSION_SECRET` no trivial, desactiva demo y cuentas sin verificar, reenvía toda la configuración soportada y encadena servicios mediante health checks. El desarrollo local conserva `NODE_ENV=development` de forma separada.
+- **Motivo:** Una instancia autoalojada puede quedar expuesta a Internet; credenciales demo y secretos conocidos NO pueden ser el camino por defecto.
+- **Consecuencias:** La instalación requiere generar un secreto antes del primer arranque; la demo se habilita explícitamente y la guía diferencia desarrollo de producción.
+- **Estado:** aprobada.
+
+## ADR-042 — Discord como integración opt-in
+
+- **Tema:** Dependencia de Discord en el núcleo autoalojable.
+- **Opciones:** Discord obligatorio | Discord opcional | Eliminar Discord.
+- **Decisión:** Lectura pública, cuentas por correo y pases privados cubren todos los flujos principales. Discord OAuth, webhooks y comandos slash permanecen como integración opcional por instancia.
+- **Motivo:** El organizador debe poder operar con infraestructura propia sin crear una aplicación externa, pero las comunidades que ya usan Discord conservan automatización útil.
+- **Consecuencias:** La ausencia de variables `DISCORD_*` deshabilita la integración sin degradar torneos, reportes ni arbitraje.
+- **Estado:** aprobada.
+
 ## Supuestos por defecto (estado: propuesta)
 
 Estos valores se tomaron por defecto durante el descubrimiento y se confirman en la revisión de la especificación:

@@ -36,7 +36,7 @@ export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
 
   await app.register(rateLimit, {
     global: true,
-    max: 300,
+    max: env.RATE_LIMIT_GLOBAL_PER_MIN,
     timeWindow: '1 minute',
   });
 

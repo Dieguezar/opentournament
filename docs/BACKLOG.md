@@ -4,14 +4,14 @@ Historias de usuario en el formato estándar del proyecto. Prioridad: P0 (bloque
 
 ## Épicas
 
-| Épica | Fase | Historias |
-| --- | --- | --- |
-| EPIC-AUTH — Autenticación y cuentas | 1 | AUTH-01 … AUTH-06 |
-| EPIC-ORG — Organizaciones y roles | 1 | ORG-01 … ORG-04 |
-| EPIC-TOUR — Torneos y brackets | 2 | TOUR-01 … TOUR-09 |
-| EPIC-RES — Resultados, evidencias y disputas | 3 | RES-01 … RES-06 |
-| EPIC-DISC — Discord, tiempo real y PWA | 4 | DISC-01 … DISC-04 |
-| EPIC-OS — Preparación open source | 5 | OS-01 … OS-03 |
+| Épica                                        | Fase | Historias         |
+| -------------------------------------------- | ---- | ----------------- |
+| EPIC-AUTH — Autenticación y cuentas          | 1    | AUTH-01 … AUTH-06 |
+| EPIC-ORG — Organizaciones y roles            | 1    | ORG-01 … ORG-04   |
+| EPIC-TOUR — Torneos y brackets               | 2    | TOUR-01 … TOUR-09 |
+| EPIC-RES — Resultados, evidencias y disputas | 3    | RES-01 … RES-06   |
+| EPIC-DISC — Discord, tiempo real y PWA       | 4    | DISC-01 … DISC-04 |
+| EPIC-OS — Preparación open source            | 5    | OS-01 … OS-03     |
 
 ---
 
@@ -680,7 +680,7 @@ Historias de usuario en el formato estándar del proyecto. Prioridad: P0 (bloque
 - **Para:** validar la promesa de `docker compose up -d`
 - **Prioridad:** P1
 - **Dependencias:** Fases 1–4
-- **Reglas de negocio:** sin secretos en el repo; `cp .env.example .env` suficiente.
+- **Reglas de negocio:** sin secretos en el repo; la guía exige generar `SESSION_SECRET` antes del primer arranque y Compose rechaza el placeholder en producción.
 - **Criterios de aceptación:**
   ```gherkin
   Dado un entorno limpio con Docker

@@ -2,7 +2,8 @@
 
 ## 1. Objetivo
 
-Una instalación nueva debe poder iniciarse con:
+Una instalación nueva, después de inicializar `.env` y generar `SESSION_SECRET`, debe poder
+iniciarse con:
 
 ```bash
 docker compose up -d
@@ -28,12 +29,12 @@ flowchart LR
 
 ## 3. Servicios y volúmenes
 
-| Servicio | Imagen | Volúmenes |
-| --- | --- | --- |
-| postgres | postgres:16-alpine | `pgdata` (persistencia) |
-| minio | minio/minio | `miniodata` |
-| api | build local (`apps/api`) | ninguno (stateless) |
-| web | build local (`apps/web`) | ninguno (stateless) |
+| Servicio | Imagen                   | Volúmenes               |
+| -------- | ------------------------ | ----------------------- |
+| postgres | postgres:16-alpine       | `pgdata` (persistencia) |
+| minio    | minio/minio              | `miniodata`             |
+| api      | build local (`apps/api`) | ninguno (stateless)     |
+| web      | build local (`apps/web`) | ninguno (stateless)     |
 
 ## 4. Variables de entorno
 
@@ -47,14 +48,16 @@ Ver [.env.example](../.env.example). Variables críticas:
 
 ## 5. Migraciones y seeds
 
-- En Fase 1 se define el mecanismo: migraciones con drizzle-kit, ejecutadas como paso explícito (`pnpm db:migrate`) o job de arranque con lock (única instancia).
-- Seeds de demostración con `SEED_DEMO_DATA=true` (organización, torneo ejemplo, equipos, bracket y resultados).
+- La API aplica las migraciones Drizzle durante el arranque antes de aceptar tráfico.
+- El seed de demostración es idempotente y sólo se ejecuta con `SEED_DEMO_DATA=true`; Compose lo
+  mantiene desactivado por defecto.
 
 ## 6. Health checks
 
 - `GET /healthz` en API (DB + MinIO + scheduler).
 - `GET /` o `GET /api/health` en web (verifica upstream).
-- Compose healthchecks para postgres y minio; la API espera a postgres antes de migrar.
+- Compose healthchecks para postgres, MinIO, API y web; cada servicio espera a que sus dependencias
+  estén saludables.
 
 ## 7. Respaldos
 
@@ -72,7 +75,7 @@ Ver [.env.example](../.env.example). Variables críticas:
 
 ## 9. CI/CD
 
-En Fase 1 se define el pipeline de GitHub Actions:
+El pipeline de GitHub Actions ejecuta:
 
 - **CI (PR):** lint, typecheck, tests unitarios + integración, build, `pnpm audit`, CodeQL.
 - **E2E:** Playwright contra compose de test (web + api + postgres + minio).
@@ -80,11 +83,11 @@ En Fase 1 se define el pipeline de GitHub Actions:
 
 ## 10. Dimensionamiento
 
-| Escenario | Recursos |
-| --- | --- |
+| Escenario                   | Recursos                      |
+| --------------------------- | ----------------------------- |
 | Mínimo (8–32 participantes) | 2 vCPU, 2 GB RAM, 20 GB disco |
-| Típico (128 participantes) | 2 vCPU, 4 GB RAM, 40 GB disco |
-| Smoke (256 concurrentes) | 4 vCPU, 8 GB RAM |
+| Típico (128 participantes)  | 2 vCPU, 4 GB RAM, 40 GB disco |
+| Smoke (256 concurrentes)    | 4 vCPU, 8 GB RAM              |
 
 ## 11. Despliegue económico (referencia futura)
 

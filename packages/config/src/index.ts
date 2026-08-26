@@ -6,10 +6,7 @@ import { config as loadDotenv } from 'dotenv';
 
 export function getEnvironmentFilePaths(cwd = process.cwd()): string[] {
   return [
-    ...new Set([
-      resolve(cwd, '.env'),
-      fileURLToPath(new URL('../../../.env', import.meta.url)),
-    ]),
+    ...new Set([resolve(cwd, '.env'), fileURLToPath(new URL('../../../.env', import.meta.url))]),
   ];
 }
 
@@ -28,6 +25,10 @@ const boolFromString = z
   .transform((v) => v === 'true');
 
 const devSecret = 'dev-only-session-secret-change-me-32chars';
+const insecureProductionSecrets = new Set([
+  devSecret,
+  'change-me-generate-with-openssl-rand-hex-32',
+]);
 
 const optionalUrl = z.preprocess(
   (value) => (value === '' || value === undefined ? undefined : value),
@@ -49,9 +50,7 @@ export const apiEnvSchema = z.object({
     .min(32, 'SESSION_SECRET debe tener al menos 32 caracteres')
     .default(devSecret),
   SESSION_TTL_HOURS: z.coerce.number().int().positive().default(168),
-  LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   ALLOW_UNVERIFIED_EMAILS: boolFromString,
   SEED_DEMO_DATA: boolFromString,
   DISCORD_CLIENT_ID: z.string().optional(),
@@ -74,13 +73,14 @@ export const apiEnvSchema = z.object({
   S3_FORCE_PATH_STYLE: boolFromString,
   MAX_EVIDENCE_SIZE_MB: z.coerce.number().int().positive().default(10),
   MAX_EVIDENCE_FILES_PER_SUBMISSION: z.coerce.number().int().positive().default(5),
+  RATE_LIMIT_GLOBAL_PER_MIN: z.coerce.number().int().positive().max(100_000).default(300),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;
 
 export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
   const parsed = apiEnvSchema.parse(env);
-  if (parsed.NODE_ENV === 'production' && parsed.SESSION_SECRET === devSecret) {
+  if (parsed.NODE_ENV === 'production' && insecureProductionSecrets.has(parsed.SESSION_SECRET)) {
     throw new Error('En producción, SESSION_SECRET debe configurarse con un valor único.');
   }
   return parsed;

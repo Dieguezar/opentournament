@@ -2,15 +2,15 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: opentournament
-      POSTGRES_PASSWORD: opentournament
-      POSTGRES_DB: opentournament
+      POSTGRES_USER: ${POSTGRES_USER:-opentournament}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-opentournament}
+      POSTGRES_DB: ${POSTGRES_DB:-opentournament}
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
-      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+      - '127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U opentournament -d opentournament"]
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -19,15 +19,15 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
     volumes:
       - miniodata:/data
     ports:
-      - "127.0.0.1:${MINIO_API_HOST_PORT:-9000}:9000"
-      - "127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001"
+      - '127.0.0.1:${MINIO_API_HOST_PORT:-9000}:9000'
+      - '127.0.0.1:${MINIO_CONSOLE_HOST_PORT:-9001}:9001'
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -37,35 +37,51 @@ services:
       context: .
       dockerfile: infrastructure/Dockerfile.api
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${COMPOSE_NODE_ENV:-production}
       HOST: 0.0.0.0
       PORT: 4000
+      TZ: ${TZ:-UTC}
       API_URL: ${API_URL:-http://localhost:4000}
       APP_URL: ${APP_URL:-http://localhost:3000}
-      DATABASE_URL: postgres://opentournament:opentournament@postgres:5432/opentournament
-      SESSION_SECRET: ${SESSION_SECRET:-dev-only-session-secret-change-me-32chars}
+      DATABASE_URL: ${DATABASE_URL_DOCKER:-postgres://opentournament:opentournament@postgres:5432/opentournament}
+      SESSION_SECRET: ${SESSION_SECRET:?Define SESSION_SECRET in .env with at least 32 characters}
       SESSION_TTL_HOURS: ${SESSION_TTL_HOURS:-168}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      ALLOW_UNVERIFIED_EMAILS: ${ALLOW_UNVERIFIED_EMAILS:-true}
-      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+      ALLOW_UNVERIFIED_EMAILS: ${ALLOW_UNVERIFIED_EMAILS:-false}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-}
       DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI:-}
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_PUBLIC_KEY: ${DISCORD_PUBLIC_KEY:-}
       DISCORD_NOTIFY_WEBHOOK_URL: ${DISCORD_NOTIFY_WEBHOOK_URL:-}
-      S3_ENDPOINT: http://minio:9000
-      S3_REGION: us-east-1
-      S3_BUCKET: opentournament
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-OpenTournament <no-reply@example.com>}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      S3_ENDPOINT: ${S3_ENDPOINT_DOCKER:-http://minio:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-opentournament}
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
+      MAX_EVIDENCE_SIZE_MB: ${MAX_EVIDENCE_SIZE_MB:-10}
+      MAX_EVIDENCE_FILES_PER_SUBMISSION: ${MAX_EVIDENCE_FILES_PER_SUBMISSION:-5}
+      RATE_LIMIT_GLOBAL_PER_MIN: ${RATE_LIMIT_GLOBAL_PER_MIN:-300}
     depends_on:
       postgres:
         condition: service_healthy
       minio:
-        condition: service_started
+        condition: service_healthy
     ports:
-      - "127.0.0.1:${API_HOST_PORT:-4000}:4000"
+      - '127.0.0.1:${API_HOST_PORT:-4000}:4000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://localhost:4000/healthz >/dev/null 2>&1']
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
   web:
     build:
@@ -74,13 +90,20 @@ services:
       args:
         API_URL: http://api:4000
     environment:
-      NODE_ENV: ${NODE_ENV:-production}
+      NODE_ENV: ${COMPOSE_NODE_ENV:-production}
+      TZ: ${TZ:-UTC}
       APP_URL: ${APP_URL:-http://localhost:3000}
       API_URL: http://api:4000
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
-      - "127.0.0.1:${WEB_HOST_PORT:-3000}:3000"
+      - '127.0.0.1:${WEB_HOST_PORT:-3000}:3000'
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O - http://localhost:3000 >/dev/null 2>&1']
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
 volumes:
   pgdata:
