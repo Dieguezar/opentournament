@@ -15,9 +15,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Added `pnpm test:integration`, which runs the API integration suite against configured PostgreSQL or an automatically cleaned ephemeral Docker container.
 - API errors now use a shared stable-code catalog, English server fallbacks, and client-side English/Spanish localization.
+- Console mail previews and the verification-email subject now use English contributor-facing text.
 - Contributor-facing test titles and operational messages are now written in English.
 - Contributor, security, issue, and pull request guidance is now written in English.
 - Data-model, engine, backlog, and architecture documentation now distinguish implemented behavior from future design.
+
+### Fixed
+
+- Demo seeding now serializes queries within a transaction, avoiding the concurrent `client.query()` behavior deprecated for `pg@9`.
 
 ## [1.0.0] - 2026-08-26
 

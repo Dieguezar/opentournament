@@ -1,5 +1,5 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it, vi } from 'vitest';
 
 const hasDb = Boolean(process.env.TEST_DATABASE_URL);
 const INTEGRATION_TEST_TIMEOUT_MS = 30_000;
@@ -1533,6 +1533,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
       await runMigrations(process.env.TEST_DATABASE_URL!);
       env.ALLOW_UNVERIFIED_EMAILS = false;
       const app = await initServer(false);
+      const mailLog = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
       try {
         const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
@@ -1555,6 +1556,11 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         expect(
           registerRes.json<{ requiresEmailVerification: boolean }>().requiresEmailVerification,
         ).toBe(true);
+        expect(mailLog).toHaveBeenCalledWith(
+          expect.stringContaining(
+            `[mailer:console] To: ${email}\nSubject: Verify your email in OpenTournament`,
+          ),
+        );
 
         const loginBeforeVerification = await app.inject({
           method: 'POST',
@@ -1608,6 +1614,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         });
         expect(loginAfterVerification.statusCode).toBe(200);
       } finally {
+        mailLog.mockRestore();
         env.ALLOW_UNVERIFIED_EMAILS = true;
         await app.close();
       }
@@ -1636,8 +1643,28 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
       const { initServer } = await import('./app.js');
 
       await runMigrations(process.env.TEST_DATABASE_URL!);
-      const firstSeed = await seedDemoData(db);
-      const secondSeed = await seedDemoData(db);
+      const overlappingQueryWarnings: Error[] = [];
+      const collectOverlappingQueryWarning = (warning: Error) => {
+        if (
+          warning.name === 'DeprecationWarning' &&
+          warning.message.includes('client.query() when the client is already executing a query')
+        ) {
+          overlappingQueryWarnings.push(warning);
+        }
+      };
+      process.on('warning', collectOverlappingQueryWarning);
+
+      let firstSeed: Awaited<ReturnType<typeof seedDemoData>>;
+      let secondSeed: Awaited<ReturnType<typeof seedDemoData>>;
+      try {
+        firstSeed = await seedDemoData(db);
+        secondSeed = await seedDemoData(db);
+        await new Promise((resolve) => setImmediate(resolve));
+      } finally {
+        process.off('warning', collectOverlappingQueryWarning);
+      }
+
+      expect(overlappingQueryWarnings).toEqual([]);
       const expectedDemoTeamIds = [
         '00000000-0000-4000-8000-000000000201',
         '00000000-0000-4000-8000-000000000202',

@@ -85,7 +85,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         });
         await sendMail({
           to: body.email,
-          subject: 'Verifica tu correo en OpenTournament',
+          subject: 'Verify your email in OpenTournament',
           text: `Your verification link (valid for 24 hours): ${env.API_URL}/api/v1/auth/verify?token=${resetToken}`,
         });
       }

@@ -186,9 +186,10 @@ export async function seedDemoData(db: Db): Promise<DemoSeedResult> {
       .onConflictDoNothing();
 
     const adminUserId = await findUserIdByEmail(transaction, 'admin@opentournament.local');
-    const captainIds = await Promise.all(
-      DEMO_USERS.map((user) => findUserIdByEmail(transaction, user.email)),
-    );
+    let captainIds: string[] = [];
+    for (const user of DEMO_USERS) {
+      captainIds = [...captainIds, await findUserIdByEmail(transaction, user.email)];
+    }
 
     await transaction
       .insert(organizations)

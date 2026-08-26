@@ -20,7 +20,7 @@ export async function sendMail(input: {
 }): Promise<void> {
   if (!transporter) {
     if (env.LOG_LEVEL !== 'silent') {
-      console.log(`[mailer:consola] Para: ${input.to}\nAsunto: ${input.subject}\n${input.text}`);
+      console.log(`[mailer:console] To: ${input.to}\nSubject: ${input.subject}\n${input.text}`);
     }
     return;
   }
