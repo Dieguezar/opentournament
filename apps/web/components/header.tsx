@@ -4,8 +4,8 @@ import { Suspense } from 'react';
 import { ActiveNavLink } from '@/components/active-nav-link';
 import { LogoutButton } from '@/components/logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { getAuthSession } from '@/lib/auth-session';
 import { getHeaderPresentation } from '@/lib/participant-experience';
-import { serverFetch } from '@/lib/server-api';
 
 interface HeaderNavLinkProps {
   children: string;
@@ -27,13 +27,7 @@ function HeaderNavLink({ children, href }: HeaderNavLinkProps) {
 }
 
 export async function Header() {
-  const { status, data } = await serverFetch<{
-    user: { displayName: string } | null;
-    participantAccess: {
-      tournamentSlug: string;
-      teamName: string;
-    } | null;
-  }>('/auth/me');
+  const { status, data } = await getAuthSession();
   const user = status === 200 ? data.user : null;
   const presentation = user
     ? getHeaderPresentation({ user, participantAccess: data.participantAccess ?? null })

@@ -128,6 +128,29 @@ button:focus-visible {
   border-bottom: 1px solid var(--border);
 }
 
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  padding: 0.65rem 0.9rem;
+  transform: translateY(calc(-100% - 1rem));
+  border: 2px solid var(--primary);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
+#main-content:focus {
+  outline: none;
+}
+
 .nav-inner {
   width: min(100%, 1440px);
   min-height: 3.5rem;
@@ -724,11 +747,13 @@ ul {
   .nav-links {
     order: 3;
     width: 100%;
-    min-height: 2.25rem;
-    overflow-x: auto;
+    min-height: auto;
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
   .nav-link {
+    min-height: 2.25rem;
     padding: 0 0.55rem;
     white-space: nowrap;
   }

@@ -62,6 +62,31 @@ test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }
   await expect(page.getByText('La evidencia del servidor confirma')).toBeVisible();
 });
 
+test('la portada autenticada propone acciones útiles y el menú refluye en móvil', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  await page.getByLabel('Correo').fill('admin@opentournament.local');
+  await page.getByLabel('Contraseña').fill('demo-password-123');
+  await page.getByRole('button', { name: 'Entrar' }).click();
+  await page.waitForURL('**/dashboard');
+
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Hola, Admin Demo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Abrir panel' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Crear torneo' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Iniciar sesión' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Crear cuenta' })).toHaveCount(0);
+
+  await page.setViewportSize({ width: 320, height: 800 });
+  const mainNavigation = page.getByRole('navigation', { name: 'Principal' });
+  await expect
+    .poll(() =>
+      mainNavigation.evaluate((element) => element.scrollWidth <= element.clientWidth),
+    )
+    .toBe(true);
+});
+
 test('demo Smash → 8 participantes → personajes y games visibles', async ({ page }) => {
   await page.goto('/t/smash-random-showdown');
 

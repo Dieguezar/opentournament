@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   getHeaderPresentation,
+  getHomePresentation,
   getReportOutcomeMessage,
   getReportPanelState,
 } from './participant-experience';
@@ -36,6 +37,39 @@ describe('participant experience', () => {
         { href: '/tournaments/new', label: 'Nuevo torneo' },
         { href: '/teams/new', label: 'Nuevo participante' },
       ],
+    });
+  });
+
+  it('offers a useful next step on the home page for organizers and participants', () => {
+    expect(
+      getHomePresentation({
+        user: { displayName: 'Admin Demo' },
+        participantAccess: null,
+      }),
+    ).toEqual({
+      eyebrow: 'Tu espacio',
+      title: 'Hola, Admin Demo',
+      description:
+        'Retomá la organización desde el panel o creá un torneo con las plantillas de Smash Ultimate y League of Legends.',
+      primaryAction: { href: '/dashboard', label: 'Abrir panel' },
+      secondaryAction: { href: '/tournaments/new', label: 'Crear torneo' },
+    });
+
+    expect(
+      getHomePresentation({
+        user: { displayName: 'Aurora Gaming · participante' },
+        participantAccess: {
+          tournamentSlug: 'copa-nexo-demo',
+          teamName: 'Aurora Gaming',
+        },
+      }),
+    ).toEqual({
+      eyebrow: 'Tu competencia',
+      title: 'Aurora Gaming',
+      description:
+        'Volvé al torneo para seguir el bracket, revisar tus partidas y reportar resultados.',
+      primaryAction: { href: '/t/copa-nexo-demo', label: 'Ver mi torneo' },
+      secondaryAction: { href: '/t/copa-nexo-demo#reportar', label: 'Reportar resultado' },
     });
   });
 

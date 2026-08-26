@@ -1,5 +1,6 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import type { CSSProperties } from 'react';
+import { cache, type CSSProperties } from 'react';
 import type {
   GameAdapterKey,
   TournamentSettings,
@@ -63,6 +64,44 @@ interface TeamEntryView {
   teamTag: string | null;
   registrationStatus: string;
   checkedIn: boolean | null;
+}
+
+interface PublicTournamentResponse {
+  tournament: {
+    id: string;
+    name: string;
+    description: string | null;
+    rules: string | null;
+    status: TournamentStatus;
+    format: string;
+    gameAdapterKey: GameAdapterKey;
+    startsAt: string | null;
+    capacity: number;
+    seriesConfig: { bo?: number } | null;
+    settings: TournamentSettings | null;
+  };
+  organization: { name: string } | null;
+}
+
+const getPublicTournament = cache((slug: string) =>
+  serverFetch<PublicTournamentResponse>(`/tournaments/by-slug/${slug}`),
+);
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const tournamentRes = await getPublicTournament(slug);
+  const tournament = tournamentRes.data?.tournament;
+
+  if (!tournament) return { title: 'Torneo no disponible' };
+  return {
+    title: tournament.name,
+    description:
+      tournament.description ?? `Seguí el bracket y los resultados de ${tournament.name}.`,
+  };
 }
 
 function teamLabel(team: { name: string } | null): string {
@@ -318,22 +357,7 @@ export default async function PublicTournamentPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const tournamentRes = await serverFetch<{
-    tournament: {
-      id: string;
-      name: string;
-      description: string | null;
-      rules: string | null;
-      status: TournamentStatus;
-      format: string;
-      gameAdapterKey: GameAdapterKey;
-      startsAt: string | null;
-      capacity: number;
-      seriesConfig: { bo?: number } | null;
-      settings: TournamentSettings | null;
-    };
-    organization: { name: string } | null;
-  }>(`/tournaments/by-slug/${slug}`);
+  const tournamentRes = await getPublicTournament(slug);
   if (tournamentRes.status === 503) {
     return (
       <main className={`container narrow ${styles.formPage}`}>

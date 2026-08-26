@@ -19,6 +19,14 @@ interface HeaderPresentation {
   links: HeaderLink[];
 }
 
+interface HomePresentation {
+  eyebrow: string;
+  title: string;
+  description: string;
+  primaryAction: HeaderLink;
+  secondaryAction: HeaderLink;
+}
+
 export function getHeaderPresentation(auth: AuthSummary): HeaderPresentation {
   if (auth.participantAccess) {
     return {
@@ -36,6 +44,29 @@ export function getHeaderPresentation(auth: AuthSummary): HeaderPresentation {
       { href: '/tournaments/new', label: 'Nuevo torneo' },
       { href: '/teams/new', label: 'Nuevo participante' },
     ],
+  };
+}
+
+export function getHomePresentation(auth: AuthSummary): HomePresentation {
+  if (auth.participantAccess) {
+    const tournamentHref = `/t/${auth.participantAccess.tournamentSlug}`;
+    return {
+      eyebrow: 'Tu competencia',
+      title: auth.participantAccess.teamName,
+      description:
+        'Volvé al torneo para seguir el bracket, revisar tus partidas y reportar resultados.',
+      primaryAction: { href: tournamentHref, label: 'Ver mi torneo' },
+      secondaryAction: { href: `${tournamentHref}#reportar`, label: 'Reportar resultado' },
+    };
+  }
+
+  return {
+    eyebrow: 'Tu espacio',
+    title: `Hola, ${auth.user.displayName}`,
+    description:
+      'Retomá la organización desde el panel o creá un torneo con las plantillas de Smash Ultimate y League of Legends.',
+    primaryAction: { href: '/dashboard', label: 'Abrir panel' },
+    secondaryAction: { href: '/tournaments/new', label: 'Crear torneo' },
   };
 }
 

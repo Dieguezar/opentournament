@@ -8,7 +8,10 @@ import { Header } from '@/components/header';
 import { ThemeScript } from '@/components/theme-script';
 
 export const metadata: Metadata = {
-  title: 'OpenTournament',
+  title: {
+    default: 'OpenTournament',
+    template: '%s | OpenTournament',
+  },
   description: 'Plataforma open source para crear, administrar y publicar torneos de esports.',
 };
 
@@ -23,8 +26,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ThemeScript />
       </head>
       <body>
+        <a className="skip-link" href="#main-content">
+          Saltar al contenido
+        </a>
         <Header />
-        {children}
+        <div id="main-content" tabIndex={-1}>
+          {children}
+        </div>
         <PwaRegister />
       </body>
     </html>
