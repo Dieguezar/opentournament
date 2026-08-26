@@ -1,153 +1,155 @@
-# Diseño de API
+# API design
 
-## 1. Convenciones
+## Conventions
 
-- API REST bajo `/api/v1`, servida por Fastify (`apps/api`).
-- JSON; `Content-Type: application/json`. Las subidas de archivos usan multipart o URLs firmadas (S3 presign).
-- Autenticación: cookie de sesión httpOnly (`session`); token CSRF en cabecera `X-CSRF-Token` para mutaciones.
-- Errores: envelope consistente:
+- REST API under `/api/v1`, served by Fastify in `apps/api`.
+- JSON uses `Content-Type: application/json`; file uploads use multipart requests or presigned S3 URLs.
+- Authentication uses an HTTP-only `session` cookie. Mutating requests require a CSRF token in `X-CSRF-Token`.
+- Errors use a stable machine-readable envelope:
 
 ```json
 {
   "error": {
     "code": "MATCH_RESULT_CONFLICT",
-    "message": "Los reportes no coinciden",
+    "message": "The submitted reports do not match",
     "details": { "reportedBy": ["team-a", "team-b"] }
   }
 }
 ```
 
-- Paginación: `?cursor=` (cursor opaque) + `limit` (máx. 100); respuesta `{ items, nextCursor }`.
-- Idempotencia: mutaciones que generan recursos aceptan `Idempotency-Key` (defecto: no requerido, excepto reportes de resultados y subidas).
-- Versión en la URL; cambios breaking requieren `/api/v2` o nueva versión de release.
-- Documentación OpenAPI generada desde el código (`@fastify/swagger`), disponible en `/docs` en desarrollo.
+- Pagination uses opaque `cursor` values and a `limit` no greater than 100, returning `{ items, nextCursor }`.
+- Resource-creating mutations accept `Idempotency-Key`; it is required for result reports and uploads.
+- Breaking changes require `/api/v2` or a new major release.
+- Code-generated OpenAPI documentation is available at `/docs` in development.
 
-## 2. Autenticación
+The error `code`, not the human-readable `message`, is the stable client contract. Clients should localize messages from the code and use the server message only as a fallback.
 
-| Método | Ruta | Descripción |
-| --- | --- | --- |
-| POST | `/auth/register` | Registro con correo + contraseña |
-| POST | `/auth/login` | Inicio de sesión (correo) |
-| POST | `/auth/participant-pass` | Canjea un pase privado por una sesión restringida |
-| POST | `/auth/logout` | Cierre de sesión |
-| POST | `/auth/forgot-password` | Solicita recuperación |
-| POST | `/auth/reset-password` | Resetea contraseña con token |
-| GET | `/auth/discord` | Inicia flujo OAuth Discord |
-| GET | `/auth/discord/callback` | Callback OAuth Discord |
-| GET | `/auth/me` | Perfil y sesión actual |
-| PATCH | `/auth/me` | Editar perfil |
-| GET | `/auth/me/notifications` | Bandeja de notificaciones |
+## Authentication
 
-## 3. Organizaciones
+| Method | Route                    | Purpose                                          |
+| ------ | ------------------------ | ------------------------------------------------ |
+| POST   | `/auth/register`         | Register with email and password                 |
+| POST   | `/auth/login`            | Sign in with email                               |
+| POST   | `/auth/participant-pass` | Exchange a private pass for a restricted session |
+| POST   | `/auth/logout`           | End the current session                          |
+| POST   | `/auth/forgot-password`  | Request password recovery                        |
+| POST   | `/auth/reset-password`   | Reset a password with a token                    |
+| GET    | `/auth/discord`          | Start optional Discord OAuth                     |
+| GET    | `/auth/discord/callback` | Complete Discord OAuth                           |
+| GET    | `/auth/me`               | Read the current profile and session             |
+| PATCH  | `/auth/me`               | Update the profile                               |
+| GET    | `/auth/me/notifications` | List notifications                               |
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| POST | `/organizations` | Autenticado (crea la primera vía wizard si no existe) |
-| GET | `/organizations` | Autenticado (las suyas) |
-| GET | `/organizations/:orgId` | Miembro |
-| PATCH | `/organizations/:orgId` | Org admin |
-| DELETE | `/organizations/:orgId` | Org owner (soft delete) |
-| GET/POST | `/organizations/:orgId/members` | Miembro / admin |
-| PATCH/DELETE | `/organizations/:orgId/members/:userId` | Org admin |
-| GET | `/organizations/:orgId/tournaments` | Público (solo públicos) |
+## Organizations
 
-## 4. Equipos
+| Method       | Route                                   | Required access                       |
+| ------------ | --------------------------------------- | ------------------------------------- |
+| POST         | `/organizations`                        | Authenticated user                    |
+| GET          | `/organizations`                        | Authenticated user; own organizations |
+| GET          | `/organizations/:orgId`                 | Organization member                   |
+| PATCH        | `/organizations/:orgId`                 | Organization admin                    |
+| DELETE       | `/organizations/:orgId`                 | Organization owner; soft delete       |
+| GET/POST     | `/organizations/:orgId/members`         | Member to read, admin to write        |
+| PATCH/DELETE | `/organizations/:orgId/members/:userId` | Organization admin                    |
+| GET          | `/organizations/:orgId/tournaments`     | Public tournaments are public         |
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| POST | `/teams` | Autenticado (crea equipo permanente) |
-| GET | `/teams/:teamId` | Miembro o público (perfil de equipo) |
-| PATCH | `/teams/:teamId` | Capitán |
-| POST | `/teams/:teamId/members` | Capitán (invita) |
-| DELETE | `/teams/:teamId/members/:userId` | Capitán |
-| POST | `/teams/:teamId/join` | Autenticado (por invitación o link) |
+## Teams and players
 
-## 5. Torneos
+| Method | Route                            | Required access                    |
+| ------ | -------------------------------- | ---------------------------------- |
+| POST   | `/teams`                         | Authenticated user                 |
+| GET    | `/teams/:teamId`                 | Member or public profile access    |
+| PATCH  | `/teams/:teamId`                 | Captain                            |
+| POST   | `/teams/:teamId/members`         | Captain                            |
+| DELETE | `/teams/:teamId/members/:userId` | Captain                            |
+| POST   | `/teams/:teamId/join`            | Authenticated user with invitation |
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| POST | `/tournaments` | Org member/admin |
-| GET | `/tournaments/:tournamentId` | Público (si es público) |
-| PATCH | `/tournaments/:tournamentId` | Torneo admin |
-| DELETE | `/tournaments/:tournamentId` | Torneo admin (soft delete) |
-| POST | `/tournaments/:tournamentId/publish` | Torneo admin |
-| POST | `/tournaments/:tournamentId/cancel` | Torneo admin |
-| GET | `/tournaments/:tournamentId/staff` | Público (roles visibles) |
-| POST | `/tournaments/:tournamentId/staff` | Org admin / torneo admin |
-| DELETE | `/tournaments/:tournamentId/staff/:userId` | Org admin / torneo admin |
-| GET/POST | `/tournaments/:tournamentId/access-passes` | Torneo admin; lista metadatos o crea/regenera un pase |
-| DELETE | `/tournaments/:tournamentId/access-passes/:passId` | Torneo admin; revoca el pase y sus sesiones |
+Individual competitors use the same participant model with a one-player team internally.
 
-### Inscripciones
+## Tournaments
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| POST | `/tournaments/:id/registrations` | Capitán |
-| GET | `/tournaments/:id/registrations` | Staff |
-| PATCH | `/tournaments/:id/registrations/:regId` | Staff (aprobar/rechazar) |
-| DELETE | `/tournaments/:id/registrations/:regId` | Capitán o staff |
+| Method   | Route                                              | Required access                             |
+| -------- | -------------------------------------------------- | ------------------------------------------- |
+| POST     | `/tournaments`                                     | Organization member or admin                |
+| GET      | `/tournaments/:tournamentId`                       | Public when the tournament is public        |
+| PATCH    | `/tournaments/:tournamentId`                       | Tournament admin                            |
+| DELETE   | `/tournaments/:tournamentId`                       | Tournament admin; soft delete               |
+| POST     | `/tournaments/:tournamentId/publish`               | Tournament admin                            |
+| POST     | `/tournaments/:tournamentId/cancel`                | Tournament admin                            |
+| GET      | `/tournaments/:tournamentId/staff`                 | Public visible roles                        |
+| POST     | `/tournaments/:tournamentId/staff`                 | Organization or tournament admin            |
+| DELETE   | `/tournaments/:tournamentId/staff/:userId`         | Organization or tournament admin            |
+| GET/POST | `/tournaments/:tournamentId/access-passes`         | Tournament admin                            |
+| DELETE   | `/tournaments/:tournamentId/access-passes/:passId` | Tournament admin; revokes pass and sessions |
 
-### Check-in y bracket
+### Registration
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| POST | `/tournaments/:id/check-in` | Capitán (por equipo) |
-| GET | `/tournaments/:id/check-in/status` | Staff |
-| POST | `/tournaments/:id/bracket/generate` | Torneo admin |
-| GET | `/tournaments/:id/bracket` | Público |
-| POST | `/tournaments/:id/finalize` | Torneo admin (publica resultados finales) |
+| Method | Route                                   | Required access             |
+| ------ | --------------------------------------- | --------------------------- |
+| POST   | `/tournaments/:id/registrations`        | Captain                     |
+| GET    | `/tournaments/:id/registrations`        | Staff                       |
+| PATCH  | `/tournaments/:id/registrations/:regId` | Staff approval or rejection |
+| DELETE | `/tournaments/:id/registrations/:regId` | Captain or staff            |
 
-### Partidas
+### Check-in and bracket
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| GET | `/matches/:matchId` | Público (estado y resultado) |
-| PATCH | `/matches/:matchId` | Torneo admin (horario, lobby, maps, reprogramación) |
-| POST | `/matches/:matchId/reschedule` | Torneo admin |
-| POST | `/matches/:matchId/walkover` | Torneo admin |
-| POST | `/matches/:matchId/disqualify` | Torneo admin |
-| POST | `/matches/:matchId/void` | Torneo admin (anular resultado) |
+| Method | Route                               | Required access             |
+| ------ | ----------------------------------- | --------------------------- |
+| POST   | `/tournaments/:id/check-in`         | Captain for own participant |
+| GET    | `/tournaments/:id/check-in/status`  | Staff                       |
+| POST   | `/tournaments/:id/bracket/generate` | Tournament admin            |
+| GET    | `/tournaments/:id/bracket`          | Public                      |
+| POST   | `/tournaments/:id/finalize`         | Tournament admin            |
 
-### Resultados y evidencias
+### Matches
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| POST | `/matches/:matchId/results` | Capitán, pase del participante o staff, según `settings.reportingMode` |
-| GET | `/matches/:matchId/results` | Staff y partes |
-| POST | `/results/:resultId/evidence` | Capitán (sube captura/link) |
-| GET | `/results/:resultId/evidence` | Staff y partes |
-| POST | `/files/presign` | Autenticado (genera URL firmada) |
+| Method | Route                          | Required access                         |
+| ------ | ------------------------------ | --------------------------------------- |
+| GET    | `/matches/:matchId`            | Public state and confirmed result       |
+| PATCH  | `/matches/:matchId`            | Tournament admin                        |
+| POST   | `/matches/:matchId/reschedule` | Tournament admin                        |
+| POST   | `/matches/:matchId/walkover`   | Tournament admin                        |
+| POST   | `/matches/:matchId/disqualify` | Tournament admin                        |
+| POST   | `/matches/:matchId/void`       | Tournament admin; void confirmed result |
 
-### Disputas
+### Results and evidence
 
-| Método | Ruta | Roles |
-| --- | --- | --- |
-| POST | `/disputes` | Capitán, pase del participante o sistema (diferencia de reportes) |
-| GET | `/disputes/:disputeId` | Staff, árbitros y partes |
-| POST | `/disputes/:disputeId/messages` | Partes y staff |
-| PATCH | `/disputes/:disputeId/assignee` | Torneo admin (asigna árbitro) |
-| POST | `/disputes/:disputeId/resolve` | Árbitro/admin (resolución) |
+| Method | Route                         | Required access                                                           |
+| ------ | ----------------------------- | ------------------------------------------------------------------------- |
+| POST   | `/matches/:matchId/results`   | Captain, participant pass, or staff according to `settings.reportingMode` |
+| GET    | `/matches/:matchId/results`   | Staff and match parties                                                   |
+| POST   | `/results/:resultId/evidence` | Captain or eligible party                                                 |
+| GET    | `/results/:resultId/evidence` | Staff and match parties                                                   |
+| POST   | `/files/presign`              | Authenticated actor                                                       |
 
-## 6. Eventos en tiempo real (SSE)
+### Disputes
 
-- `GET /events` con cookie de sesión; eventos autenticados por canal (`user:<id>`, `org:<id>`, `tournament:<id>`).
-- `GET /events/public?tournament=<id>` para eventos públicos del torneo (sin sesión).
-- Formato: `event: <tipo>` + `id: <event-id>` + `data: <json>`.
-- Tipos de evento: `tournament.updated`, `bracket.updated`, `match.updated`, `result.confirmed`, `dispute.updated`, `notification.created`.
-- Reconexión con `Last-Event-ID` para recuperar eventos perdidos (cola corta en memoria + recarga de estado).
+| Method | Route                           | Required access                               |
+| ------ | ------------------------------- | --------------------------------------------- |
+| POST   | `/disputes`                     | Captain, participant pass, or system conflict |
+| GET    | `/disputes/:disputeId`          | Staff, assigned referee, and parties          |
+| POST   | `/disputes/:disputeId/messages` | Parties and staff                             |
+| PATCH  | `/disputes/:disputeId/assignee` | Tournament admin                              |
+| POST   | `/disputes/:disputeId/resolve`  | Assigned referee or admin                     |
 
-## 7. Discord
+## Server-Sent Events
 
-- `POST /discord/interactions` (interacciones del bot, verificación de firma).
-- `POST /discord/notify` (interno, usado por el módulo del bot).
-- El bot se conecta al gateway de Discord dentro del proceso de la API (módulo, ADR-030).
+- `GET /events`: authenticated channels such as `user:<id>`, `org:<id>`, and `tournament:<id>`.
+- `GET /events/public?tournament=<id>`: public tournament events without a session.
+- Wire format: `event: <type>`, `id: <event-id>`, and `data: <json>`.
+- Event types include `tournament.updated`, `bracket.updated`, `match.updated`, `result.confirmed`, `dispute.updated`, and `notification.created`.
+- `Last-Event-ID` supports short-gap recovery followed by a state refresh.
 
-## 8. Webhooks
+## Discord and webhooks
 
-- Diferidos a fases posteriores (fuera del MVP). El modelo de datos prevé `Webhook` sin exponer API todavía.
+- `POST /discord/interactions` verifies Discord signatures.
+- `POST /discord/notify` is an internal bot-module endpoint.
+- The bot connects to the Discord gateway from the API process (ADR-030).
+- General-purpose webhooks are outside the MVP; a future data model may add them.
 
-## 9. Reglas de consistencia
+## Consistency rules
 
-- Todas las mutaciones del motor (bracket, resultados, disputas) ocurren en una transacción de base de datos con versionado optimista.
-- Los resultados solo se aplican una vez (idempotencia por `matchId` + `reportedBy`).
-- Las correcciones administrativas exigen `reason` obligatorio y generan evento de auditoría.
+- Bracket, result, and dispute mutations run inside database transactions with optimistic versioning.
+- A report applies once per `matchId` and reporting actor.
+- Administrative corrections require a reason and append an audit event.
+- Public endpoints never expose private evidence, session material, or access-pass secrets.

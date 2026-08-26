@@ -1,78 +1,74 @@
-# Arquitectura de tiempo real
+# Real-time architecture
 
-## 1. Elección: SSE
+## Choice: Server-Sent Events
 
-El MVP usa **Server-Sent Events** (ADR-033): las actualizaciones son mayoritariamente unidireccionales (servidor → cliente), SSE corre sobre HTTP, se reconecta automáticamente y no requiere infraestructura adicional.
+OpenTournament uses SSE because current updates are primarily server-to-client. SSE runs over HTTP, reconnects in browsers, and avoids another service. WebSockets remain an option only for future bidirectional features such as chat or interactive vetoes.
 
-No se usan WebSockets en el MVP. Si en fases posteriores se incorpora chat interno o veto interactivo bidireccional, se evalúa Socket.IO/WebSocket sin cambiar el modelo de eventos de dominio.
+## Endpoints
 
-## 2. Endpoints
+- `GET /api/v1/events`: authenticated actor channels.
+- `GET /api/v1/events/public?tournament=<id>`: public tournament events.
 
-- `GET /api/v1/events` — autenticado; recibe eventos de los canales suscritos (`user:<id>`, `org:<id>`, `tournament:<id>`).
-- `GET /api/v1/events/public?tournament=<id>` — sin sesión; solo eventos públicos del torneo.
-
-## 3. Formato de eventos
+## Event format
 
 ```text
-id: 019f1a2b-... 
+id: 019f1a2b-...
 event: match.updated
 data: {"tournamentId":"...","matchId":"...","status":"finalized","result":{...}}
 retry: 3000
 ```
 
-Tipos:
+| Event                  | Public | Private audience               |
+| ---------------------- | ------ | ------------------------------ |
+| `tournament.updated`   | Yes    | —                              |
+| `bracket.updated`      | Yes    | —                              |
+| `match.updated`        | Yes    | —                              |
+| `result.confirmed`     | Yes    | —                              |
+| `dispute.updated`      | No     | Staff and parties              |
+| `notification.created` | No     | One user                       |
+| `checkin.status`       | No     | Staff and eligible participant |
 
-| Evento | Público | Privado |
-| --- | --- | --- |
-| `tournament.updated` | Sí | |
-| `bracket.updated` | Sí | |
-| `match.updated` | Sí | |
-| `result.confirmed` | Sí | |
-| `dispute.updated` | No | staff y partes |
-| `notification.created` | No | usuario |
-| `checkin.status` | No | staff y capitán |
-
-## 4. Flujo de publicación
+## Publication flow
 
 ```mermaid
 sequenceDiagram
-  participant S as Servicio de dominio
-  participant DB as PostgreSQL
-  participant OB as Outbox
-  participant SSE as Módulo SSE
-  participant C as Cliente
-  S->>DB: Transacción (estado + eventos + outbox)
-  DB-->>OB: Commit
-  OB->>SSE: Publica eventos
-  SSE->>C: Envía SSE (con Last-Event-ID)
+  participant S as Domain service
+  participant DB as PostgreSQL transaction
+  participant O as Event/outbox record
+  participant E as SSE module
+  participant C as Client
+  S->>DB: Persist state and event
+  DB-->>O: Commit
+  O->>E: Publish
+  E->>C: SSE event
 ```
 
-- El outbox garantiza entrega eventual: si el proceso cae tras el commit, un job reenvía eventos pendientes.
-- En MVP monoproceso, la publicación es en memoria; la tabla de outbox permite recuperación y futura escala multi-nodo (Redis pub/sub documentado como evolución).
+Domain state must commit before a client observes the event. When durable outbox delivery is used, a worker can retry publication after process failure.
 
-## 5. Suscripciones y autorización
+## Authorization and reconnect
 
-- El cliente se suscribe a canales según sus roles (resueltos en backend).
-- Eventos privados nunca se envían a canales públicos.
-- Al conectar, el servidor envía un snapshot del estado relevante (bracket actual) y luego los eventos.
-- Reconexión: `Last-Event-ID` → se reenvían eventos perdidos desde la cola corta; si se perdió demasiado, se recarga el snapshot.
+- The API derives private channels from the authenticated actor; clients do not grant themselves a channel.
+- Public channels contain no dispute, evidence, pass, or private participant data.
+- Clients refresh the authoritative resource after reconnect.
+- `Last-Event-ID` may recover a short gap; a full resource fetch handles an unavailable history window.
+- Logout closes or invalidates private streams.
 
-## 6. Conexión y recursos
+## Client behavior
 
-- Un cliente mantiene una conexión SSE por pestaña; el servidor identifica la pestaña con `clientId`.
-- Timeout de inactividad: keep-alive cada 15 s (`: ping`).
-- Límite de conexiones por usuario (defecto 5) y por IP (rate limiting).
-- Al cerrar sesión, se cierran los canales privados.
+- Use one connection per page context.
+- Show connecting, live, and reconnecting states honestly.
+- Keep-alive comments may prevent idle proxy termination.
+- SSE events invalidate/refetch state; they should not become a second independent state store.
+- Announce only meaningful live changes to assistive technology.
 
-## 7. PWA
+## PWA behavior
 
-- Con la app abierta, SSE actualiza la UI.
-- Sin notificaciones push ni actualización en segundo plano en el MVP (fase 6).
-- La caché de lectura (bracket/reglas/resultados) se refresca en cada carga y con eventos recibidos.
+SSE updates the app while open. The service worker stores read-only public resources and refreshes them on later loads. Background push and offline mutations are outside the MVP.
 
-## 8. Pruebas
+## Verification
 
-- Integración: emitir un evento de dominio y verificar la entrega a clientes suscritos.
-- Reconexión: cortar y verificar recuperación con `Last-Event-ID`.
-- Autorización: un visitante no recibe eventos privados.
-- Carga: 256 conexiones simuladas sin pérdida significativa (p95 < 1 s).
+- Deliver an event to an eligible subscriber.
+- Prevent a visitor or unrelated organization actor from receiving private events.
+- Reconnect and restore authoritative state.
+- Simulate 256 public connections and measure propagation.
+- Verify screen-reader announcements do not repeat noisy connection heartbeats.

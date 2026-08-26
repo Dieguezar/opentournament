@@ -1,100 +1,101 @@
-# Modelo de seguridad
+# Security model
 
-## 1. Principios
+## Principles
 
-- Seguridad desde el diseño (threat modeling en la especificación).
-- Autorización en backend; validación en cliente y servidor.
-- Privilegio mínimo; fail-closed.
-- Secretos fuera del repositorio; `.env.example` sin valores reales.
-- Datos sensibles identificados y tratados por separado.
+- Threat modeling during design.
+- Authorization in the API and validation on both client and server.
+- Least privilege and fail-closed behavior.
+- Secrets outside the repository.
+- Explicit classification and handling of sensitive data.
 
-## 2. Modelo de amenazas
+## Threat model
 
-Clasificación: Impacto (A=alto, M=medio, B=bajo) × Probabilidad (A=alta, M=media, B=baja).
+Impact and probability use High, Medium, and Low.
 
-| Amenaza | Impacto | Prob. | Controles |
-| --- | --- | --- | --- |
-| Escalamiento de privilegios | A | M | RBAC por roles, validación de rol efectivo, rutas de roles protegidas, audit log |
-| Acceso entre organizaciones (IDOR) | A | M | Filtro `organization_id` + membresía en cada query; tests de autorización |
-| Alteración de resultados | A | M | Reporte bilateral, confirmación automática, optimistic locking, inmutabilidad + corrección auditada |
-| Suplantación de jugadores | A | M | Cuentas verificadas, IDs de juego por adaptador, perfiles públicos, auditoría de cambios de roster |
-| Manipulación de brackets | A | B | Motor determinista, solo admin genera/regenera, eventos de dominio |
-| Spam y bots | M | A | Rate limiting por IP/cuenta, validación de correo, captcha diferido |
-| Archivos maliciosos | A | B | Presign, tipos permitidos, verificación de MIME/tamaño, servir con attachment |
-| Evidencias privadas filtradas | A | M | Bucket privado, URLs firmadas, `evidence.view` + alcance, sin exposición en respuestas públicas |
-| Webhooks falsificados | A | B | Diferidos; cuando existan: firma HMAC + replay protection (documentado) |
-| Robo de sesiones | A | M | Cookie httpOnly + SameSite, expiración, revocación, token CSRF, rate limiting |
-| CSRF | M | M | Token CSRF en mutaciones; SameSite=Lax |
-| XSS | A | M | Escapado de React/Next, sanitización de rich text, CSP |
-| SQL injection | A | B | Drizzle parametrizado; prohibido SQL interpolado |
-| Rate limit bypass / abuso de endpoints públicos | M | M | Rate limiting global y por ruta, paginación acotada, caché de SSR |
-| Fuga de secretos | A | M | .env fuera de git, auditoría de secretos en CI, rotación documentada |
-| Configuración insegura en autoalojados | A | M | Checklist de hardening en SELF_HOSTING, defaults seguros, documentación |
+| Threat                      | Impact | Probability | Primary controls                                                                  |
+| --------------------------- | ------ | ----------- | --------------------------------------------------------------------------------- |
+| Privilege escalation        | High   | Medium      | RBAC, effective-role checks, protected role routes, audit log                     |
+| Cross-organization IDOR     | High   | Medium      | `organization_id` and membership filters plus authorization tests                 |
+| Result tampering            | High   | Medium      | Reporting policy, bilateral confirmation, optimistic locking, audited corrections |
+| Player impersonation        | High   | Medium      | Verified accounts, adapter identifiers, public profiles, roster audit             |
+| Bracket manipulation        | High   | Low         | Deterministic engine and admin-only generation                                    |
+| Spam and bots               | Medium | High        | IP/account rate limits, email validation, future CAPTCHA                          |
+| Malicious files             | High   | Low         | Presigned uploads, MIME and size validation, attachment serving                   |
+| Private evidence disclosure | High   | Medium      | Private bucket, signed URLs, permission and scope checks                          |
+| Session theft               | High   | Medium      | HTTP-only SameSite cookies, expiration, revocation, CSRF, rate limits             |
+| CSRF                        | Medium | Medium      | CSRF token on mutations and `SameSite=Lax`                                        |
+| XSS                         | High   | Medium      | React escaping, rich-text sanitization, CSP                                       |
+| SQL injection               | High   | Low         | Parameterized Drizzle queries; interpolated SQL is prohibited                     |
+| Public endpoint abuse       | Medium | Medium      | Global and route rate limits, bounded pagination, SSR caching                     |
+| Secret leakage              | High   | Medium      | Git exclusion, CI scanning, and documented rotation                               |
+| Unsafe self-hosting         | High   | Medium      | Secure defaults and the self-hosting hardening checklist                          |
 
-## 3. Controles por capa
+General-purpose webhooks are deferred. A future implementation must use HMAC signatures and replay protection.
 
-### 3.1 Transporte y cabeceras
+## Controls by layer
 
-- HTTPS obligatorio en producción (proxy inverso).
-- Next.js aplica globalmente `Content-Security-Policy`, `X-Content-Type-Options: nosniff`,
-  `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` y aislamiento cross-origin.
-- El baseline ZAP documenta en `.zap/rules.tsv` el contenido dinámico no almacenable y
-  mantiene como informativo el uso inline requerido por la CSP estática de Next.js.
-- HSTS en producción.
+### Transport and browser headers
 
-### 3.2 Autenticación
+- Production requires HTTPS through a reverse proxy.
+- Next.js applies Content Security Policy, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`, and cross-origin isolation headers.
+- HSTS belongs at the production proxy.
+- `.zap/rules.tsv` documents expected dynamic non-cacheable responses and the inline behavior required by the static Next.js CSP.
 
-- Contraseñas Argon2id (19 MiB, 2 iteraciones, 1 hilo).
-- Verificación de correo (si SMTP); sin SMTP, `ALLOW_UNVERIFIED_EMAILS` explícito.
-- Sesiones: cookie `HttpOnly`, `Secure`, `SameSite=Lax`; sesión almacenada con hash; expiración 7 días por defecto.
-- Discord OAuth con `state` (CSRF de OAuth) y verificación de correo para vinculación.
+### Authentication
 
-### 3.3 Autorización
+- Argon2id password hashes use 19 MiB memory, two iterations, and one thread.
+- Email verification applies when SMTP is available. `ALLOW_UNVERIFIED_EMAILS` must be an explicit private-instance choice.
+- Session cookies use `HttpOnly`, `Secure` in production, and `SameSite=Lax`; database sessions store token hashes and expire after seven days by default.
+- Discord OAuth uses `state` and verified-email rules.
 
-- Catálogo de permisos y enforcement centralizado ([AUTHORIZATION_MODEL.md](AUTHORIZATION_MODEL.md)).
-- Pruebas automáticas de IDOR en cada recurso.
+### Authorization
 
-### 3.4 Validación
+The central permission catalog and resource-scope rules are defined in [AUTHORIZATION_MODEL.md](AUTHORIZATION_MODEL.md). Integration tests must cover IDOR on every organization-owned resource.
 
-- Zod en el borde de la API y en la UI; mensajes de error sin detalles internos.
-- Rich text de reglas: sanitización en servidor (allowlist de HTML).
-- Paginación y límites de tamaño de cuerpo.
+### Validation
 
-### 3.5 Rate limiting
+- Zod validates API boundaries and UI forms.
+- The API returns stable error codes without stack traces or internal details.
+- Rich-text rules use a server-side HTML allowlist.
+- Request-body sizes and pagination are bounded.
 
-- Global por IP (300 req/min por defecto).
-- Estricto en auth (login/registro/recuperación): 5–10 intentos/min por cuenta/IP.
-- Por usuario autenticado en rutas de escritura sensibles.
+### Rate limiting
 
-### 3.6 Archivos
+- Global default: 300 requests per minute per IP.
+- Authentication routes: approximately 5–10 attempts per minute per account and IP.
+- Sensitive writes also apply authenticated-user limits.
 
-- Presign con expiración corta; validación de tipo/tamaño antes y después de subir.
-- Evidencias privadas; avatares/logos públicos sanitizados (sin HTML/SVG).
+### Files
 
-### 3.7 Dependencias y CI
+- Presigned URLs expire quickly.
+- Type and size are checked before and after upload.
+- Evidence remains private.
+- Public avatars and logos reject HTML and SVG.
 
-- `pnpm audit` en CI; Dependabot para actualizaciones.
-- CodeQL (JavaScript/TypeScript) en CI.
-- Revisión manual de dependencias nuevas (PR checklist).
+### Dependencies and CI
 
-## 4. Datos sensibles
+- `pnpm audit` and CodeQL run in CI.
+- Dependabot tracks compatible and security updates.
+- Pull requests justify and review every new dependency.
 
-| Dato | Tratamiento |
-| --- | --- |
-| Contraseñas | Hash Argon2id; nunca en logs |
-| Sesiones | Hash en base; cookie firmada |
-| Tokens OAuth (Discord) | Cifrados con clave de instancia |
-| Evidencias | Bucket privado + URLs firmadas |
-| Correos | Solo los necesarios; no en logs (pino redacta) |
+## Sensitive data
 
-## 5. Auditoría y respuesta
+| Data                 | Treatment                                                 |
+| -------------------- | --------------------------------------------------------- |
+| Passwords            | Argon2id hash; never logged                               |
+| Sessions             | Token hash in PostgreSQL; secure cookie in browser        |
+| Discord OAuth tokens | Encrypted with an instance key                            |
+| Evidence             | Private bucket and short-lived signed URLs                |
+| Email addresses      | Stored only when needed and redacted from structured logs |
 
-- Audit log append-only (acciones críticas).
-- Plan de respuesta a incidentes documentado en [SECURITY.md](../SECURITY.md) (divulgación responsable).
+## Audit and incident response
 
-## 6. Pruebas de seguridad
+Critical actions append immutable audit events. Follow [SECURITY.md](../SECURITY.md) for private reporting, response targets, and coordinated disclosure.
 
-- Tests automatizados de autorización (IDOR, escalamiento) en integración.
-- Escaneo estático en CI.
-- Pruebas manuales pre-release: sesión, CSRF, subida de archivos, cabeceras.
-- Baseline pasivo de OWASP ZAP manual y aislado, validado antes del primer release.
+## Security verification
+
+- Integration tests for IDOR and privilege escalation.
+- Static analysis and dependency audit in CI.
+- Manual pre-release checks for sessions, CSRF, uploads, signed URLs, and headers.
+- An isolated passive OWASP ZAP baseline before releases.
+- Manual penetration testing before major releases or sensitive authentication and authorization changes.

@@ -1,80 +1,79 @@
-# Integración con Discord
+# Optional Discord integration
 
-## 1. Alcance del MVP
+Discord is an opt-in adapter around the core product. An instance without Discord credentials must retain public tournaments, email accounts, participant passes, reporting, and arbitration.
 
-- Discord OAuth para iniciar sesión (ADR-013).
-- Bot de notificaciones y comandos slash `/checkin` y `/status` (ADR-023).
-- Configuración por instancia vía variables de entorno (`DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN`).
-- Sin creación de roles, canales ni reporte de resultados desde Discord en el MVP (fase 6).
+## Capabilities
 
-## 2. OAuth
+- Discord OAuth login.
+- Signed HTTP interaction endpoint.
+- Optional `/checkin` and `/status` slash commands.
+- Optional outgoing webhook notifications.
+- No required Discord roles, private channels, or Discord-native result reporting.
+
+## OAuth flow
 
 ```mermaid
 sequenceDiagram
-  participant U as Usuario
-  participant W as Web/API
+  participant U as User
+  participant A as OpenTournament API
   participant D as Discord
-  U->>W: GET /auth/discord
-  W->>D: Authorization URL (scope identify email)
-  D-->>U: Consentimiento
-  U->>W: Callback con code
-  W->>D: Token exchange + /users/@me
-  W->>W: Buscar Identity(provider=discord, sub)
-  W-->>W: ¿Coincide correo verificado con un User existente? → vincular
-  W-->>U: Sesión creada
+  U->>A: GET /auth/discord
+  A->>D: Authorization URL with identify + email
+  D-->>U: Consent
+  U->>A: Callback with code and state
+  A->>D: Token exchange and /users/@me
+  A->>A: Resolve Identity(provider=discord, providerSub)
+  A->>A: Link verified matching email or create user
+  A-->>U: Session cookie
 ```
 
-Reglas:
-- Si `identity` existe → login directo.
-- Si no existe pero el correo de Discord coincide con una cuenta verificada → se vincula.
-- Si no coincide → se crea una cuenta nueva (o se solicita vincular tras verificar el correo).
-- Los tokens OAuth se guardan cifrados en `Identity` (solo los necesarios para refrescar).
+Existing identities sign in directly. A verified email may link to an existing verified account. Otherwise OpenTournament creates a separate user. Discord access material never reaches the frontend.
 
-## 3. Bot
+## Interactions and commands
 
-- Módulo dentro del proceso de la API (ADR-030); en el MVP se implementa con **interacciones HTTP** (sin gateway): los comandos slash llegan a `POST /api/v1/discord/interactions`, la firma Ed25519 se verifica con `DISCORD_PUBLIC_KEY` y las respuestas usan la API REST de Discord. Esto evita una conexión persistente y simplifica el despliegue.
-- Se registran comandos globales de aplicación:
-  - `/checkin <código-torneo>`: el usuario (capitán) hace check-in de su equipo.
-  - `/status <código-torneo>`: estado del torneo, próximas partidas del equipo y check-in pendiente.
-- Interacciones verificadas por firma (cabeceras `X-Signature-Ed25519`, `X-Signature-Timestamp`).
-- Rate limits de Discord respetados.
-- Notificaciones salientes vía webhook (`DISCORD_NOTIFY_WEBHOOK_URL`) o DM por el token del bot; sin datos sensibles en los mensajes.
+`POST /api/v1/discord/interactions` verifies `X-Signature-Ed25519` and `X-Signature-Timestamp` with `DISCORD_PUBLIC_KEY`.
 
-## 4. Notificaciones
+Configured instances register application commands through the Discord REST API:
 
-El bot envía mensajes al canal configurado por el organizador o DM a usuarios que vincularon Discord:
+- `/checkin <tournament-code>`: checks in the eligible captain’s participant.
+- `/status <tournament-code>`: returns tournament state and relevant participant information.
 
-| Evento | Mensaje |
-| --- | --- |
-| Apertura de inscripciones | Aviso + enlace al torneo |
-| Cupo liberado (waitlist) | Aviso al siguiente equipo |
-| Apertura/cierre de check-in | Recordatorio con hora límite |
-| Recordatorio de partida | Fecha, lobby y rival |
-| Resultado reportado | Aviso al rival para confirmar |
-| Resultado confirmado | Resultado + siguiente partida |
-| Disputa abierta | Aviso a árbitros con enlace |
-| Resolución de disputa | Resultado final |
-| Resultados finales | Podio y enlace público |
+The implementation uses signed HTTP interactions rather than requiring a persistent gateway connection.
 
-## 5. Configuración para instancias autoalojadas
+## Notifications
 
-1. Crear una aplicación en el [Developer Portal](https://discord.com/developers/applications).
-2. OAuth2: redirect URI `${API_URL}/api/v1/auth/discord/callback`, scopes `identify` + `email`.
-3. Bot: generar token (`DISCORD_BOT_TOKEN`), copiar la clave pública (`DISCORD_PUBLIC_KEY`) y habilitar el bot en el servidor con permisos mínimos (enviar mensajes).
-4. Configurar `.env` (`DISCORD_*`) y reiniciar la API.
+Configured webhooks may announce:
 
-La documentación de instalación está en [SELF_HOSTING.md](SELF_HOSTING.md).
+- Registration and check-in windows.
+- Match reminders and lobby information.
+- Submitted or confirmed results.
+- New disputes and rulings.
+- Final standings.
 
-## 6. Seguridad
+Notifications contain links and public summaries, never private evidence or access-pass secrets.
 
-- Firma de interacciones verificada siempre.
-- Los tokens del bot nunca se exponen al frontend; solo el backend los usa.
-- No se confía en el ID de usuario de Discord como identidad de plataforma; se usa `Identity` → `User`.
-- Mensajes sensibles (resultados, evidencias) no se envían por Discord; solo avisos con enlaces autenticados.
+## Self-hosting setup
 
-## 7. Fuera del MVP (fase 6)
+1. Create a Discord application in the [Developer Portal](https://discord.com/developers/applications).
+2. Add `${API_URL}/api/v1/auth/discord/callback` with `identify` and `email` scopes.
+3. Copy the application ID, client secret, public key, and optional bot/webhook credentials.
+4. Set the matching `DISCORD_*` variables in `.env`.
+5. Restart the API and verify OAuth and an interaction signature.
 
-- Creación automática de roles y canales (privados por partida).
-- Check-in y reporte de resultados desde Discord.
-- Publicación automática del bracket en canal.
-- Panel de configuración del bot en la UI.
+See [SELF_HOSTING.md](SELF_HOSTING.md).
+
+## Security
+
+- Verify every interaction signature before parsing commands.
+- Keep client secrets and bot tokens only in backend configuration.
+- Resolve platform users through the stored `Identity → User` relationship.
+- Respect Discord rate limits.
+- Never send evidence, session cookies, CSRF tokens, or participant-pass secrets to Discord.
+
+## Deferred scope
+
+- Automatic role and channel creation.
+- Private match channels.
+- Result submission from Discord.
+- Interactive bot configuration in the web UI.
+- Mandatory Discord dependency.

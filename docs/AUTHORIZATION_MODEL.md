@@ -1,88 +1,86 @@
-# Modelo de autorización
+# Authorization model
 
-## 1. Principios
+## Principles
 
-1. La autorización se evalúa siempre en el backend, para cada recurso, antes de cualquier operación.
-2. El alcance de datos es por organización: ningún query cruza organizaciones sin permiso explícito.
-3. Los roles son la fuente de permisos; no se confía en campos enviados por el cliente.
-4. Las decisiones de autorización relevantes se registran en el audit log.
-5. Fail-closed: ante un rol desconocido o falta de permiso, la operación se rechaza.
+1. The API authorizes every operation against the requested resource.
+2. Organization data never crosses organization boundaries without explicit permission.
+3. Server-resolved roles grant permissions; client-provided role fields are never trusted.
+4. Important authorization decisions append audit events.
+5. Unknown roles and missing permissions fail closed.
 
-## 2. Autenticación (quién eres)
+## Authentication actors
 
-- Sesión: cookie httpOnly con token opaco; en base de datos sólo se conserva su hash, actor, alcance opcional y expiración.
-- Pase de participante: token aleatorio mostrado una sola vez, almacenado como hash y limitado a un torneo/equipo. Crea un actor seudónimo para auditoría, puede expirar o revocarse y nunca hereda membresías de organización ni permisos del capitán real.
-- CSRF: token por sesión en cabecera `X-CSRF-Token` para métodos mutantes.
-- Contraseñas: Argon2id (memoria 19 MiB, iteraciones 2, paralelismo 1).
-- Discord OAuth: intercambio `authorization_code`; la identidad se vincula por correo verificado coincidente (si el correo de Discord no coincide con una cuenta existente, se crea una nueva).
-- Rate limiting: por IP (global) y por cuenta (login, registro, recuperación).
+- **Account session:** opaque token in an HTTP-only cookie; the database stores only its hash, actor, optional scope, and expiration.
+- **Participant pass:** random secret shown once and stored as a hash. It is restricted to one tournament and participant, creates a pseudonymous audit actor, may expire or be revoked, and never inherits organization membership.
+- **CSRF:** mutating methods require the session token through `X-CSRF-Token`.
+- **Password:** Argon2id with 19 MiB memory, two iterations, and parallelism 1.
+- **Discord OAuth:** authorization-code exchange. A verified matching email may link an identity; otherwise a separate account is created.
+- **Rate limits:** global by IP and stricter by account and IP for authentication routes.
 
-## 3. Catálogo de permisos
+## Permission catalog
 
-Permisos granulares asignados a roles:
+| Permission                        | Effect                                       |
+| --------------------------------- | -------------------------------------------- |
+| `org.manage`                      | Edit the organization and manage members     |
+| `org.delete`                      | Soft-delete the organization                 |
+| `tournament.create`               | Create a tournament in the organization      |
+| `tournament.manage`               | Edit or cancel a tournament and manage staff |
+| `tournament.registrations.manage` | Approve or reject registrations              |
+| `tournament.checkin.manage`       | Manage check-in                              |
+| `tournament.bracket.generate`     | Generate or regenerate a bracket             |
+| `tournament.finalize`             | Publish final results                        |
+| `match.manage`                    | Reschedule, walk over, disqualify, or void   |
+| `match.report`                    | Report a result for an eligible match        |
+| `match.results.confirm`           | Confirm or escalate results                  |
+| `evidence.view`                   | View evidence within scope                   |
+| `dispute.manage`                  | Assign referees and manage disputes          |
+| `dispute.resolve`                 | Resolve an assigned dispute                  |
+| `team.manage`                     | Manage a team roster                         |
 
-| Permiso | Efecto |
-| --- | --- |
-| `org.manage` | Editar organización, gestionar miembros |
-| `org.delete` | Soft delete de organización |
-| `tournament.create` | Crear torneo en la organización |
-| `tournament.manage` | Editar/cancelar torneo, staff |
-| `tournament.registrations.manage` | Aprobar/rechazar inscripciones |
-| `tournament.checkin.manage` | Gestionar check-in |
-| `tournament.bracket.generate` | Generar/regenerar bracket |
-| `tournament.finalize` | Publicar resultados finales |
-| `match.manage` | Reprogramar, walkover, DQ, anular |
-| `match.report` | Reportar resultado (capitán o pase restringido de la partida) |
-| `match.results.confirm` | Confirmar/escalar resultados (staff) |
-| `evidence.view` | Ver evidencias (staff/árbitro/partes) |
-| `dispute.manage` | Asignar árbitros, gestionar disputas |
-| `dispute.resolve` | Resolver disputas |
-| `team.manage` | Gestionar roster del equipo (capitán) |
+## Role mapping
 
-## 4. Mapeo rol → permisos
+| Role                | Effective permissions                                                                        |
+| ------------------- | -------------------------------------------------------------------------------------------- |
+| Organization owner  | Every `org.*` permission, tournament creation, and authority to assign tournament roles      |
+| Organization admin  | `org.manage`, `tournament.create`, and tournament management within the organization         |
+| Organization member | `tournament.create` only when organization policy allows it                                  |
+| Tournament admin    | Tournament, registration, check-in, bracket, match, result, evidence, and dispute management |
+| Referee             | Assigned dispute management and resolution, evidence view, and result confirmation           |
+| Moderator           | Registration and check-in management plus dispute messages                                   |
+| Captain             | Own-match reporting, own roster management, and own evidence                                 |
+| Participant pass    | Reporting and disputes only for its tournament and participant                               |
 
-| Rol | Permisos |
-| --- | --- |
-| Org owner | Todos los `org.*` + `tournament.create` + cualquier rol de torneo |
-| Org admin | `org.manage`, `tournament.create`, `tournament.manage` en torneos de la org |
-| Org miembro | `tournament.create` (si la org lo permite) |
-| Torneo admin | `tournament.manage`, `registrations.manage`, `checkin.manage`, `bracket.generate`, `finalize`, `match.manage`, `match.results.confirm`, `dispute.manage`, `dispute.resolve`, `evidence.view` |
-| Árbitro | `dispute.resolve`, `dispute.manage` (asignado), `evidence.view`, `match.results.confirm` |
-| Moderador | `registrations.manage`, `checkin.manage`, mensajes de disputas |
-| Capitán | `match.report` (solo en sus partidas), `team.manage`, ver evidencias propias |
-| Participante con pase | `match.report` y disputas sólo para su torneo/equipo; sin permisos de organización o roster |
+## Data-scope rules
 
-## 5. Reglas de alcance de datos
+- Organization-owned tables carry `organization_id`; queries filter by organization membership.
+- Captains operate only on matches containing their participant.
+- Every participant-pass request rechecks tournament, participant, expiration, and revocation.
+- A pass begins in the URL fragment `#token=`, keeping it out of HTTP logs and `Referer` headers.
+- Evidence is private to tournament staff, the assigned referee, and match parties.
+- Disputes are visible to staff, the assigned referee, and parties.
+- Public profiles expose only explicitly public fields.
+- Public brackets are readable without a session; mutations require management permissions.
 
-- `organization_id` en todas las tablas de la organización; consultas siempre filtradas por membresía.
-- Partidas: el capitán solo opera sobre partidas donde su equipo participa.
-- Pases: cada request vuelve a comprobar torneo, equipo, expiración y revocación; el token viaja inicialmente en el fragmento `#token=` para no quedar en logs HTTP ni cabeceras `Referer`.
-- Evidencias: privadas; acceso a staff del torneo, árbitro asignado y equipos de la partida.
-- Disputas: acceso a staff, árbitro asignado y partes.
-- Perfiles públicos: solo datos marcados públicos.
-- Bracket público: lectura sin sesión; mutaciones solo con `tournament.manage`/`bracket.generate`.
+## Enforcement
 
-## 6. Enforcement
+Fastify routes use helpers such as `requireAuth`, `requireOrgRole`, `requireTournamentRole`, and `requireMatchParticipant`. A central `can(actor, permission, resource)` helper evaluates the effective role.
 
-- Middleware Fastify por ruta: `requireAuth`, `requireOrgRole(orgId, 'admin')`, `requireTournamentRole(tournamentId, ['admin','referee'])`, `requireMatchParticipant(matchId)`.
-- Chequeo de permisos con un helper central (`can(actor, permiso, recurso)`) alimentado por el rol efectivo.
-- El rol efectivo se resuelve como: rol de torneo (si existe) + rol de organización (base). El rol de torneo no puede elevarse por encima del rol de organización (un miembro no puede ser admin de torneo sin permiso del org admin).
+The effective role combines organization and tournament assignments. A tournament role cannot silently exceed organization policy; an organization admin must grant elevated tournament authority.
 
-## 7. Casos de abuso cubiertos
+## Covered abuse cases
 
-| Ataque | Control |
-| --- | --- |
-| IDOR (acceder a recurso de otra org) | Filtro por `organization_id` + membresía |
-| Escalamiento de privilegios | Roles otorgados solo por owner/admin; validación de rol efectivo |
-| Reporte de resultado de partida ajena | `requireMatchParticipant` |
-| Resolver disputa sin ser árbitro | `dispute.resolve` + asignación |
-| Ver evidencias privadas | `evidence.view` + alcance |
-| Regenerar bracket después de partidas jugadas | Regla de negocio del motor (solo antes de la primera partida) |
-| Autopromoción | Las rutas de roles exigen actor con permiso y nunca al propio actor como objetivo |
+| Attack                                | Control                                                          |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| Cross-organization IDOR               | `organization_id` filter plus membership                         |
+| Privilege escalation                  | Protected role assignment and effective-role checks              |
+| Reporting another participant’s match | Match-participant scope check                                    |
+| Resolving an unassigned dispute       | `dispute.resolve` plus assignment                                |
+| Reading private evidence              | `evidence.view` plus resource scope                              |
+| Regenerating an active bracket        | Engine rule blocks regeneration after play begins                |
+| Self-promotion                        | Role routes require a privileged actor and reject unsafe targets |
 
-## 8. Auditoría de autorización
+## Authorization audit
 
-- Eventos auditados: login/registro, cambios de rol, invitaciones, cambios de configuración sensible, reportes/confirmaciones, correcciones, asignaciones de árbitros, resoluciones.
-- El audit log es append-only (sin endpoints de edición).
+The append-only audit log records authentication events, role changes, invitations, sensitive configuration changes, reports, confirmations, corrections, referee assignments, and rulings.
 
-Detalle de amenazas y controles completos: [docs/SECURITY_MODEL.md](SECURITY_MODEL.md).
+See [SECURITY_MODEL.md](SECURITY_MODEL.md) for the complete threat model.

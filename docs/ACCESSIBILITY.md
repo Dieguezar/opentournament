@@ -1,54 +1,61 @@
-# Accesibilidad
+# Accessibility
 
-## 1. Objetivo
+## Standard
 
-Cumplir **WCAG 2.1 nivel AA** en todo el frontend (NFR-A11Y-01). La accesibilidad es requisito de aceptación de cada historia de UI.
+The web interface targets **WCAG 2.1 AA**. Accessibility is part of acceptance criteria, not a release-afterthought.
 
-## 2. Principios
+## Principles
 
-1. Perceptible: contraste AA, textos alternativos, no depender solo del color.
-2. Operable: navegación completa por teclado, foco visible, sin atascos.
-3. Comprensible: idioma declarado, navegación consistente, errores de formulario claros.
-4. Robusto: HTML semántico, roles ARIA solo cuando faltan nativos, validación con tecnologías de asistencia.
+1. **Perceivable:** AA contrast, meaningful alternatives, and no color-only meaning.
+2. **Operable:** complete keyboard access, visible focus, and no keyboard traps.
+3. **Understandable:** declared language, consistent navigation, and clear form errors.
+4. **Robust:** semantic HTML first; ARIA only when native semantics are insufficient.
 
-## 3. Áreas críticas
+## Critical areas
 
-### Bracket
+### Brackets
 
-- El bracket es el componente más complejo. Debe tener:
-  - Alternativa textual accesible (lista ordenada de rondas y partidas) además de la visual.
-  - Navegación por teclado entre partidas (flechas + tab).
-  - Anuncio de cambios en vivo con `aria-live="polite"` (resultados, avance de ronda).
-  - Contraste suficiente en líneas de conexión y estados (ganador/perdedor).
+- Provide an accessible ordered representation of rounds and matches.
+- Keep the visual bracket horizontally scrollable inside a labeled focusable region.
+- Preserve visible connector contrast in light and dark themes.
+- Expose winner, loser, and match state in text, not color alone.
+- Announce meaningful confirmed-result changes without overwhelming the user.
 
-### Formularios
+### Forms
 
-- Labels asociados (`for`/`id`), `aria-describedby` para ayuda y errores.
-- Errores inline con `role="alert"` y resumen al inicio del formulario.
-- Estados de carga (`aria-busy`) y de éxito anunciados.
+- Associate every label through native `label`/input relationships.
+- Connect help and errors with `aria-describedby`.
+- Use inline errors and focus the first invalid field.
+- Announce loading and successful completion when a visual update alone is insufficient.
 
-### Tiempo real (SSE)
+### Live updates
 
-- Las actualizaciones usan regiones live; los usuarios pueden pausar/ocultar la animación.
-- Ninguna información crítica depende solo del movimiento (respetar `prefers-reduced-motion`).
+- Use polite live regions for important SSE state changes.
+- Respect `prefers-reduced-motion`.
+- Do not communicate critical state through animation.
 
-### PWA
+### PWA and responsive behavior
 
-- Pantalla de instalación accesible; iconos y nombres legibles.
-- El modo offline de lectura no degrada la navegación por teclado.
+- Installation instructions and icons need accessible names.
+- Read-cache behavior must not break keyboard navigation.
+- Intentional bracket/tab overflow stays inside its own labeled region.
+- The layout must remain usable from a 360 px viewport.
 
-## 4. Herramientas y CI
+## Verification
 
-- `@axe-core/playwright` en páginas clave dentro de los E2E.
-- Lighthouse como diagnóstico manual complementario antes del release.
-- Revisión manual con lectores de pantalla (NVDA/VoiceOver) antes del release.
+- Automated `@axe-core/playwright` checks on representative public and authenticated routes.
+- Browser keyboard traversal.
+- Manual screen-reader smoke with NVDA on Windows or VoiceOver on macOS/iOS.
+- Light, dark, forced-colors, and reduced-motion review when relevant.
+- Lighthouse as a diagnostic aid, not the sole accessibility test.
 
-## 5. Criterios de aceptación por historia
+## Pull request checklist
 
-Toda historia de UI incluye:
+Every UI change should confirm:
 
-- Navegación completa por teclado.
-- Contraste AA verificado.
-- Textos alternativos presentes.
-- Sin bloqueos de foco ni atascos de tabulación.
-- Anuncios live para actualizaciones asíncronas.
+- [ ] Keyboard path is complete.
+- [ ] Focus is visible and returns sensibly after dialogs/actions.
+- [ ] Labels, names, and error relationships are correct.
+- [ ] Contrast meets AA.
+- [ ] Live updates are understandable without motion.
+- [ ] Spanish and English copy preserve the same accessible meaning.

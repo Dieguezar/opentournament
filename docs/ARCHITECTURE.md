@@ -1,30 +1,30 @@
-# Arquitectura
+# Architecture
 
-## 1. Resumen
+## Overview
 
-OpenTournament es un **monolito modular** en un monorepo. Dos aplicaciones desplegables (`web` y `api`) y paquetes internos con responsabilidades claras. El worker (scheduler de jobs) y el bot de Discord son **módulos dentro de la API** (ADR-002, ADR-030). La comunicación con el cliente es REST + SSE; la persistencia es PostgreSQL; los archivos van a un bucket S3-compatible.
+OpenTournament is a **modular monolith** in a monorepo. It has two deployable applications, `web` and `api`, plus internal packages with explicit responsibilities. The scheduler worker and optional Discord bot are modules inside the API process (ADR-002 and ADR-030). Clients use REST and SSE, state lives in PostgreSQL, and files use S3-compatible storage.
 
 ```mermaid
 flowchart TB
-  subgraph Clientes
-    B[Navegador / PWA]
+  subgraph Clients
+    B[Browser / PWA]
     D[Discord]
   end
   subgraph Docker
     subgraph API
       F[Fastify: REST + OpenAPI]
       S[SSE /events]
-      W[Worker: scheduler jobs Postgres]
-      Bot[Bot Discord]
+      W[Worker: PostgreSQL job scheduler]
+      Bot[Discord bot]
     end
-    Web[Next.js: SSR, páginas públicas, PWA]
+    Web[Next.js: SSR, public pages, PWA]
     PG[(PostgreSQL)]
-    M[(MinIO S3)]
+    M[(S3-compatible object storage)]
   end
   B -->|HTTP/SSE| Web
   Web -->|API| F
   B -->|API| F
-  D -->|Interacciones HTTP| Bot
+  D -->|HTTP interactions| Bot
   F --> PG
   W --> PG
   Bot --> PG
@@ -32,50 +32,50 @@ flowchart TB
   Bot -->|Webhook/API| D
 ```
 
-## 2. Estructura del monorepo
+## Monorepo structure
 
 ```text
 opentournament/
 ├── apps/
-│   ├── web/              # Next.js (App Router, SSR, PWA)
-│   └── api/              # Fastify (REST, SSE, worker, bot Discord)
+│   ├── web/                # Next.js App Router, SSR, PWA
+│   └── api/                # Fastify REST, SSE, worker, Discord bot
 ├── packages/
-│   ├── tournament-engine/  # Motor puro, determinista
-│   ├── game-adapters/      # Configuración tipada + genérico
-│   ├── bracket-ui/         # Componentes de bracket reutilizables
-│   ├── database/           # Esquema Drizzle, migraciones, seeds
-│   ├── auth/               # Sesiones, contraseñas, OAuth, RBAC helpers
-│   ├── shared-types/       # Tipos compartidos web/api
-│   ├── validation/         # Validación de entrada (zod)
-│   └── config/             # Variables de entorno y configuración tipada
-├── infrastructure/         # Docker Compose, scripts de despliegue
-├── docs/                   # Documentación (este árbol)
-├── scripts/                # Scripts de desarrollo/operación
-└── tests/                  # Suites de integración/E2E a nivel repo
+│   ├── tournament-engine/  # Pure deterministic tournament logic
+│   ├── game-adapters/      # Typed game and template configuration
+│   ├── bracket-ui/         # Reusable bracket components
+│   ├── database/           # Drizzle schema, migrations, and seeds
+│   ├── auth/               # Sessions, passwords, OAuth, RBAC helpers
+│   ├── shared-types/       # Types shared by web and API
+│   ├── validation/         # Boundary validation with Zod
+│   └── config/             # Typed environment configuration
+├── infrastructure/         # Deployment infrastructure
+├── docs/                   # Architecture and product documentation
+├── scripts/                # Development and operations scripts
+└── tests/                  # Repository-level integration and E2E suites
 ```
 
-## 3. Flujo de una petición
+## Request flow
 
-1. El navegador llama a la API (`apps/api`) con cookie de sesión.
-2. Middleware de auth resuelve el usuario; middleware de autorización resuelve el rol efectivo y valida el permiso.
-3. Los datos se validan con `packages/validation` (zod) antes de tocar la base.
-4. El servicio de dominio usa `packages/tournament-engine` (funciones puras) para computar el nuevo estado.
-5. La transacción persiste el estado y los eventos de dominio en PostgreSQL.
-6. Se emiten eventos SSE y se encolan jobs/notificaciones en la misma transacción (outbox de eventos).
+1. The browser calls `apps/api` with its session cookie.
+2. Authentication resolves the user; authorization resolves the effective role and checks the permission.
+3. `packages/validation` validates untrusted input before database access.
+4. Domain services call pure functions from `packages/tournament-engine` to compute transitions.
+5. A PostgreSQL transaction persists state and domain events.
+6. The same transaction records outbox jobs for SSE and notifications.
 
-## 4. Decisiones clave y su racional
+## Key decisions
 
-| Decisión | Racional |
-| --- | --- |
-| Monolito modular | Un solo deployable; costos de operación mínimos; límites claros por paquete |
-| Motor separado del framework | Determinismo, tests extensivos, independencia de storage |
-| Worker dentro de la API | Jobs ligeros (temporizadores y envíos); extracción futura documentada |
-| Bot dentro de la API | Un solo proceso; gateway de Discord tolera reinicios con reconnect |
-| SSE en vez de WebSockets | Actualizaciones unidireccionales; simplicidad y reconexión automática |
-| Cola en PostgreSQL | Cero servicios extra; sobrevive reinicios; BullMQ/Redis como evolución |
-| Drizzle | SQL tipado, sin query engine binario, menos fricción en Docker |
+| Decision                     | Reason                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| Modular monolith             | One operational unit with explicit package boundaries and low self-hosting cost |
+| Framework-independent engine | Determinism, extensive tests, and no storage coupling                           |
+| Worker inside API            | Current jobs are lightweight; extraction remains possible                       |
+| Discord bot inside API       | One process and reconnect-tolerant Discord gateway                              |
+| SSE instead of WebSockets    | Updates are server-to-client; browser reconnection is built in                  |
+| PostgreSQL queue/outbox      | Survives restarts without adding Redis                                          |
+| Drizzle ORM                  | Typed SQL without a binary query engine and lower Docker friction               |
 
-## 5. Paquetes y dependencias
+## Package dependency rules
 
 ```mermaid
 flowchart LR
@@ -94,36 +94,37 @@ flowchart LR
   Database --> Config
 ```
 
-- `tournament-engine` no depende de HTTP, base de datos ni Discord.
-- `game-adapters` solo depende de `shared-types`.
-- `web` no importa `database` ni `auth` directamente.
+- `tournament-engine` does not depend on HTTP, databases, storage, or Discord.
+- `game-adapters` depends only on `shared-types`.
+- `web` does not import `database` or `auth` directly.
+- API routes validate and authorize; domain services own orchestration and transactions.
 
-## 6. Ciclo de vida de una transacción de dominio
+## Domain transaction lifecycle
 
 ```mermaid
 sequenceDiagram
-  participant R as Ruta API
-  participant S as Servicio
-  participant E as Motor
-  participant D as DB (transacción)
+  participant R as API route
+  participant S as Domain service
+  participant E as Engine
+  participant D as Database transaction
   participant Q as Outbox
-  R->>S: Comando validado
-  S->>E: Estado actual + comando
-  E->>E: Computa transición y eventos
-  E-->>S: Nuevo estado + eventos
-  S->>D: Persistir estado + eventos + jobs (commit)
-  D-->>Q: Eventos en outbox
-  Q->>Q: Dispatch SSE / Discord / correo
+  R->>S: Validated command
+  S->>E: Current state + command
+  E->>E: Compute transition and events
+  E-->>S: New state + events
+  S->>D: Persist state, events, and jobs
+  D-->>Q: Commit outbox records
+  Q->>Q: Dispatch SSE, Discord, or email
 ```
 
-El outbox garantiza que las notificaciones y eventos no se pierdan si el proceso cae después del commit.
+The transactional outbox prevents committed state from losing its corresponding notifications when the process stops after the database commit.
 
-## 7. Evolución futura
+## Evolution boundaries
 
-- Extraer `worker` y `bot` a procesos separados sin cambios de dominio (interfaces ya aisladas).
-- Redis + BullMQ cuando la carga o la distribución lo exijan.
-- WebSockets si se incorpora chat interno.
-- Servicio cloud administrado (instancias multi-tenant) con RLS de PostgreSQL como refuerzo.
-- Aplicación Tauri reutilizando `apps/web`.
+- Extract the worker or Discord bot into separate processes without changing domain contracts.
+- Adopt Redis and BullMQ only when load or distribution requires them.
+- Add WebSockets if bidirectional features such as internal chat are introduced.
+- Add a managed multi-tenant service with PostgreSQL RLS as defense in depth.
+- Reuse `apps/web` in a future Tauri desktop application.
 
-Detalle por capa: [API](API_DESIGN.md), [Datos](DATA_MODEL.md), [Tiempo real](REALTIME_ARCHITECTURE.md), [Storage](STORAGE_STRATEGY.md), [Despliegue](DEPLOYMENT.md).
+Continue with [API design](API_DESIGN.md), [data model](DATA_MODEL.md), [real-time architecture](REALTIME_ARCHITECTURE.md), [storage](STORAGE_STRATEGY.md), and [deployment](DEPLOYMENT.md).

@@ -1,53 +1,53 @@
-# Adaptadores de juegos
+# Game adapters
 
-## 1. Concepto
+## Concept
 
-Los adaptadores definen las reglas de un videojuego para el motor. El núcleo de torneos es agnóstico del juego (ADR-024): un adaptador es **configuración tipada** con validación, sin integraciones externas en el MVP.
+Game adapters describe a video game to the tournament engine. The tournament core remains game-agnostic (ADR-024): an adapter is **typed configuration with validation**, not an external game API integration.
 
 ```mermaid
 flowchart LR
-  Engine[Motor de torneos] --> Adapter[Adaptador]
-  Adapter --> Generic[genérico]
+  Engine[Tournament engine] --> Adapter[Game adapter]
+  Adapter --> Generic[generic]
   Adapter --> Valorant[valorant]
   Adapter --> CS2[cs2]
   Adapter --> LoL[lol]
   Adapter --> Smash[smash_ultimate]
-  Smash --> Template[smash_ultimate.standard_v1]
+  Smash --> SmashTemplate[smash_ultimate.standard_v1]
   LoL --> LoLTemplate[lol.standard_v1]
 ```
 
-## 2. Interfaz del adaptador
+## Adapter contract
 
 ```ts
 interface GameAdapterConfig {
-  key: string; // "valorant"
-  name: string; // "Valorant"
+  key: string;
+  name: string;
   iconUrl?: string;
-  platforms: Platform[]; // ["pc", ...]
+  platforms: Platform[];
   team: {
-    minPlayers: number; // 5
-    maxPlayers: number; // 5
-    substitutes: number; // 1-2
+    minPlayers: number;
+    maxPlayers: number;
+    substitutes: number;
   };
   playerId: {
-    label: string; // "Riot ID"
-    format: RegExp; // /^[^#]+#[A-Z0-9]{3,5}$/i
-    hint: string; // "Nombre#TAG"
+    label: string;
+    format: RegExp;
+    hint: string;
   };
   regions?: string[];
-  maps?: string[]; // nombres canónicos
+  maps?: string[];
   modes?: string[];
   scoring: {
     type: 'series' | 'first_to' | 'timed';
     drawAllowed: boolean;
-    defaultSeries?: number[]; // [1, 3, 5]
+    defaultSeries?: number[];
   };
   matchFormats: {
-    series: boolean; // BO1/BO3/BO5
+    series: boolean;
     timed: boolean;
   };
   veto: {
-    mode: 'external'; // MVP: fuera de plataforma + registro
+    mode: 'external';
     mapsRequired: boolean;
   };
   terminology?: {
@@ -62,71 +62,79 @@ interface GameAdapterConfig {
     editable: boolean;
     defaults: TournamentTemplateDefaults;
   };
-  customFields?: FieldSchema[]; // campos propios de inscripción
-  integrations?: string[]; // ["riot-api", ...] futuro; vacío en MVP
+  customFields?: FieldSchema[];
+  integrations?: string[];
 }
 ```
 
-La validación en tiempo de ejecución usa zod (`packages/validation`) y comparte tipos con `packages/shared-types`.
+Runtime validation uses Zod in `packages/validation`; shared TypeScript contracts live in `packages/shared-types`.
 
-## 3. Adaptador genérico
+## Generic adapter
 
-- Cualquier juego sin adaptador oficial.
-- Config por defecto: equipo 1–10 jugadores, 0–2 suplentes, BO1/BO3/BO5, empates permitidos según el organizador, sin mapas ni regiones.
-- El organizador personaliza campos y tamaños al crear el torneo.
+The generic adapter supports games without an official adapter. It defaults to teams of 1–10 players, 0–2 substitutes, BO1/BO3/BO5 series, organizer-controlled draws, and no predefined maps or regions. Organizers customize team sizes and fields while creating a tournament.
 
-Una **plantilla de torneo** es opcional y vive dentro de un adaptador. A diferencia del adaptador, que define identidad, roster y capacidades del juego, la plantilla aplica valores iniciales coherentes para formato, capacidad, series, check-in y reglas específicas. El servidor vuelve a validar esos invariantes; no confía solo en el formulario web.
+A **tournament template** is optional and belongs to an adapter. The adapter defines game identity, roster constraints, and capabilities. A template provides coherent initial values for format, capacity, series, check-in, and game-specific rules. The API validates template invariants again and never trusts only the web form.
 
-## 4. Adaptadores oficiales del MVP
+## Official adapters
 
-| Juego                      | Tamaño equipo | Suplentes | ID de jugador          | Mapas o escenarios                                                                               | Empate | Formato                                |
-| -------------------------- | ------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------ | ------ | -------------------------------------- |
-| Valorant                   | 5             | 1         | Riot ID (`Nombre#TAG`) | Abyss, Ascent, Bind, Breeze, Haven, Icebox, Lotus, Pearl, Split, Sunset                          | No     | BO1/BO3/BO5                            |
-| CS2                        | 5             | 1         | SteamID64              | Ancient, Anubis, Dust2, Inferno, Mirage, Nuke, Overpass, Train, Vertigo                          | No     | BO1/BO3/BO5                            |
-| LoL                        | 5             | 1         | Riot ID (`Nombre#TAG`) | Summoner's Rift (mapa único)                                                                     | No     | BO1/BO3/BO5                            |
-| Super Smash Bros. Ultimate | 1             | 0         | Tag de bracket         | Battlefield, Small Battlefield, Pokémon Stadium 2, Final Destination, Town & City + counterpicks | No     | BO3/BO5; doble eliminación por defecto |
+| Game                       | Team size | Substitutes | Player ID           | Maps or stages                          | Draw | Format                                 |
+| -------------------------- | --------: | ----------: | ------------------- | --------------------------------------- | ---- | -------------------------------------- |
+| Valorant                   |         5 |           1 | Riot ID, `Name#TAG` | Current competitive map pool            | No   | BO1/BO3/BO5                            |
+| Counter-Strike 2           |         5 |           1 | SteamID64           | Current competitive map pool            | No   | BO1/BO3/BO5                            |
+| League of Legends          |         5 |           1 | Riot ID, `Name#TAG` | Summoner’s Rift                         | No   | BO1/BO3/BO5                            |
+| Super Smash Bros. Ultimate |         1 |           0 | Bracket tag         | Versioned starter and counterpick pools | No   | BO3/BO5; double elimination by default |
 
-Notas:
+Map and stage pools change with patches and are versioned in adapter configuration. Player identifiers are validated at registration and in profiles.
 
-- Los valores de mapas pueden cambiar con parches; se mantienen en configuración versionada del adaptador.
-- El empate se declara por adaptador (`drawAllowed: false` en los cuatro adaptadores oficiales).
-- Los campos de ID se validan en inscripción y en el perfil público.
-- La plantilla `smash_ultimate.standard_v1` parte de 3 stocks, 7 minutos, objetos y hazards desactivados, 3 bans, gran final con reset y capacidad 32. El organizador puede editarla o restaurar sus valores estándar.
-- La plantilla `lol.standard_v1` parte de 16 equipos, eliminación sencilla, BO3, región LAN, Summoner's Rift y Tournament Draft. No fija un parche por defecto para no quedar obsoleta; el organizador puede usar el parche live o registrar una versión fija, activar Fearless Draft, elegir la política de lados y ajustar pausas y retraso de espectadores.
+### Smash Ultimate template
 
-### Reporte estructurado de series de League of Legends
+`smash_ultimate.standard_v1` starts with:
 
-El endpoint `POST /matches/:matchId/results` admite un campo opcional `lolGames` para League of Legends. Cada entrada registra número de partida, ganador, equipo en lado azul, duración y Riot Match ID opcional. El servidor valida el orden, el BO, los participantes, los identificadores repetidos y la coherencia con el marcador global.
+- 3 stocks and a 7-minute limit.
+- Items, Final Smash Meter, and stage hazards disabled.
+- A versioned starter and counterpick pool.
+- 3 stage bans with editable DSR policy.
+- BO3, double elimination, 32-player capacity, and a grand-final reset.
 
-La web ofrece marcadores definitivos para BO1, BO3 y BO5 y genera la cantidad exacta de partidas a completar. El formulario hace visibles las decisiones de lado y conserva el reporte bilateral: ambos equipos deben enviar el mismo detalle para confirmar automáticamente. Los reportes antiguos sin `lolGames` siguen siendo válidos.
+Organizers may edit the values or restore the standard template. The API validates stock limits, time, unique stages, bans, launch rate, and the relationship between stage pools.
 
-El Riot Match ID mejora la trazabilidad, pero no es obligatorio. La plantilla no depende de una clave de Riot ni de conectividad externa. Una integración futura con Tournament Codes puede automatizar lobbies y resultados sin cambiar este contrato manual. Referencias: [Tournament API de Riot](https://developer.riotgames.com/docs/lol) y [biblioteca oficial de operaciones competitivas](https://competitiveops.riotgames.com/en-US/library?game=lol).
+### League of Legends template
 
-### Reporte estructurado de sets de Smash
+`lol.standard_v1` starts with 16 teams, single elimination, BO3, LAN, Summoner’s Rift, and Tournament Draft. It does not pin a patch so the template cannot become stale. Organizers can select the live patch or record a fixed version, enable Fearless Draft, set side-selection policy, and adjust pause allowance and spectator delay.
 
-El endpoint `POST /matches/:matchId/results` admite un campo opcional `games` para Smash Ultimate. Cada entrada registra número de game, escenario, personaje de cada participante, ganador y stocks restantes. El servidor valida el orden, el BO, el límite de stocks, los participantes, el pool de escenarios y la coherencia con el marcador global.
+## Structured League of Legends reports
 
-En la web, los capitanes usan un formulario guiado compatible con BO3/BO5 para elegir marcador, escenario, personajes, ganador y stocks de cada game. El formulario construye el contrato estructurado y lleva el foco al primer campo incompleto. Los reportes heredados sin `games` siguen siendo compatibles; cuando ambos capitanes incluyen el detalle, éste también debe coincidir para confirmar automáticamente el resultado. El detalle confirmado queda dentro del JSONB `matches.result` y se publica mediante el bracket API. Otros adaptadores conservan el formulario genérico y rechazan este campo específico.
+`POST /matches/:matchId/results` accepts an optional `lolGames` field for LoL. Each entry records the game number, winner, blue-side team, duration, and optional Riot Match ID. The API checks order, best-of limits, participants, duplicate identifiers, and consistency with the aggregate score.
 
-Esta capacidad registra lo ocurrido; todavía no implementa el veto interactivo ni aplica DSR durante la selección de escenario.
+The web application offers valid final scores for BO1, BO3, and BO5 and creates the exact number of game rows required. Bilateral reporting still applies: both teams must submit matching details for automatic confirmation. Legacy reports without `lolGames` remain valid.
 
-## 5. Ciclo de vida de un adaptador
+A Riot Match ID improves traceability but is optional. The template does not require a Riot API key or external connectivity. A future Tournament Codes integration may automate lobbies and results without changing the manual contract. References: [Riot Tournament API](https://developer.riotgames.com/docs/lol) and the [official competitive operations library](https://competitiveops.riotgames.com/en-US/library?game=lol).
 
-1. **Propuesta:** issue con la plantilla `game_adapter_proposal.md`.
-2. **Evaluación:** coherencia con el modelo, mantenibilidad y comunidad.
-3. **Implementación:** configuración tipada + validación + tests de ejemplo.
-4. **Publicación:** se versiona en `packages/game-adapters` y se documenta.
+## Structured Smash reports
 
-## 6. Testing de adaptadores
+The same result endpoint accepts an optional `games` field for Smash Ultimate. Each game records its number, stage, both characters, winner, and remaining stocks. The API checks order, best-of limits, stock limits, participants, stage pools, and aggregate-score consistency.
 
-- Tests de esquema: la configuración valida contra el contrato.
-- Tests de ejemplo: un torneo de ejemplo por juego genera brackets y acepta resultados correctos.
-- Tests negativos: rosters inválidos, IDs mal formados, empates en juegos sin empates.
-- Tests de plantilla: los defaults, el merge en servidor y las reglas específicas mantienen sus invariantes.
-- Tests de resultados: el detalle por game o partida respeta participantes, BO, reglas específicas y marcador global.
+The web form supports BO3 and BO5, generates the exact game count from the selected score, and focuses the first incomplete field. Bilateral reports must match in both the aggregate and structured detail. Legacy reports without `games` remain compatible. Confirmed details are stored in `matches.result` JSONB and exposed by the bracket API.
 
-## 7. Futuro
+This feature records what happened. It does not yet provide an interactive stage-veto flow or enforce DSR while selecting a stage.
 
-- Integraciones externas (Riot, Steam) para verificación de resultados.
-- Veto interactivo con mapas del adaptador.
-- Adaptadores comunitarios a través del proceso de propuesta.
+## Adapter lifecycle
+
+1. **Proposal:** open an issue with `.github/ISSUE_TEMPLATE/game_adapter_proposal.md`.
+2. **Evaluation:** maintainers review model fit, sources, maintenance, and community demand.
+3. **Implementation:** add typed configuration, validation, documentation, and representative tests.
+4. **Publication:** version the adapter in `packages/game-adapters`.
+
+## Required tests
+
+- Schema tests prove that configuration satisfies the contract.
+- Representative tournament tests generate brackets and accept valid results.
+- Negative tests reject invalid rosters, malformed identifiers, and disallowed draws.
+- Template tests protect defaults, server-side merging, and game-specific invariants.
+- Result tests prove that per-game detail matches participants, best-of rules, game rules, and the aggregate score.
+
+## Future extensions
+
+- Authorized Riot or Steam integrations for result verification.
+- Interactive map and stage vetoes.
+- Community adapters through the documented proposal process.

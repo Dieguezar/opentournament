@@ -1,80 +1,79 @@
-# Estrategia de pruebas
+# Testing strategy
 
-## 1. Pirámide
+## Test pyramid
 
 ```mermaid
 flowchart TB
-  E2E[E2E Playwright - pocas, flujos críticos]
-  INT[Integración - API + Postgres + MinIO]
-  UNIT[Unitarias + propiedades - motor, adaptadores, validación]
+  E2E[Playwright E2E: a few critical flows]
+  INT[Integration: API + PostgreSQL + MinIO]
+  UNIT[Unit and property tests: engine, adapters, validation]
   E2E --> INT --> UNIT
 ```
 
-- **Unitarias (Vitest):** motor de torneos, adaptadores, validación, permisos, utilidades.
-- **Integración (Vitest + contenedores):** API contra PostgreSQL y MinIO reales (compose de test).
-- **E2E (Playwright):** flujos completos de usuario en navegador.
-- **Calidad:** cobertura del motor ≥ 95%; API ≥ 80% de líneas críticas; lint + typecheck + build en CI.
+- **Unit tests (Vitest):** tournament engine, adapters, validation, permissions, and utilities.
+- **Integration tests (Vitest + containers):** API behavior against real PostgreSQL and MinIO.
+- **E2E tests (Playwright):** complete browser flows.
+- **Quality gates:** at least 95% engine coverage, at least 80% of critical API lines, plus lint, type checking, tests, and build in CI.
 
-## 2. Tests del motor
+## Engine tests
 
-- Por comando y transición de estado.
-- De propiedades: N participantes (2, 3, 5, 8, 16, 33, 64, 128) → bracket completo, sin huérfanos, ganador único.
-- Escenarios: BYEs, seeds, empates, walkover, DQ, anulación, doble eliminación con/sin reset, disputas, reportes concurrentes, idempotencia.
+Cover every command and state transition. Property scenarios use participant counts such as 2, 3, 5, 8, 16, 33, 64, and 128 and assert a complete bracket, no orphaned entries, and one winner.
 
-Ver [TOURNAMENT_ENGINE.md](TOURNAMENT_ENGINE.md) §9.
+Required scenarios include BYEs, seeds, draws, walkovers, disqualifications, voided matches, double elimination with and without a grand-final reset, disputes, concurrent reports, and idempotency.
 
-## 3. Tests de integración
+See [TOURNAMENT_ENGINE.md](TOURNAMENT_ENGINE.md).
 
-- Autenticación: registro, login, Discord OAuth (mock), recuperación, sesión/CSRF.
-- Autorización: IDOR entre organizaciones, escalamiento de roles, acceso a evidencias y disputas.
-- Flujo de torneo: crear → inscribir → check-in → bracket → partida → resultado → confirmación.
-- Concurrencia: reportes simultáneos del mismo resultado; escrituras con versionado.
-- Jobs: cierre de check-in, walkover, timeouts, notificaciones (outbox).
-- Storage: presign, subida real a MinIO, validación de tamaño/MIME, URLs firmadas.
-- SSE: entrega a suscriptores, reconexión con `Last-Event-ID`, aislamiento de canales privados.
+## Integration tests
 
-## 4. E2E (Playwright)
+- Authentication: registration, login, mocked Discord OAuth, recovery, sessions, and CSRF.
+- Authorization: cross-organization IDOR, role escalation, evidence, and dispute access.
+- Tournament flow: create, register, check in, seed, generate a bracket, play, report, and confirm.
+- Concurrency: simultaneous reports for the same match and versioned writes.
+- Jobs: check-in closure, walkovers, timeouts, notifications, and outbox dispatch.
+- Storage: presigned URLs, real MinIO uploads, size and MIME checks, and signed downloads.
+- SSE: delivery, `Last-Event-ID` reconnection, and private-channel isolation.
 
-Flujos críticos:
+## E2E flows
 
-1. Onboarding → crear organización → crear torneo → publicar.
-2. Inscribir equipos (con aprobación y lista de espera) → check-in → generar bracket.
-3. Reporte bilateral coincidente → confirmación automática → avance del bracket.
-4. Reporte conflictivo → disputa → mensajes → asignación de árbitro → resolución → bracket actualizado.
-5. Walkover por ausencia y reprogramación por admin.
-6. Página pública con SSE (bracket se actualiza en vivo).
-7. PWA instalable y caché de lectura.
+1. Onboard, create an organization, create a tournament, and publish it.
+2. Register teams with approval and waiting lists, check in, and generate a bracket.
+3. Submit matching bilateral reports and advance the bracket automatically.
+4. Submit conflicting reports, open a dispute, exchange messages, assign a referee, resolve it, and update the bracket.
+5. Apply a walkover and reschedule a match as staff.
+6. Observe a public bracket update through SSE.
+7. Install the PWA and verify read caching.
+8. Exercise the Spanish and English interfaces for user-facing changes.
 
-Accesibilidad: `@axe-core/playwright` en páginas clave.
+Run `@axe-core/playwright` on key pages.
 
-## 5. Tests de seguridad
+## Security tests
 
-- Automatizados: IDOR, escalamiento, CSRF, subida maliciosa, rate limiting, cabeceras.
-- Estáticos: `pnpm audit`, CodeQL.
-- Manuales pre-release: sesión, cookies, rich text, URLs firmadas.
-- OWASP ZAP: baseline pasivo manual contra una instalación aislada de Docker Compose.
-- Pentest manual: previo a releases mayores o cambios sensibles de autenticación/autorización.
+- Automated: IDOR, escalation, CSRF, malicious uploads, rate limiting, and security headers.
+- Static: `pnpm audit` and CodeQL.
+- Manual pre-release: sessions, cookies, rich text, signed URLs, and private participant passes.
+- OWASP ZAP: manual passive baseline against an isolated Compose installation.
+- Manual penetration test before major releases or sensitive authentication and authorization changes.
 
-## 6. Carga y rendimiento
+## Load and performance
 
-- Smoke de concurrencia: 256 participantes (reportes simultáneos, check-in masivo).
-- Generación de bracket: 128 y 512 participantes < 1 s.
-- SSE: 256 conexiones, p95 < 1 s de propagación.
-- Herramienta: script de carga simple (k6 opcional) integrado en CI como job separado.
+- Concurrency smoke: 256 participants reporting or checking in.
+- Bracket generation: 128 and 512 participants in under one second.
+- SSE: 256 connections with propagation p95 under one second.
+- A small load script or optional k6 job may run separately in CI.
 
-## 7. Datos de prueba
+## Test data
 
-- Seeds de demostración: 2 organizaciones, torneo sencilla + doble, equipos con rosters válidos, partidas con resultados, una disputa resuelta.
-- Fixtures tipados por adaptador (Valorant/CS2/LoL) para rosters y resultados.
+Demo seeds provide organizations, single- and double-elimination tournaments, valid rosters, completed matches, LoL and Smash structured reports, and a resolved dispute. Adapter-specific typed fixtures cover valid and invalid rosters and results.
 
-## 8. CI
+## CI commands
 
-| Stage | Comando |
-| --- | --- |
-| Lint | `pnpm lint` |
-| Typecheck | `pnpm typecheck` |
-| Unit | `pnpm test` |
-| Integración | `pnpm test:integration` (compose de test) |
-| E2E | `pnpm test:e2e` (Playwright) |
-| Build | `pnpm build` |
-| Seguridad | `pnpm audit --prod` + CodeQL + baseline manual OWASP ZAP |
+| Gate                                  | Command                                                    |
+| ------------------------------------- | ---------------------------------------------------------- |
+| Lint                                  | `pnpm lint`                                                |
+| Type checking                         | `pnpm typecheck`                                           |
+| Unit and configured integration tests | `pnpm test`                                                |
+| E2E                                   | `pnpm test:e2e`                                            |
+| Build                                 | `pnpm build`                                               |
+| Security                              | `pnpm audit --prod`, CodeQL, and manual OWASP ZAP baseline |
+
+A pull request should run the smallest focused test during development and the full relevant gate before review.

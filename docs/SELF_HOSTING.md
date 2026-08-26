@@ -1,37 +1,42 @@
-# Self-hosting
+# Self-hosting OpenTournament
 
-## 1. Requisitos
+## Requirements
 
-- Docker y Docker Compose v2.
-- Node.js 22+ y pnpm (solo para desarrollo; no para la instalación con compose).
-- Recursos: 2 vCPU, 2 GB RAM, 20 GB disco (mínimo).
-- Dominio y TLS recomendados (proxy inverso) para producción.
+- Docker with Docker Compose v2.
+- At least 2 vCPU, 2 GB RAM, and 20 GB of disk.
+- A domain and TLS through a reverse proxy for production.
+- Node.js 22+ and pnpm only when developing from source; release-image installations do not require them.
 
-## 2. Instalación rápida
+## Quick installation
 
-### Desde el código fuente
+### Build from source
 
 ```bash
 git clone https://github.com/Dieguezar/opentournament.git
 cd opentournament
 cp .env.example .env
-# Generar un secreto y reemplazar SESSION_SECRET en .env
 openssl rand -hex 32
+# Put the generated value in SESSION_SECRET inside .env
 docker compose up -d
 ```
 
-Compose compila el checkout local porque `.env.example` usa `IMAGE_PULL_POLICY=build`.
+The default `.env.example` uses `IMAGE_PULL_POLICY=build`, so Compose builds the local checkout.
 
-### Desde imágenes de una release
+If OpenSSL is unavailable, generate a 32-byte hexadecimal secret with Docker:
 
-Cuando exista una release publicada, es preferible fijar su versión exacta y evitar compilar en el
-servidor. El checkout y las imágenes deben usar la misma versión; por ejemplo, para `v1.0.0`:
+```bash
+docker run --rm alpine:3.22 sh -c "head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'"
+```
+
+### Use release images
+
+Pin both the repository checkout and images to the same exact release. For `v1.0.0`:
 
 ```bash
 git checkout v1.0.0
 ```
 
-Después cambiar estas variables en `.env`:
+Set:
 
 ```dotenv
 API_IMAGE=ghcr.io/dieguezar/opentournament-api:1.0.0
@@ -39,93 +44,76 @@ WEB_IMAGE=ghcr.io/dieguezar/opentournament-web:1.0.0
 IMAGE_PULL_POLICY=always
 ```
 
-Después iniciar sin builds locales:
+Then start without local builds:
 
 ```bash
 docker compose up -d --no-build
 ```
 
-En producción se recomienda fijar `X.Y.Z`, no `latest`, para que una actualización sea explícita y
-reversible.
+Pin `X.Y.Z`, not `latest`, so updates remain explicit and reversible.
 
-`SESSION_SECRET` es obligatorio en Compose y la API rechaza el valor de ejemplo en producción.
-Si `openssl` no está disponible, se puede generar un valor hexadecimal seguro con Docker:
+## First start
 
-```bash
-docker run --rm alpine:3.22 sh -c "head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n'"
-```
+`SESSION_SECRET` is required in Compose, and the API rejects the example value in production. Containers use `COMPOSE_NODE_ENV=production`. Demo data and unverified accounts are disabled by default; enable `SEED_DEMO_DATA=true` and `ALLOW_UNVERIFIED_EMAILS=true` only for a deliberate private evaluation.
 
-Los contenedores usan `COMPOSE_NODE_ENV=production`. La demo y el acceso sin verificar quedan
-desactivados por defecto; para una evaluación local se pueden habilitar explícitamente con
-`SEED_DEMO_DATA=true` y `ALLOW_UNVERIFIED_EMAILS=true`.
+`DATABASE_URL` and `S3_ENDPOINT` are used by host-side development tools. `DATABASE_URL_DOCKER` and `S3_ENDPOINT_DOCKER` are used inside Compose, where the service names are `postgres` and `minio`. When changing the internal PostgreSQL password, update `DATABASE_URL_DOCKER` too. A hexadecimal password avoids URL-escaping problems.
 
-`DATABASE_URL` y `S3_ENDPOINT` se usan desde el host durante desarrollo. Sus variantes
-`DATABASE_URL_DOCKER` y `S3_ENDPOINT_DOCKER` se usan dentro de Compose, donde los hosts son
-`postgres` y `minio`. Si se cambia la contraseña interna de PostgreSQL, también debe actualizarse
-`DATABASE_URL_DOCKER`; se recomienda usar un valor hexadecimal para evitar caracteres que deban
-escaparse dentro de una URL.
+1. Open `http://localhost:3000` or the configured domain.
+2. Complete the first-use wizard to create the account and first organization.
+3. Check the API at `GET /healthz`.
 
-1. Abrir `http://localhost:3000` (o el dominio configurado).
-2. Completar el wizard de primer uso → se crea la cuenta y la primera organización.
-3. Verificar health: `GET /healthz`.
+Without SMTP, the API writes verification links to its logs. Read them with `docker compose logs api`; do not enable unverified accounts on a public instance just to avoid configuring email.
 
-Sin SMTP, la API escribe el enlace de verificación en sus logs. Se puede consultar con
-`docker compose logs api`; no es necesario habilitar cuentas sin verificar en una instancia
-pública.
+## Occupied ports
 
-### Puertos ocupados
+Compose binds host ports to `127.0.0.1`. Every host port can be changed in `.env` without changing the internal container ports.
 
-Compose publica los servicios únicamente en `127.0.0.1` y permite cambiar cada
-puerto del host desde `.env`. Los puertos internos entre contenedores no cambian.
-
-Por ejemplo, si PostgreSQL ya usa el puerto `5432`:
+If PostgreSQL already uses `5432`:
 
 ```dotenv
 POSTGRES_HOST_PORT=15432
 ```
 
-También se pueden ajustar `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`,
-`API_HOST_PORT` y `WEB_HOST_PORT`. Si se cambia el puerto web o API, actualizar
-también `APP_URL` o `API_URL`. Para ejecutar herramientas de desarrollo fuera de
-Docker con otro puerto de PostgreSQL, actualizar además `DATABASE_URL`.
+The other overrides are `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`, `API_HOST_PORT`, and `WEB_HOST_PORT`. When changing web or API ports, update `APP_URL` or `API_URL`. Host-side development tools also require the matching `DATABASE_URL`.
 
-## 3. Configuración opcional
+## Optional services
 
-### Correo (SMTP)
+### Email through SMTP
 
-- Con SMTP: verificación y recuperación de contraseña por correo.
-- Compose reenvía todas las variables `SMTP_*` a la API.
-- Sin SMTP: los correos se escriben en el log; si se desea permitir cuentas sin verificar en una
-  instalación privada, `ALLOW_UNVERIFIED_EMAILS=true`.
+- With SMTP, OpenTournament sends verification and password-recovery email.
+- Compose forwards every `SMTP_*` variable to the API.
+- Without SMTP, messages are logged.
+- A private instance may explicitly use `ALLOW_UNVERIFIED_EMAILS=true`; production should keep it false.
 
 ### Discord
 
-1. Crear aplicación en el Developer Portal de Discord.
-2. OAuth2 → redirect URI `${API_URL}/api/v1/auth/discord/callback` y scopes `identify email`.
-3. Bot → token y permisos mínimos de mensajes.
-4. Configurar `DISCORD_*` en `.env` y reiniciar.
+1. Create an application in the Discord Developer Portal.
+2. Add `${API_URL}/api/v1/auth/discord/callback` as the OAuth2 redirect URI with `identify email` scopes.
+3. Create a bot token with only the required message permissions.
+4. Configure `DISCORD_*` in `.env` and restart the stack.
 
-### Almacenamiento
+Discord is optional. Participant passes and email accounts continue to work without it.
 
-- Por defecto MinIO con credenciales locales (`minioadmin`).
-- `S3_ACCESS_KEY` y `S3_SECRET_KEY` configuran tanto MinIO como el cliente de la API, por lo que
-  deben cambiarse juntas antes de exponer la instancia.
-- En producción: apuntar `S3_*` a R2 o S3.
-- El bucket configurado por `S3_BUCKET` usa prefijos públicos/privados.
+### Object storage
 
-## 4. Checklist de hardening
+- Development uses MinIO with local defaults.
+- `S3_ACCESS_KEY` and `S3_SECRET_KEY` configure both MinIO and the API client; change them together before exposing an instance.
+- Production may point `S3_*` to Cloudflare R2, Amazon S3, or another compatible provider.
+- The `S3_BUCKET` stores public and private objects under separate prefixes.
 
-- [ ] HTTPS habilitado (Caddy/Traefik/Nginx) con redirect de HTTP.
-- [ ] Secretos de `.env` únicos y largos.
-- [ ] `COMPOSE_NODE_ENV=production` y `SEED_DEMO_DATA=false`.
-- [ ] Credenciales de MinIO/PostgreSQL cambiadas.
-- [ ] Puertos de postgres/minio no expuestos al exterior (red interna).
-- [ ] Respaldos configurados y probados.
-- [ ] Logs revisados periódicamente.
-- [ ] Versión actualizada con releases de seguridad.
-- [ ] `ALLOW_UNVERIFIED_EMAILS=false` en producción (salvo decisión explícita).
+## Production hardening checklist
 
-## 5. Respaldo y restauración
+- [ ] HTTPS enabled through Caddy, Traefik, or Nginx with HTTP redirects.
+- [ ] Every `.env` secret is unique and sufficiently long.
+- [ ] `COMPOSE_NODE_ENV=production` and `SEED_DEMO_DATA=false`.
+- [ ] MinIO and PostgreSQL credentials changed.
+- [ ] PostgreSQL and MinIO are not exposed outside the private network.
+- [ ] `ALLOW_UNVERIFIED_EMAILS=false`, unless a documented private-instance decision says otherwise.
+- [ ] PostgreSQL and object-storage backups configured and restoration tested.
+- [ ] Logs reviewed regularly.
+- [ ] Security releases applied promptly.
+
+## Backup and restore
 
 ```bash
 # PostgreSQL
@@ -136,29 +124,30 @@ docker compose exec minio mc alias set local http://localhost:9000 minioadmin mi
 docker compose exec minio mc mirror --overwrite local/opentournament ./backup-bucket
 ```
 
-Restauración: detener servicios, restaurar el dump (`psql`), restaurar el bucket y levantar de nuevo.
+To restore, stop dependent services, restore the PostgreSQL dump with `psql`, restore the bucket, and restart the stack. Test this process outside production.
 
-### Actualizar una instalación con imágenes
+### Update a release-image installation
 
-1. Leer el changelog y respaldar PostgreSQL/MinIO.
-2. Cambiar `API_IMAGE` y `WEB_IMAGE` a la nueva versión exacta.
-3. Ejecutar `docker compose pull api web`.
-4. Ejecutar `docker compose up -d --no-build` y verificar `/healthz`.
+1. Read the changelog and back up PostgreSQL and MinIO.
+2. Change `API_IMAGE` and `WEB_IMAGE` to the new exact version.
+3. Run `docker compose pull api web`.
+4. Run `docker compose up -d --no-build`.
+5. Verify `/healthz`, login, and one public tournament.
 
-## 6. Troubleshooting
+## Troubleshooting
 
-| Síntoma                             | Causa probable                                | Acción                                                         |
-| ----------------------------------- | --------------------------------------------- | -------------------------------------------------------------- |
-| Compose no puede publicar un puerto | El puerto ya está ocupado en el host          | Cambiar el `*_HOST_PORT` correspondiente en `.env`             |
-| La API no arranca                   | `DATABASE_URL` incorrecta o postgres no listo | Revisar healthcheck y logs                                     |
-| La API rechaza `SESSION_SECRET`     | Se conservó el valor de ejemplo               | Generar un secreto hexadecimal de 32 bytes y actualizar `.env` |
-| Login con Discord falla             | Redirect URI mal configurada                  | Verificar `DISCORD_REDIRECT_URI`                               |
-| Subidas fallan                      | Bucket no creado o credenciales S3            | Crear buckets y revisar `S3_*`                                 |
-| No llegan correos                   | SMTP no configurado                           | Revisar logs; se registran en consola                          |
-| Página pública lenta                | SSR sin caché                                 | Revisar NFR-PERF-05 y configuración de caché                   |
+| Symptom                       | Likely cause                                    | Action                                      |
+| ----------------------------- | ----------------------------------------------- | ------------------------------------------- |
+| Compose cannot publish a port | The host port is already occupied               | Change the matching `*_HOST_PORT` in `.env` |
+| API does not start            | Invalid database URL or PostgreSQL is not ready | Inspect Compose health and API logs         |
+| API rejects `SESSION_SECRET`  | The example value is still configured           | Generate a 32-byte hexadecimal secret       |
+| Discord login fails           | Incorrect redirect URI                          | Verify `DISCORD_REDIRECT_URI`               |
+| Uploads fail                  | Missing bucket or invalid S3 credentials        | Create the bucket and verify `S3_*`         |
+| Email does not arrive         | SMTP is not configured                          | Inspect API logs for the generated message  |
+| Public page is slow           | SSR or cache configuration                      | Review NFR-PERF-05 and cache settings       |
 
-## 7. Soporte
+## Support
 
-- Issues en GitHub para bugs y dudas de instalación.
-- Vulnerabilidades por la política de [SECURITY.md](../SECURITY.md).
-- La comunidad mantiene guías por plataforma (VPS, Docker en NAS, etc.).
+- Use GitHub issues for reproducible bugs and installation questions.
+- Report vulnerabilities through [SECURITY.md](../SECURITY.md).
+- Community-maintained platform guides may cover VPS, NAS, and other Docker hosts.

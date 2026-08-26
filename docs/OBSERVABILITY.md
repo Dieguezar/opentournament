@@ -1,50 +1,56 @@
-# Observabilidad
+# Observability
 
-## 1. Principios
+## Current baseline
 
-- Logs estructurados (pino) con `requestId` en toda la cadena web → API → jobs.
-- Métricas básicas exportadas para salud del servicio.
-- Health checks públicos para operación.
-- Auditoría de dominio separada del logging operativo.
+- Structured Fastify/Pino request logs.
+- Request IDs across API handling.
+- Public liveness and readiness routes.
+- Compose health checks.
+- Domain audit data stored separately from operational logs.
 
-## 2. Logs
+## Logging contract
 
-- Formato JSON, nivel configurable (`LOG_LEVEL`).
-- Campos estándar: `time`, `level`, `msg`, `requestId`, `route`, `userId`, `orgId`, `tournamentId` (cuando aplique).
-- Redacción automática de secretos, contraseñas y tokens.
-- Sin datos personales innecesarios (correos solo cuando el contexto lo exige y redactados en error).
+Logs use JSON in production and a configurable `LOG_LEVEL`. Prefer these fields when available:
 
-## 3. Métricas (fase 1)
+- `requestId`
+- `route`
+- `userId`
+- `organizationId`
+- `tournamentId`
+- `jobId`
+- `error.code`
 
-Con prom-client en la API:
+Redact passwords, cookies, authorization headers, CSRF tokens, pass tokens, and OAuth secrets. Include email only when operationally necessary and ensure error serialization does not leak it.
 
-- HTTP: requests, latencia (histograma), errores por ruta.
-- Jobs: pendientes, en ejecución, fallidos, duración.
-- SSE: conexiones activas, eventos emitidos, reconexiones.
-- DB: pool activo/esperando, duración de queries (slow queries).
-- Storage: presign generados, fallos de subida.
+## Health endpoints
 
-Exposición en `GET /metrics` (protegida en producción).
+- `GET /healthz`: liveness plus required dependency health.
+- `GET /readyz`: readiness to accept traffic.
+- Compose probes web, API, PostgreSQL, and MinIO.
 
-## 4. Health checks
+Health responses must not expose credentials or internal stack traces.
 
-- `GET /healthz`: estado de la API (DB, MinIO, scheduler).
-- `GET /readyz`: listo para recibir tráfico.
-- Compose healthchecks para cada servicio.
+## Audit versus logs
 
-## 5. Auditoría vs. logs
+- **Audit log:** append-only business actions needed for tournament and security traceability.
+- **Operational logs:** short-retention diagnostics, request handling, jobs, and failures.
 
-- **AuditLog (base de datos):** acciones de dominio críticas, append-only, para trazabilidad legal/competitiva.
-- **Logs (pino):** operación, depuración y errores, con retención corta.
+A log entry does not replace an audit event.
 
-## 6. Trazas
+## Planned metrics
 
-- OpenTelemetry diferido (AF-16): se documenta la interfaz (contexto `requestId` + headers `traceparent`) para adoptarlo sin refactor en fase 5/6.
+A future protected `GET /metrics` may expose:
 
-## 7. Alertas (futuro)
+- HTTP volume, latency, and errors by bounded route label.
+- Pending, active, failed, and duration job metrics.
+- SSE connections, events, and reconnects.
+- Database pool and slow-query metrics.
+- Presign count and upload failures.
 
-- Reglas sugeridas para fase 5: rate de errores 5xx > 1%, jobs fallidos acumulados, disco/bucket, health down.
+Do not document metrics as operational until the route and collector exist.
 
-## 8. Dashboards
+## Tracing and alerts
 
-- Grafana con los paneles básicos (HTTP, jobs, SSE, DB) documentado como plantilla en `infrastructure/` (fase 5).
+OpenTelemetry is deferred. Preserve `requestId` and `traceparent` forwarding so tracing can be added without changing domain contracts.
+
+Suggested future alerts include sustained 5xx above 1%, accumulated failed jobs, unhealthy dependencies, storage capacity, and repeated authentication abuse.

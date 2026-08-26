@@ -1,74 +1,75 @@
-# Estrategia de almacenamiento
+# Storage strategy
 
-## 1. Elección: S3-compatible
+## S3-compatible boundary
 
-OpenTournament usa una abstracción S3 para todos los archivos (ADR-032):
+OpenTournament uses one S3-compatible contract for object storage:
 
-- **Desarrollo:** MinIO en Docker Compose.
-- **Producción:** Cloudflare R2, AWS S3 o cualquier S3-compatible (MinIO autoalojado).
+- MinIO in local and default Compose environments.
+- Cloudflare R2, Amazon S3, or compatible operator-managed storage in production.
 
-Un solo contrato (`PutObject`, `GetObject`, `DeleteObject`, presign) mantenido en `packages/database` o un helper de storage; nunca se dependa de un proveedor específico.
+Provider-specific behavior must stay behind the storage service. Domain and route code work with object keys and presigned operations.
 
-## 2. Buckets
+## Bucket layout
 
-| Bucket | Contenido | Acceso |
-| --- | --- | --- |
-| `opentournament-public` | logos, avatares, íconos | Lectura pública, escritura vía presign autenticado |
-| `opentournament-private` | evidencias | Privado; acceso solo vía URLs firmadas con expiración corta |
+An instance may use separate public/private buckets or one bucket with prefixes:
 
-Alternativa más simple soportada: un solo bucket con prefijos `public/` y `private/` (configurable por variable de entorno).
+| Prefix or bucket | Content           | Access                           |
+| ---------------- | ----------------- | -------------------------------- |
+| `public/`        | Logos and avatars | Public read, authenticated write |
+| `private/`       | Result evidence   | Private, authorized signed read  |
 
-## 3. Flujo de subida (evidencias)
+The current environment variables define the bucket and endpoint; contributors must verify the implementation before introducing a second physical bucket.
+
+## Evidence upload
 
 ```mermaid
 sequenceDiagram
-  participant C as Cliente
-  participant API as API
-  participant S as Bucket privado
-  C->>API: POST /files/presign (tipo, tamaño, mime)
-  API->>API: Valida límites (10 MB, 5 por resultado) y permisos
-  API-->>C: URL firmada PUT + key
-  C->>S: PUT directo a S3
-  C->>API: POST /results/:id/evidence (key, metadata)
-  API->>API: Verifica existencia y tamaño real
+  participant C as Browser
+  participant A as API
+  participant S as S3-compatible storage
+  C->>A: POST /files/presign with type and size
+  A->>A: Check actor, count, size, and MIME
+  A-->>C: Short-lived PUT URL and object key
+  C->>S: Direct PUT
+  C->>A: POST evidence metadata
+  A->>A: Verify object and persist metadata
 ```
 
-Reglas:
-- El cliente sube directo a S3 con URL firmada (sin pasar el binario por la API).
-- Se verifican el tamaño real y el tipo MIME tras la subida (magic bytes).
-- Extensiones/MIME permitidos: `image/png`, `image/jpeg`, `image/webp`, `image/gif`.
-- Sin contenido ejecutable; se sirve con `Content-Disposition: attachment` cuando corresponda.
+The browser uploads directly to storage. The API records metadata only after verifying authorization and object expectations.
 
-## 4. Descarga y URLs firmadas
+## Constraints
 
-- Evidencias: URL firmada con expiración de 15 minutos (configurable).
-- La URL firmada se genera solo para usuarios con `evidence.view` y alcance (staff/árbitro/partes).
-- Logos/avatares: URL pública estable; se cachea en CDN si se configura.
+| Parameter          | Default limit        |
+| ------------------ | -------------------- |
+| Evidence object    | 10 MB                |
+| Objects per result | Five                 |
+| Avatar or logo     | 2 MB                 |
+| Image types        | PNG, JPEG, WebP, GIF |
 
-## 5. Límites
+Never accept executable content. Serve private downloads with safe content headers.
 
-| Parámetro | Valor |
-| --- | --- |
-| Máx. por archivo (evidencia) | 10 MB |
-| Máx. por resultado | 5 archivos |
-| Máx. avatar/logo | 2 MB |
-| Tipos permitidos | PNG, JPEG, WebP, GIF |
+## Signed reads
 
-## 6. Retención y limpieza
+- Generate a signed URL only after `evidence.view` and resource-scope checks.
+- Keep expiration short; 15 minutes is the intended default.
+- Do not expose the underlying private key in a public API response.
+- Public media may use stable cacheable URLs.
 
-- Las evidencias no se eliminan al resolver una disputa; quedan para auditoría.
-- Política de retención configurable por instancia (defecto: 1 año tras finalizar el torneo).
-- Jobs de limpieza: borrar evidencias huérfanas (sin referencia) y expiradas según retención.
-- Los objetos borrados por retención no son recuperables (documentar en la política de la instancia).
+## Retention
 
-## 7. Seguridad
+- Resolving a dispute does not immediately remove its evidence.
+- Instance operators define retention; one year after tournament finalization is the suggested default.
+- Cleanup jobs remove orphaned uploads and retention-expired objects.
+- Deletion under retention is irreversible unless operator backups contain the object.
 
-- Bucket privado por defecto; nunca público.
-- Presign con expiración corta y permiso mínimo (`PutObject` solo al key generado).
-- Validación de MIME y tamaño posterior a la subida.
-- Sin SSRF: los enlaces externos de evidencia no se descargan ni se procesan en el MVP.
-- Escaneo antivirus: diferido (se documenta en riesgos); mitigación inicial por tipo de archivo y tamaño.
+## Security
 
-## 8. Backup
+- Private evidence is never public by default.
+- Presigned PUT access is limited to one generated key and short expiration.
+- Validate declared and observed type/size.
+- Do not download or process external evidence links, avoiding SSRF.
+- Antivirus scanning is a future defense-in-depth option.
 
-- El bucket debe incluirse en la política de respaldo de la instancia (documentado en [SELF_HOSTING.md](SELF_HOSTING.md)).
+## Backup
+
+Include object storage in the same tested recovery plan as PostgreSQL. See [SELF_HOSTING.md](SELF_HOSTING.md).
