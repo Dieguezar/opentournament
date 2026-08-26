@@ -230,6 +230,27 @@ describe('validación local de reglas de League of Legends', () => {
     expect(result.errors.spectatorDelayMinutes).toBe('El retraso debe estar entre 0 y 30 minutos.');
     expect(result.firstInvalidField).toBe('patchVersion');
   });
+
+  it('devuelve los errores de validación en inglés cuando se solicita', () => {
+    const result = validateLeagueOfLegendsRules(
+      {
+        ...getRules(),
+        patchPolicy: 'fixed',
+        patchVersion: '',
+        pauseBudgetMinutes: 121,
+        spectatorDelayMinutes: -1,
+      },
+      'en',
+    );
+
+    expect(result.errors.patchVersion).toBe('Enter a patch version, for example 26.16.');
+    expect(result.errors.pauseBudgetMinutes).toBe(
+      'The total pause allowance must be between 0 and 120 minutes.',
+    );
+    expect(result.errors.spectatorDelayMinutes).toBe(
+      'The spectator delay must be between 0 and 30 minutes.',
+    );
+  });
 });
 
 describe('validación local de reglas de Smash Ultimate', () => {
@@ -365,5 +386,21 @@ describe('validación local de reglas de Smash Ultimate', () => {
 
     expect(result.errors.launchRate).toBe('El launch rate debe estar entre 0.5× y 2×.');
     expect(result.firstInvalidField).toBe('launchRate');
+  });
+
+  it('devuelve los errores de validación en inglés cuando se solicita', () => {
+    const result = validateSmashUltimateRules(
+      {
+        ...getRules(),
+        starters: [],
+        counterpicks: [],
+        launchRate: 2.5,
+      },
+      'en',
+    );
+
+    expect(result.errors.starters).toBe('Add at least one starter stage.');
+    expect(result.errors.counterpicks).toBe('Add at least one counterpick stage.');
+    expect(result.errors.launchRate).toBe('The launch rate must be between 0.5× and 2×.');
   });
 });

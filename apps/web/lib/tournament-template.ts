@@ -5,6 +5,7 @@ import type {
   SmashUltimateStageClause,
   TournamentGameRules,
 } from '@opentournament/shared-types';
+import type { Locale } from './i18n';
 
 export interface TournamentTemplateFormState {
   gameAdapterKey: GameAdapterKey;
@@ -77,6 +78,47 @@ const smashRuleFieldOrder: readonly SmashUltimateRuleField[] = [
 const GENERAL_BEST_OF_OPTIONS = ['1', '3', '5'] as const;
 const SMASH_BEST_OF_OPTIONS = ['3', '5'] as const;
 
+const ruleValidationMessages = {
+  es: {
+    stocks: 'Los stocks deben ser un número entero entre 1 y 10.',
+    timeLimit: 'El tiempo límite debe ser un número entero entre 1 y 60 minutos.',
+    stageBans: 'Los vetos deben ser un número entero entre 0 y 10.',
+    starterRequired: 'Agregá al menos un escenario inicial.',
+    counterpickRequired: 'Agregá al menos un escenario counterpick.',
+    starterLimit: 'Usá como máximo 20 escenarios iniciales.',
+    counterpickLimit: 'Usá como máximo 20 escenarios de counterpick.',
+    starterLength: 'Cada escenario inicial puede tener hasta 80 caracteres.',
+    counterpickLength: 'Cada escenario counterpick puede tener hasta 80 caracteres.',
+    starterRepeated: 'Los escenarios iniciales no pueden repetirse.',
+    counterpickRepeated: 'Los escenarios de counterpick no pueden repetirse.',
+    stagePoolOverlap: 'Un escenario no puede ser inicial y counterpick a la vez.',
+    stageBansAvailability: 'Los vetos deben dejar al menos un escenario disponible.',
+    launchRate: 'El launch rate debe estar entre 0.5× y 2×.',
+    patchVersion: 'Indicá una versión de parche, por ejemplo 26.16.',
+    pauseBudget: 'La pausa total debe estar entre 0 y 120 minutos.',
+    spectatorDelay: 'El retraso debe estar entre 0 y 30 minutos.',
+  },
+  en: {
+    stocks: 'Stocks must be a whole number between 1 and 10.',
+    timeLimit: 'The time limit must be a whole number between 1 and 60 minutes.',
+    stageBans: 'Stage bans must be a whole number between 0 and 10.',
+    starterRequired: 'Add at least one starter stage.',
+    counterpickRequired: 'Add at least one counterpick stage.',
+    starterLimit: 'Use no more than 20 starter stages.',
+    counterpickLimit: 'Use no more than 20 counterpick stages.',
+    starterLength: 'Each starter stage can contain up to 80 characters.',
+    counterpickLength: 'Each counterpick stage can contain up to 80 characters.',
+    starterRepeated: 'Starter stages cannot be repeated.',
+    counterpickRepeated: 'Counterpick stages cannot be repeated.',
+    stagePoolOverlap: 'A stage cannot be both a starter and a counterpick.',
+    stageBansAvailability: 'Stage bans must leave at least one stage available.',
+    launchRate: 'The launch rate must be between 0.5× and 2×.',
+    patchVersion: 'Enter a patch version, for example 26.16.',
+    pauseBudget: 'The total pause allowance must be between 0 and 120 minutes.',
+    spectatorDelay: 'The spectator delay must be between 0 and 30 minutes.',
+  },
+} as const;
+
 export function getSeriesBestOfOptions(gameAdapterKey: GameAdapterKey): readonly string[] {
   return gameAdapterKey === 'smash_ultimate' ? SMASH_BEST_OF_OPTIONS : GENERAL_BEST_OF_OPTIONS;
 }
@@ -105,17 +147,20 @@ function hasRepeatedStage(stageNames: readonly string[]): boolean {
 function validateStagePool(
   stageNames: readonly string[],
   pool: 'starters' | 'counterpicks',
+  locale: Locale,
 ): string | undefined {
-  const singularLabel = pool === 'starters' ? 'inicial' : 'counterpick';
-  const pluralLabel = pool === 'starters' ? 'iniciales' : 'de counterpick';
-
-  if (stageNames.length === 0) return `Agregá al menos un escenario ${singularLabel}.`;
-  if (stageNames.length > 20) return `Usá como máximo 20 escenarios ${pluralLabel}.`;
+  const messages = ruleValidationMessages[locale];
+  if (stageNames.length === 0) {
+    return pool === 'starters' ? messages.starterRequired : messages.counterpickRequired;
+  }
+  if (stageNames.length > 20) {
+    return pool === 'starters' ? messages.starterLimit : messages.counterpickLimit;
+  }
   if (stageNames.some((stageName) => stageName.length > 80)) {
-    return `Cada escenario ${singularLabel} puede tener hasta 80 caracteres.`;
+    return pool === 'starters' ? messages.starterLength : messages.counterpickLength;
   }
   if (hasRepeatedStage(stageNames)) {
-    return `Los escenarios ${pluralLabel} no pueden repetirse.`;
+    return pool === 'starters' ? messages.starterRepeated : messages.counterpickRepeated;
   }
 
   return undefined;
@@ -123,7 +168,9 @@ function validateStagePool(
 
 export function validateSmashUltimateRules(
   rules: EditableSmashUltimateRules,
+  locale: Locale = 'es',
 ): SmashUltimateRulesValidation {
+  const messages = ruleValidationMessages[locale];
   const normalizedRules: EditableSmashUltimateRules = {
     ...rules,
     starters: parseStageList(rules.starters.join('\n')),
@@ -136,25 +183,25 @@ export function validateSmashUltimateRules(
     normalizedRules.stocks < 1 ||
     normalizedRules.stocks > 10
   ) {
-    errors.stocks = 'Los stocks deben ser un número entero entre 1 y 10.';
+    errors.stocks = messages.stocks;
   }
   if (
     !Number.isInteger(normalizedRules.timeLimitMinutes) ||
     normalizedRules.timeLimitMinutes < 1 ||
     normalizedRules.timeLimitMinutes > 60
   ) {
-    errors.timeLimitMinutes = 'El tiempo límite debe ser un número entero entre 1 y 60 minutos.';
+    errors.timeLimitMinutes = messages.timeLimit;
   }
   if (
     !Number.isInteger(normalizedRules.stageBans) ||
     normalizedRules.stageBans < 0 ||
     normalizedRules.stageBans > 10
   ) {
-    errors.stageBans = 'Los vetos deben ser un número entero entre 0 y 10.';
+    errors.stageBans = messages.stageBans;
   }
 
-  const startersError = validateStagePool(normalizedRules.starters, 'starters');
-  const counterpicksError = validateStagePool(normalizedRules.counterpicks, 'counterpicks');
+  const startersError = validateStagePool(normalizedRules.starters, 'starters', locale);
+  const counterpicksError = validateStagePool(normalizedRules.counterpicks, 'counterpicks', locale);
   if (startersError) errors.starters = startersError;
   if (counterpicksError) errors.counterpicks = counterpicksError;
 
@@ -163,7 +210,7 @@ export function validateSmashUltimateRules(
     !errors.counterpicks &&
     normalizedRules.counterpicks.some((stageName) => starterSet.has(normalizeStageName(stageName)))
   ) {
-    errors.counterpicks = 'Un escenario no puede ser inicial y counterpick a la vez.';
+    errors.counterpicks = messages.stagePoolOverlap;
   }
 
   const totalUniqueStages = new Set([
@@ -175,7 +222,7 @@ export function validateSmashUltimateRules(
     totalUniqueStages > 0 &&
     normalizedRules.stageBans >= totalUniqueStages
   ) {
-    errors.stageBans = 'Los vetos deben dejar al menos un escenario disponible.';
+    errors.stageBans = messages.stageBansAvailability;
   }
 
   if (
@@ -183,7 +230,7 @@ export function validateSmashUltimateRules(
     normalizedRules.launchRate < 0.5 ||
     normalizedRules.launchRate > 2
   ) {
-    errors.launchRate = 'El launch rate debe estar entre 0.5× y 2×.';
+    errors.launchRate = messages.launchRate;
   }
 
   for (const field of smashRuleFieldOrder) {
@@ -197,7 +244,9 @@ export function validateSmashUltimateRules(
 
 export function validateLeagueOfLegendsRules(
   rules: EditableLeagueOfLegendsRules,
+  locale: Locale = 'es',
 ): LeagueOfLegendsRulesValidation {
+  const messages = ruleValidationMessages[locale];
   const normalizedRules: EditableLeagueOfLegendsRules = {
     ...rules,
     patchVersion: rules.patchVersion?.trim() || null,
@@ -208,21 +257,21 @@ export function validateLeagueOfLegendsRules(
     normalizedRules.patchPolicy === 'fixed' &&
     (!normalizedRules.patchVersion || !/^\d{1,2}\.\d{1,2}$/.test(normalizedRules.patchVersion))
   ) {
-    errors.patchVersion = 'Indicá una versión de parche, por ejemplo 26.16.';
+    errors.patchVersion = messages.patchVersion;
   }
   if (
     !Number.isInteger(normalizedRules.pauseBudgetMinutes) ||
     normalizedRules.pauseBudgetMinutes < 0 ||
     normalizedRules.pauseBudgetMinutes > 120
   ) {
-    errors.pauseBudgetMinutes = 'La pausa total debe estar entre 0 y 120 minutos.';
+    errors.pauseBudgetMinutes = messages.pauseBudget;
   }
   if (
     !Number.isInteger(normalizedRules.spectatorDelayMinutes) ||
     normalizedRules.spectatorDelayMinutes < 0 ||
     normalizedRules.spectatorDelayMinutes > 30
   ) {
-    errors.spectatorDelayMinutes = 'El retraso debe estar entre 0 y 30 minutos.';
+    errors.spectatorDelayMinutes = messages.spectatorDelay;
   }
 
   const fieldOrder: readonly LeagueOfLegendsRuleField[] = [

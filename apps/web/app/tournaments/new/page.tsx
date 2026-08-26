@@ -9,7 +9,10 @@ import type {
   OrganizationSummary,
   ResultReportingMode,
 } from '@opentournament/shared-types';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { formatMessage } from '@/lib/i18n';
+import { formatGameAdapter } from '@/lib/presentation';
 import {
   applyGameTemplateSelection,
   getSeriesBestOfOptions,
@@ -29,7 +32,6 @@ import styles from '../../workspace-pages.module.css';
 
 const GAME_OPTIONS = Object.values(adapters).map((adapter) => ({
   key: adapter.key,
-  label: adapter.name,
 }));
 
 const SMASH_RULE_FIELD_IDS: Record<SmashUltimateRuleField, string> = {
@@ -49,6 +51,8 @@ const LOL_RULE_FIELD_IDS: Record<LeagueOfLegendsRuleField, string> = {
 
 export default function NewTournamentPage() {
   const router = useRouter();
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.newTournament;
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
   const [hasLoadedOrganizations, setHasLoadedOrganizations] = useState(false);
   const [organizationId, setOrganizationId] = useState('');
@@ -177,7 +181,7 @@ export default function NewTournamentPage() {
     setError(null);
 
     const smashValidation =
-      gameRules?.game === 'smash_ultimate' ? validateSmashUltimateRules(gameRules) : null;
+      gameRules?.game === 'smash_ultimate' ? validateSmashUltimateRules(gameRules, locale) : null;
     if (smashValidation) {
       setGameRules(smashValidation.rules);
       setRuleErrors(smashValidation.errors);
@@ -187,7 +191,7 @@ export default function NewTournamentPage() {
       }
     }
     const leagueValidation =
-      gameRules?.game === 'lol' ? validateLeagueOfLegendsRules(gameRules) : null;
+      gameRules?.game === 'lol' ? validateLeagueOfLegendsRules(gameRules, locale) : null;
     if (leagueValidation) {
       setGameRules(leagueValidation.rules);
       setLeagueRuleErrors(leagueValidation.errors);
@@ -230,7 +234,7 @@ export default function NewTournamentPage() {
       });
       router.push(`/tournaments/${result.tournament.id}`);
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Error al crear el torneo');
+      setError(err instanceof ApiClientError && locale === 'es' ? err.message : copy.createError);
     } finally {
       setSubmitting(false);
     }
@@ -240,12 +244,9 @@ export default function NewTournamentPage() {
     <main className={`container ${styles.page} ${styles.formPage}`}>
       <header className={styles.pageHeader}>
         <div>
-          <p className={styles.eyebrow}>Nuevo torneo</p>
-          <h1>Configurá la competencia</h1>
-          <p className={styles.intro}>
-            Definí lo esencial ahora. Después vas a poder administrar inscripciones, check-in y
-            bracket desde el workspace del torneo.
-          </p>
+          <p className={styles.eyebrow}>{copy.eyebrow}</p>
+          <h1>{copy.title}</h1>
+          <p className={styles.intro}>{copy.intro}</p>
         </div>
       </header>
 
@@ -265,28 +266,23 @@ export default function NewTournamentPage() {
       >
         <fieldset className={styles.formSection}>
           <legend>
-            <h2>Identidad</h2>
+            <h2>{copy.identityTitle}</h2>
           </legend>
-          <p className={styles.sectionDescription}>
-            Elegí quién organiza el torneo y cómo se mostrará públicamente.
-          </p>
+          <p className={styles.sectionDescription}>{copy.identityDescription}</p>
 
           {hasLoadedOrganizations && organizations.length === 0 && (
             <div className={styles.notice} role="status">
-              <strong>Necesitás una organización para crear un torneo.</strong>
-              <p>
-                La organización define quién puede administrar la competencia y publicar sus
-                resultados.
-              </p>
+              <strong>{copy.organizationRequired}</strong>
+              <p>{copy.organizationRequiredDescription}</p>
               <Link className="button button-secondary" href="/wizard">
-                Crear organización
+                {copy.createOrganization}
               </Link>
             </div>
           )}
 
           <div className={styles.formGrid}>
             <div className={styles.field}>
-              <label htmlFor="organizationId">Organización</label>
+              <label htmlFor="organizationId">{copy.organization}</label>
               <select
                 id="organizationId"
                 value={organizationId}
@@ -296,7 +292,7 @@ export default function NewTournamentPage() {
               >
                 {organizations.length === 0 && (
                   <option value="">
-                    {hasLoadedOrganizations ? 'Sin organizaciones' : 'Cargando organizaciones'}
+                    {hasLoadedOrganizations ? copy.noOrganizations : copy.loadingOrganizations}
                   </option>
                 )}
                 {organizations.map((organization) => (
@@ -305,11 +301,11 @@ export default function NewTournamentPage() {
                   </option>
                 ))}
               </select>
-              <p className={styles.help}>Será la responsable visible del torneo.</p>
+              <p className={styles.help}>{copy.organizationHelp}</p>
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="gameAdapterKey">Juego</label>
+              <label htmlFor="gameAdapterKey">{copy.game}</label>
               <select
                 id="gameAdapterKey"
                 value={gameAdapterKey}
@@ -317,17 +313,15 @@ export default function NewTournamentPage() {
               >
                 {GAME_OPTIONS.map((game) => (
                   <option key={game.key} value={game.key}>
-                    {game.label}
+                    {formatGameAdapter(game.key, locale)}
                   </option>
                 ))}
               </select>
-              <p className={styles.help}>
-                Al elegir un juego con plantilla se aplican defaults que podés editar.
-              </p>
+              <p className={styles.help}>{copy.gameHelp}</p>
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="name">Nombre del torneo</label>
+              <label htmlFor="name">{copy.tournamentName}</label>
               <input
                 id="name"
                 required
@@ -336,11 +330,11 @@ export default function NewTournamentPage() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
               />
-              <p className={styles.help}>Entre 2 y 80 caracteres.</p>
+              <p className={styles.help}>{copy.tournamentNameHelp}</p>
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="slug">Dirección pública</label>
+              <label htmlFor="slug">{copy.publicAddress}</label>
               <input
                 id="slug"
                 required
@@ -352,8 +346,8 @@ export default function NewTournamentPage() {
                 onChange={(event) => setSlug(event.target.value)}
               />
               <p className={styles.help} id="slug-help">
-                Minúsculas, números y guiones. Vista previa:
-                <span className={styles.urlPreview}>/t/{slug || 'mi-torneo'}</span>
+                {copy.publicAddressHelp}
+                <span className={styles.urlPreview}>/t/{slug || copy.slugExample}</span>
               </p>
             </div>
           </div>
@@ -362,25 +356,20 @@ export default function NewTournamentPage() {
         {gameRules?.game === 'smash_ultimate' && (
           <fieldset className={`${styles.formSection} ${styles.smashTemplate}`}>
             <legend>
-              <h2>Plantilla competitiva de Smash Ultimate</h2>
+              <h2>{copy.smashTitle}</h2>
             </legend>
-            <p className={styles.sectionDescription}>
-              Podés ajustar estas reglas según tu comunidad.
-            </p>
+            <p className={styles.sectionDescription}>{copy.smashDescription}</p>
 
             <div className={styles.templateLead}>
-              <p>
-                La configuración estándar sirve como punto de partida; tus datos de identidad no
-                cambian al restaurarla.
-              </p>
+              <p>{copy.smashTemplateLead}</p>
               <button className="button-secondary" type="button" onClick={restoreStandardTemplate}>
-                Restaurar plantilla estándar
+                {copy.restoreTemplate}
               </button>
             </div>
 
             <div className={styles.formGrid}>
               <div className={styles.field}>
-                <label htmlFor="smash-stocks">Stocks</label>
+                <label htmlFor="smash-stocks">{copy.stocks}</label>
                 <input
                   id="smash-stocks"
                   type="number"
@@ -398,7 +387,7 @@ export default function NewTournamentPage() {
                   }}
                 />
                 <p className={styles.help} id="smash-stocks-help">
-                  Vidas disponibles por juego.
+                  {copy.stocksHelp}
                 </p>
                 {ruleErrors.stocks && (
                   <p className={styles.fieldError} id="smash-stocks-error" role="alert">
@@ -408,7 +397,7 @@ export default function NewTournamentPage() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="smash-time-limit">Tiempo límite</label>
+                <label htmlFor="smash-time-limit">{copy.timeLimit}</label>
                 <input
                   id="smash-time-limit"
                   type="number"
@@ -428,7 +417,7 @@ export default function NewTournamentPage() {
                   }}
                 />
                 <p className={styles.help} id="smash-time-limit-help">
-                  Minutos por juego.
+                  {copy.timeLimitHelp}
                 </p>
                 {ruleErrors.timeLimitMinutes && (
                   <p className={styles.fieldError} id="smash-time-limit-error" role="alert">
@@ -438,7 +427,7 @@ export default function NewTournamentPage() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="smash-stage-bans">Bans de escenarios</label>
+                <label htmlFor="smash-stage-bans">{copy.stageBans}</label>
                 <input
                   id="smash-stage-bans"
                   type="number"
@@ -458,7 +447,7 @@ export default function NewTournamentPage() {
                   }}
                 />
                 <p className={styles.help} id="smash-stage-bans-help">
-                  Cantidad de escenarios que puede vetar el ganador.
+                  {copy.stageBansHelp}
                 </p>
                 {ruleErrors.stageBans && (
                   <p className={styles.fieldError} id="smash-stage-bans-error" role="alert">
@@ -468,7 +457,7 @@ export default function NewTournamentPage() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="smash-stage-clause">Regla DSR</label>
+                <label htmlFor="smash-stage-clause">{copy.dsrRule}</label>
                 <select
                   id="smash-stage-clause"
                   value={gameRules.stageClause}
@@ -479,26 +468,24 @@ export default function NewTournamentPage() {
                     })
                   }
                 >
-                  <option value="none">Sin DSR</option>
-                  <option value="modified_dsr">DSR modificado</option>
-                  <option value="full_dsr">DSR completo</option>
+                  <option value="none">{copy.noDsr}</option>
+                  <option value="modified_dsr">{copy.modifiedDsr}</option>
+                  <option value="full_dsr">{copy.fullDsr}</option>
                 </select>
-                <p className={styles.help}>
-                  Define si se restringe volver a escenarios ya ganados.
-                </p>
+                <p className={styles.help}>{copy.dsrHelp}</p>
               </div>
             </div>
 
             <details className={styles.advancedRules} ref={advancedRulesRef}>
               <summary>
-                <span>Escenarios y opciones avanzadas</span>
-                <small>Editá pools, items, FS Meter, hazards y launch rate.</small>
+                <span>{copy.advancedRules}</span>
+                <small>{copy.advancedRulesHelp}</small>
               </summary>
 
               <div className={styles.advancedRulesContent}>
                 <div className={styles.formGrid}>
                   <div className={styles.fieldWide}>
-                    <label htmlFor="smash-starters">Escenarios iniciales</label>
+                    <label htmlFor="smash-starters">{copy.starterStages}</label>
                     <textarea
                       id="smash-starters"
                       rows={5}
@@ -519,7 +506,7 @@ export default function NewTournamentPage() {
                       }
                     />
                     <p className={styles.help} id="smash-starters-help">
-                      Un escenario por línea. No puede repetirse en ninguno de los pools.
+                      {copy.starterStagesHelp}
                     </p>
                     {ruleErrors.starters && (
                       <p className={styles.fieldError} id="smash-starters-error" role="alert">
@@ -529,7 +516,7 @@ export default function NewTournamentPage() {
                   </div>
 
                   <div className={styles.fieldWide}>
-                    <label htmlFor="smash-counterpicks">Escenarios counterpick</label>
+                    <label htmlFor="smash-counterpicks">{copy.counterpickStages}</label>
                     <textarea
                       id="smash-counterpicks"
                       rows={4}
@@ -556,7 +543,7 @@ export default function NewTournamentPage() {
                       }
                     />
                     <p className={styles.help} id="smash-counterpicks-help">
-                      Un escenario por línea. No repitas escenarios iniciales.
+                      {copy.counterpickStagesHelp}
                     </p>
                     {ruleErrors.counterpicks && (
                       <p className={styles.fieldError} id="smash-counterpicks-error" role="alert">
@@ -577,8 +564,8 @@ export default function NewTournamentPage() {
                       }
                     />
                     <span>
-                      Items habilitados
-                      <small>La plantilla competitiva estándar los mantiene desactivados.</small>
+                      {copy.itemsEnabled}
+                      <small>{copy.itemsHelp}</small>
                     </span>
                   </label>
 
@@ -595,8 +582,8 @@ export default function NewTournamentPage() {
                       }
                     />
                     <span>
-                      FS Meter habilitado
-                      <small>Permite cargar el medidor de Final Smash durante el juego.</small>
+                      {copy.fsMeterEnabled}
+                      <small>{copy.fsMeterHelp}</small>
                     </span>
                   </label>
 
@@ -613,14 +600,14 @@ export default function NewTournamentPage() {
                       }
                     />
                     <span>
-                      Hazards habilitados
-                      <small>Activa los elementos dinámicos propios de cada escenario.</small>
+                      {copy.hazardsEnabled}
+                      <small>{copy.hazardsHelp}</small>
                     </span>
                   </label>
                 </div>
 
                 <div className={styles.field}>
-                  <label htmlFor="smash-launch-rate">Launch rate</label>
+                  <label htmlFor="smash-launch-rate">{copy.launchRate}</label>
                   <input
                     id="smash-launch-rate"
                     type="number"
@@ -641,7 +628,7 @@ export default function NewTournamentPage() {
                     }}
                   />
                   <p className={styles.help} id="smash-launch-rate-help">
-                    Entre 0.5× y 2×. El valor estándar es 1×.
+                    {copy.launchRateHelp}
                   </p>
                   {ruleErrors.launchRate && (
                     <p className={styles.fieldError} id="smash-launch-rate-error" role="alert">
@@ -657,25 +644,20 @@ export default function NewTournamentPage() {
         {gameRules?.game === 'lol' && (
           <fieldset className={`${styles.formSection} ${styles.smashTemplate}`}>
             <legend>
-              <h2>Plantilla competitiva de League of Legends</h2>
+              <h2>{copy.lolTitle}</h2>
             </legend>
-            <p className={styles.sectionDescription}>
-              Configurá la región, el parche y las reglas operativas de cada serie 5v5.
-            </p>
+            <p className={styles.sectionDescription}>{copy.lolDescription}</p>
 
             <div className={styles.templateLead}>
-              <p>
-                Usa Summoner’s Rift y Tournament Draft. Fearless queda disponible sin obligarlo en
-                torneos comunitarios.
-              </p>
+              <p>{copy.lolTemplateLead}</p>
               <button className="button-secondary" type="button" onClick={restoreStandardTemplate}>
-                Restaurar plantilla estándar
+                {copy.restoreTemplate}
               </button>
             </div>
 
             <div className={styles.formGrid}>
               <div className={styles.field}>
-                <label htmlFor="lol-region">Región</label>
+                <label htmlFor="lol-region">{copy.region}</label>
                 <select
                   id="lol-region"
                   value={gameRules.region}
@@ -692,17 +674,17 @@ export default function NewTournamentPage() {
                     </option>
                   ))}
                 </select>
-                <p className={styles.help}>Shard donde se crearán las partidas personalizadas.</p>
+                <p className={styles.help}>{copy.regionHelp}</p>
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="lol-map">Mapa</label>
+                <label htmlFor="lol-map">{copy.map}</label>
                 <input id="lol-map" value="Summoner’s Rift" readOnly />
-                <p className={styles.help}>Mapa competitivo fijado por la plantilla.</p>
+                <p className={styles.help}>{copy.mapHelp}</p>
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="lol-patch-policy">Política de parche</label>
+                <label htmlFor="lol-patch-policy">{copy.patchPolicy}</label>
                 <select
                   id="lol-patch-policy"
                   value={gameRules.patchPolicy}
@@ -717,17 +699,15 @@ export default function NewTournamentPage() {
                     clearLeagueRuleErrors('patchVersion');
                   }}
                 >
-                  <option value="live">Parche live al iniciar</option>
-                  <option value="fixed">Parche fijo</option>
+                  <option value="live">{copy.livePatch}</option>
+                  <option value="fixed">{copy.fixedPatch}</option>
                 </select>
-                <p className={styles.help}>
-                  Live evita que una plantilla vieja fije un parche obsoleto.
-                </p>
+                <p className={styles.help}>{copy.patchPolicyHelp}</p>
               </div>
 
               {gameRules.patchPolicy === 'fixed' && (
                 <div className={styles.field}>
-                  <label htmlFor="lol-patch-version">Versión del parche</label>
+                  <label htmlFor="lol-patch-version">{copy.patchVersion}</label>
                   <input
                     id="lol-patch-version"
                     required
@@ -752,7 +732,7 @@ export default function NewTournamentPage() {
               )}
 
               <div className={styles.field}>
-                <label htmlFor="lol-side-selection">Selección de lado</label>
+                <label htmlFor="lol-side-selection">{copy.sideSelection}</label>
                 <select
                   id="lol-side-selection"
                   value={gameRules.sideSelection}
@@ -764,16 +744,14 @@ export default function NewTournamentPage() {
                     })
                   }
                 >
-                  <option value="higher_seed_game_1_then_loser">
-                    Seed superior en Game 1; luego el perdedor
-                  </option>
-                  <option value="alternating">Alternada por partida</option>
-                  <option value="coin_toss">Sorteo inicial</option>
+                  <option value="higher_seed_game_1_then_loser">{copy.higherSeedThenLoser}</option>
+                  <option value="alternating">{copy.alternatingSides}</option>
+                  <option value="coin_toss">{copy.coinToss}</option>
                 </select>
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="lol-pause-budget">Pausa total por equipo</label>
+                <label htmlFor="lol-pause-budget">{copy.pauseBudget}</label>
                 <input
                   id="lol-pause-budget"
                   type="number"
@@ -790,7 +768,7 @@ export default function NewTournamentPage() {
                     clearLeagueRuleErrors('pauseBudgetMinutes');
                   }}
                 />
-                <p className={styles.help}>Minutos acumulados disponibles durante cada partida.</p>
+                <p className={styles.help}>{copy.pauseBudgetHelp}</p>
                 {leagueRuleErrors.pauseBudgetMinutes && (
                   <p className={styles.fieldError} id="lol-pause-budget-error" role="alert">
                     {leagueRuleErrors.pauseBudgetMinutes}
@@ -799,7 +777,7 @@ export default function NewTournamentPage() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="lol-spectator-delay">Retraso para espectadores</label>
+                <label htmlFor="lol-spectator-delay">{copy.spectatorDelay}</label>
                 <input
                   id="lol-spectator-delay"
                   type="number"
@@ -819,9 +797,7 @@ export default function NewTournamentPage() {
                     clearLeagueRuleErrors('spectatorDelayMinutes');
                   }}
                 />
-                <p className={styles.help}>
-                  Reduce el riesgo de información externa en transmisiones.
-                </p>
+                <p className={styles.help}>{copy.spectatorDelayHelp}</p>
                 {leagueRuleErrors.spectatorDelayMinutes && (
                   <p className={styles.fieldError} id="lol-spectator-delay-error" role="alert">
                     {leagueRuleErrors.spectatorDelayMinutes}
@@ -840,10 +816,8 @@ export default function NewTournamentPage() {
                 }
               />
               <span>
-                Fearless Draft
-                <small>
-                  Los campeones elegidos anteriormente en la serie no pueden volver a seleccionarse.
-                </small>
+                {copy.fearlessDraft}
+                <small>{copy.fearlessDraftHelp}</small>
               </span>
             </label>
           </fieldset>
@@ -851,32 +825,36 @@ export default function NewTournamentPage() {
 
         <fieldset className={styles.formSection}>
           <legend>
-            <h2>Competencia</h2>
+            <h2>{copy.competitionTitle}</h2>
           </legend>
-          <p className={styles.sectionDescription}>
-            Estos valores definen cómo se generan los cruces y las series.
-          </p>
+          <p className={styles.sectionDescription}>{copy.competitionDescription}</p>
           <div className={styles.formGrid}>
             <div className={styles.field}>
-              <label htmlFor="format">Formato</label>
+              <label htmlFor="format">{copy.format}</label>
               <select
                 id="format"
                 value={format}
                 onChange={(event) => setFormat(event.target.value)}
               >
-                <option value="single_elimination">Eliminación sencilla</option>
-                <option value="double_elimination">Doble eliminación</option>
+                <option value="single_elimination">{copy.singleElimination}</option>
+                <option value="double_elimination">{copy.doubleElimination}</option>
               </select>
               <p className={styles.help}>
                 {format === 'double_elimination'
-                  ? `Cada ${gameAdapterKey === 'smash_ultimate' ? 'jugador' : 'equipo'} puede perder una vez antes de quedar eliminado.`
-                  : `Una derrota elimina al ${gameAdapterKey === 'smash_ultimate' ? 'jugador' : 'equipo'} del torneo.`}
+                  ? formatMessage(copy.doubleEliminationHelp, {
+                      entry: gameAdapterKey === 'smash_ultimate' ? copy.player : copy.team,
+                    })
+                  : formatMessage(copy.singleEliminationHelp, {
+                      entry: gameAdapterKey === 'smash_ultimate' ? copy.player : copy.team,
+                    })}
               </p>
             </div>
 
             <div className={styles.field}>
               <label htmlFor="capacity">
-                Cupo de {gameAdapterKey === 'smash_ultimate' ? 'jugadores' : 'equipos'}
+                {formatMessage(copy.capacity, {
+                  entries: gameAdapterKey === 'smash_ultimate' ? copy.players : copy.teams,
+                })}
               </label>
               <input
                 id="capacity"
@@ -888,13 +866,15 @@ export default function NewTournamentPage() {
                 onChange={(event) => setCapacity(event.target.value)}
               />
               <p className={styles.help}>
-                Entre 2 y 512 {gameAdapterKey === 'smash_ultimate' ? 'jugadores' : 'equipos'}.
+                {formatMessage(copy.capacityHelp, {
+                  entries: gameAdapterKey === 'smash_ultimate' ? copy.players : copy.teams,
+                })}
               </p>
             </div>
 
             <div className={styles.field}>
               <label htmlFor="bo">
-                Formato de {gameAdapterKey === 'smash_ultimate' ? 'sets' : 'series'}
+                {gameAdapterKey === 'smash_ultimate' ? copy.setFormat : copy.seriesFormat}
               </label>
               <select id="bo" value={bo} onChange={(event) => setBo(event.target.value)}>
                 {getSeriesBestOfOptions(gameAdapterKey).map((option) => (
@@ -904,32 +884,28 @@ export default function NewTournamentPage() {
                 ))}
               </select>
               <p className={styles.help}>
-                {gameAdapterKey === 'smash_ultimate'
-                  ? 'Cantidad máxima de juegos por set.'
-                  : 'Cantidad máxima de partidas por serie.'}
+                {gameAdapterKey === 'smash_ultimate' ? copy.maxGamesPerSet : copy.maxGamesPerSeries}
               </p>
             </div>
 
             <div className={styles.field}>
-              <label htmlFor="startsAt">Inicio</label>
+              <label htmlFor="startsAt">{copy.startsAt}</label>
               <input
                 id="startsAt"
                 type="datetime-local"
                 value={startsAt}
                 onChange={(event) => setStartsAt(event.target.value)}
               />
-              <p className={styles.help}>Podés definirlo más adelante si aún no está confirmado.</p>
+              <p className={styles.help}>{copy.startsAtHelp}</p>
             </div>
           </div>
         </fieldset>
 
         <fieldset className={styles.formSection}>
           <legend>
-            <h2>Inscripción</h2>
+            <h2>{copy.registrationTitle}</h2>
           </legend>
-          <p className={styles.sectionDescription}>
-            Ajustá cuánto control necesita el staff antes de armar el bracket.
-          </p>
+          <p className={styles.sectionDescription}>{copy.registrationDescription}</p>
           <div className={styles.optionStack}>
             <label className={styles.checkboxRow}>
               <input
@@ -938,8 +914,8 @@ export default function NewTournamentPage() {
                 onChange={(event) => setManualApproval(event.target.checked)}
               />
               <span>
-                Aprobación manual de inscripciones
-                <small>El staff deberá aprobar o rechazar cada solicitud.</small>
+                {copy.manualApproval}
+                <small>{copy.manualApprovalHelp}</small>
               </span>
             </label>
             <label className={styles.checkboxRow}>
@@ -949,32 +925,29 @@ export default function NewTournamentPage() {
                 onChange={(event) => setGrandFinalReset(event.target.checked)}
               />
               <span>
-                Gran final con reset
-                <small>
-                  Usalo en doble eliminación si el ganador del bracket inferior debe vencer dos
-                  series.
-                </small>
+                {copy.grandFinalReset}
+                <small>{copy.grandFinalResetHelp}</small>
               </span>
             </label>
           </div>
           <div className={styles.formGrid}>
             <div className={styles.fieldWide}>
-              <label htmlFor="reporting-mode">Quién confirma los resultados</label>
+              <label htmlFor="reporting-mode">{copy.reportingMode}</label>
               <select
                 id="reporting-mode"
                 value={reportingMode}
                 onChange={(event) => setReportingMode(event.target.value as ResultReportingMode)}
               >
-                <option value="bilateral">Ambos participantes confirman</option>
-                <option value="winner_reports">El ganador reporta</option>
-                <option value="staff_only">Sólo el staff reporta</option>
+                <option value="bilateral">{copy.bilateral}</option>
+                <option value="winner_reports">{copy.winnerReports}</option>
+                <option value="staff_only">{copy.staffOnly}</option>
               </select>
               <p className={styles.help}>
                 {reportingMode === 'bilateral'
-                  ? 'Recomendado: si los dos reportes coinciden, el bracket avanza automáticamente.'
+                  ? copy.bilateralHelp
                   : reportingMode === 'winner_reports'
-                    ? 'Más rápido: un solo reporte confirma el resultado, pero requiere confianza entre participantes.'
-                    : 'Máximo control: participantes y capitanes no pueden cargar resultados.'}
+                    ? copy.winnerReportsHelp
+                    : copy.staffOnlyHelp}
               </p>
             </div>
           </div>
@@ -982,14 +955,12 @@ export default function NewTournamentPage() {
 
         <fieldset className={styles.formSection}>
           <legend>
-            <h2>Detalles</h2>
+            <h2>{copy.detailsTitle}</h2>
           </legend>
-          <p className={styles.sectionDescription}>
-            Dale a los participantes el contexto necesario antes de inscribirse.
-          </p>
+          <p className={styles.sectionDescription}>{copy.detailsDescription}</p>
           <div className={styles.formGrid}>
             <div className={styles.fieldWide}>
-              <label htmlFor="description">Descripción</label>
+              <label htmlFor="description">{copy.description}</label>
               <textarea
                 id="description"
                 rows={3}
@@ -997,10 +968,10 @@ export default function NewTournamentPage() {
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
               />
-              <p className={styles.help}>Resumen público del torneo. Máximo 2.000 caracteres.</p>
+              <p className={styles.help}>{copy.descriptionHelp}</p>
             </div>
             <div className={styles.fieldWide}>
-              <label htmlFor="rules">Reglas</label>
+              <label htmlFor="rules">{copy.rules}</label>
               <textarea
                 id="rules"
                 rows={7}
@@ -1008,9 +979,7 @@ export default function NewTournamentPage() {
                 value={rules}
                 onChange={(event) => setRules(event.target.value)}
               />
-              <p className={styles.help}>
-                Incluí criterios de victoria, puntualidad, reportes y resolución de conflictos.
-              </p>
+              <p className={styles.help}>{copy.rulesHelp}</p>
             </div>
           </div>
         </fieldset>
@@ -1023,13 +992,13 @@ export default function NewTournamentPage() {
 
         <div className={styles.formActions}>
           <Link className={styles.backLink} href="/dashboard">
-            Volver al panel
+            {copy.backDashboard}
           </Link>
           <button
             type="submit"
             disabled={submitting || !hasLoadedOrganizations || organizations.length === 0}
           >
-            {submitting ? 'Creando…' : 'Crear torneo'}
+            {submitting ? copy.creating : copy.create}
           </button>
         </div>
       </form>
