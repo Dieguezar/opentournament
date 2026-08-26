@@ -8,6 +8,9 @@ export default defineConfig({
   testDir: './tests/e2e',
   timeout: 90_000,
   fullyParallel: false,
+  // Los escenarios comparten el servidor y la base de datos E2E.
+  // Un solo worker evita que los flujos mutables interfieran con los showcases demo.
+  workers: 1,
   retries: 0,
   use: {
     baseURL: 'http://localhost:3000',
