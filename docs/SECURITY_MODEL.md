@@ -36,7 +36,8 @@ Clasificación: Impacto (A=alto, M=medio, B=bajo) × Probabilidad (A=alta, M=med
 ### 3.1 Transporte y cabeceras
 
 - HTTPS obligatorio en producción (proxy inverso).
-- Cabeceras: `Content-Security-Policy`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy`.
+- Next.js aplica globalmente `Content-Security-Policy`, `X-Content-Type-Options: nosniff`,
+  `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` y aislamiento cross-origin.
 - HSTS en producción.
 
 ### 3.2 Autenticación

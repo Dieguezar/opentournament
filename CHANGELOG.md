@@ -8,6 +8,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el v
 
 ### Corregido
 
+- Cabeceras globales de navegador para CSP, clickjacking, MIME sniffing, permisos y aislamiento cross-origin.
 - Health checks de API y web fijados al loopback IPv4 para evitar falsos negativos en Alpine.
 
 ### Cambiado

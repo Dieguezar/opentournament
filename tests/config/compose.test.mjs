@@ -24,6 +24,7 @@ const securityScanWorkflow = await readFile(
   new URL('../../.github/workflows/security-scan.yml', import.meta.url),
   'utf8',
 ).catch(() => '');
+const zapRules = await readFile(new URL('../../.zap/rules.tsv', import.meta.url), 'utf8');
 const envExampleEntries = Object.fromEntries(
   envExample
     .split(/\r?\n/u)
@@ -218,10 +219,12 @@ test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () =>
   assert.match(securityScanWorkflow, /docker compose up -d --build/u);
   assert.match(securityScanWorkflow, /zaproxy\/action-baseline@v0\.15\.0/u);
   assert.match(securityScanWorkflow, /target: http:\/\/127\.0\.0\.1:3000/u);
+  assert.match(securityScanWorkflow, /rules_file_name: \.zap\/rules\.tsv/u);
   assert.match(securityScanWorkflow, /fail_action: true/u);
   assert.match(securityScanWorkflow, /allow_issue_writing: false/u);
   assert.match(securityScanWorkflow, /if: failure\(\)/u);
   assert.match(securityScanWorkflow, /docker compose logs --no-color/u);
   assert.match(securityScanWorkflow, /if: always\(\)/u);
   assert.match(securityScanWorkflow, /docker compose down --volumes --remove-orphans/u);
+  assert.match(zapRules, /^10049\tINFO\t/u);
 });

@@ -38,6 +38,7 @@ jobs:
         uses: zaproxy/action-baseline@v0.15.0
         with:
           target: http://127.0.0.1:3000
+          rules_file_name: .zap/rules.tsv
           cmd_options: '-m 1'
           fail_action: true
           allow_issue_writing: false
