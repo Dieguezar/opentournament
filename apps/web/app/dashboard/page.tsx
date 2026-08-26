@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { SessionUser } from '@opentournament/shared-types';
+import { formatMessage, getDictionary, type Locale } from '@/lib/i18n';
+import { getRequestLocale } from '@/lib/i18n-server';
 import { serverFetch } from '@/lib/server-api';
 import { formatGameAdapter, formatOrganizationRole, getTournamentStatus } from '@/lib/presentation';
 import styles from '../workspace-pages.module.css';
@@ -33,8 +35,11 @@ const TOURNAMENT_PRIORITY: Record<string, number> = {
   cancelled: 5,
 };
 
-function formatTournamentFormat(format: string): string {
-  return format === 'double_elimination' ? 'Doble eliminación' : 'Eliminación sencilla';
+function formatTournamentFormat(format: string, locale: Locale): string {
+  const presentation = getDictionary(locale).presentation;
+  return format === 'double_elimination'
+    ? presentation.doubleElimination
+    : presentation.singleElimination;
 }
 
 function sortTournamentsByPriority(tournaments: TournamentView[]): TournamentView[] {
@@ -45,6 +50,9 @@ function sortTournamentsByPriority(tournaments: TournamentView[]): TournamentVie
 }
 
 export default async function DashboardPage() {
+  const locale = await getRequestLocale();
+  const dictionary = getDictionary(locale);
+  const copy = dictionary.dashboard;
   const me = await serverFetch<{ user: SessionUser }>('/auth/me');
   if (me.status === 401) redirect('/login');
   const user = me.data.user;
@@ -57,7 +65,9 @@ export default async function DashboardPage() {
   const tournaments = sortTournamentsByPriority(tournamentsRes.data?.tournaments ?? []);
   const teams = teamsRes.data?.teams ?? [];
   const priorityTournament = tournaments[0];
-  const priorityStatus = priorityTournament ? getTournamentStatus(priorityTournament.status) : null;
+  const priorityStatus = priorityTournament
+    ? getTournamentStatus(priorityTournament.status, locale)
+    : null;
   const otherTournaments = priorityTournament
     ? tournaments.filter((tournament) => tournament.id !== priorityTournament.id)
     : [];
@@ -66,34 +76,31 @@ export default async function DashboardPage() {
     <main className={`container ${styles.page}`}>
       <header className={styles.pageHeader}>
         <div>
-          <p className={styles.eyebrow}>Centro de control</p>
-          <h1>Hola, {user.displayName}</h1>
-          <p className={styles.intro}>
-            Administrá la competencia, los participantes y las decisiones pendientes desde un mismo
-            espacio.
-          </p>
+          <p className={styles.eyebrow}>{copy.controlCenter}</p>
+          <h1>{formatMessage(copy.greeting, { name: user.displayName })}</h1>
+          <p className={styles.intro}>{copy.intro}</p>
         </div>
         <div className={styles.headerActions}>
           <Link className="button" href="/tournaments/new">
-            Crear torneo
+            {copy.createTournament}
           </Link>
           <Link className="button button-secondary" href="/teams/new">
-            Crear participante
+            {copy.createParticipant}
           </Link>
         </div>
       </header>
 
-      <dl className={styles.metrics} aria-label="Resumen de actividad">
+      <dl className={styles.metrics} aria-label={copy.activitySummary}>
         <div>
-          <dt>Torneos</dt>
+          <dt>{copy.tournaments}</dt>
           <dd>{tournaments.length}</dd>
         </div>
         <div>
-          <dt>Participantes</dt>
+          <dt>{copy.participants}</dt>
           <dd>{teams.length}</dd>
         </div>
         <div>
-          <dt>Organizaciones</dt>
+          <dt>{copy.organizations}</dt>
           <dd>{user.organizations.length}</dd>
         </div>
       </dl>
@@ -102,22 +109,20 @@ export default async function DashboardPage() {
         <section className={styles.panel} aria-labelledby="priority-title">
           <div className={styles.sectionHeader}>
             <div>
-              <p className={styles.eyebrow}>Operación prioritaria</p>
-              <h2 id="priority-title">Tu próximo movimiento</h2>
+              <p className={styles.eyebrow}>{copy.priorityOperation}</p>
+              <h2 id="priority-title">{copy.nextMove}</h2>
             </div>
             <Link className={styles.sectionLink} href="/tournaments/new">
-              Nuevo torneo
+              {copy.newTournament}
             </Link>
           </div>
 
           {!priorityTournament ? (
             <div className={styles.emptyState}>
-              <h3>Tu espacio está listo</h3>
-              <p className={styles.emptyCopy}>
-                Creá el primer torneo para abrir inscripciones y empezar a recibir participantes.
-              </p>
+              <h3>{copy.workspaceReady}</h3>
+              <p className={styles.emptyCopy}>{copy.firstTournamentDescription}</p>
               <Link className="button" href="/tournaments/new">
-                Crear primer torneo
+                {copy.createFirstTournament}
               </Link>
             </div>
           ) : (
@@ -126,18 +131,18 @@ export default async function DashboardPage() {
                 <div>
                   <p className={styles.eyebrow}>
                     {priorityTournament.status === 'in_progress'
-                      ? 'Competencia activa'
-                      : 'Requiere seguimiento'}
+                      ? copy.activeCompetition
+                      : copy.needsAttention}
                   </p>
                   <h2>{priorityTournament.name}</h2>
                   <p className={styles.meta}>
-                    {formatGameAdapter(priorityTournament.gameAdapterKey)} ·{' '}
-                    {formatTournamentFormat(priorityTournament.format)}
+                    {formatGameAdapter(priorityTournament.gameAdapterKey, locale)} ·{' '}
+                    {formatTournamentFormat(priorityTournament.format, locale)}
                   </p>
                 </div>
                 <div className={styles.statusLine}>
                   {priorityTournament.slug === 'copa-nexo-demo' && (
-                    <span className="badge badge-demo">Demo incluida</span>
+                    <span className="badge badge-demo">{copy.demoIncluded}</span>
                   )}
                   {priorityStatus && (
                     <span className={priorityStatus.className}>{priorityStatus.label}</span>
@@ -146,10 +151,10 @@ export default async function DashboardPage() {
               </div>
               <div className={styles.cardActions}>
                 <Link className="button" href={`/tournaments/${priorityTournament.id}`}>
-                  Administrar torneo
+                  {copy.manageTournament}
                 </Link>
                 <Link className="button button-secondary" href={`/t/${priorityTournament.slug}`}>
-                  Ver página pública
+                  {copy.viewPublicPage}
                 </Link>
               </div>
             </article>
@@ -159,13 +164,13 @@ export default async function DashboardPage() {
             <>
               <div className={styles.sectionHeader}>
                 <div>
-                  <p className={styles.eyebrow}>Portafolio</p>
-                  <h3>Otros torneos</h3>
+                  <p className={styles.eyebrow}>{copy.portfolio}</p>
+                  <h3>{copy.otherTournaments}</h3>
                 </div>
               </div>
               <ul className={styles.tournamentList}>
                 {otherTournaments.map((tournament) => {
-                  const status = getTournamentStatus(tournament.status);
+                  const status = getTournamentStatus(tournament.status, locale);
                   return (
                     <li key={tournament.id}>
                       <article className={styles.tournamentCard}>
@@ -173,23 +178,23 @@ export default async function DashboardPage() {
                           <div>
                             <h3>{tournament.name}</h3>
                             <p className={styles.meta}>
-                              {formatGameAdapter(tournament.gameAdapterKey)} ·{' '}
-                              {formatTournamentFormat(tournament.format)}
+                              {formatGameAdapter(tournament.gameAdapterKey, locale)} ·{' '}
+                              {formatTournamentFormat(tournament.format, locale)}
                             </p>
                           </div>
                           <div className={styles.statusLine}>
                             {tournament.slug === 'copa-nexo-demo' && (
-                              <span className="badge badge-demo">Demo incluida</span>
+                              <span className="badge badge-demo">{copy.demoIncluded}</span>
                             )}
                             <span className={status.className}>{status.label}</span>
                           </div>
                         </div>
                         <div className={styles.cardActions}>
                           <Link className="button" href={`/tournaments/${tournament.id}`}>
-                            Administrar
+                            {copy.manage}
                           </Link>
                           <Link className="button button-secondary" href={`/t/${tournament.slug}`}>
-                            Página pública
+                            {copy.publicPage}
                           </Link>
                         </div>
                       </article>
@@ -204,20 +209,18 @@ export default async function DashboardPage() {
         <aside className={styles.panel} aria-labelledby="teams-title">
           <div className={styles.sectionHeader}>
             <div>
-              <p className={styles.eyebrow}>Participantes</p>
-              <h2 id="teams-title">Mis participantes</h2>
+              <p className={styles.eyebrow}>{copy.participants}</p>
+              <h2 id="teams-title">{copy.myParticipants}</h2>
             </div>
             <Link className={styles.sectionLink} href="/teams/new">
-              Nuevo
+              {copy.new}
             </Link>
           </div>
           {teams.length === 0 ? (
             <div className={styles.emptyState}>
-              <p className={styles.emptyCopy}>
-                Todavía no tenés participantes disponibles para inscribir.
-              </p>
+              <p className={styles.emptyCopy}>{copy.noParticipants}</p>
               <Link className="button button-secondary" href="/teams/new">
-                Crear participante
+                {copy.createParticipant}
               </Link>
             </div>
           ) : (
@@ -229,9 +232,9 @@ export default async function DashboardPage() {
                     <span>
                       <strong>{team.name}</strong>
                       <small className={styles.teamMeta}>
-                        {isPlayer ? 'Jugador' : 'Equipo'} ·{' '}
-                        {formatGameAdapter(team.gameAdapterKey ?? 'generic')} ·{' '}
-                        {team.tag ? `Etiqueta ${team.tag}` : 'Sin etiqueta'}
+                        {isPlayer ? copy.player : copy.team} ·{' '}
+                        {formatGameAdapter(team.gameAdapterKey ?? 'generic', locale)} ·{' '}
+                        {team.tag ? formatMessage(copy.tag, { tag: team.tag }) : copy.noTag}
                       </small>
                     </span>
                     <span className="badge">{team.tag?.slice(0, 3) ?? 'OT'}</span>
@@ -248,8 +251,8 @@ export default async function DashboardPage() {
           <section className={styles.panel} aria-labelledby="organizations-title">
             <div className={styles.sectionHeader}>
               <div>
-                <p className={styles.eyebrow}>Comunidad</p>
-                <h2 id="organizations-title">Mis organizaciones</h2>
+                <p className={styles.eyebrow}>{copy.community}</p>
+                <h2 id="organizations-title">{copy.myOrganizations}</h2>
               </div>
             </div>
             <ul className={styles.organizationList}>
@@ -259,20 +262,18 @@ export default async function DashboardPage() {
                     <Link href={`/organizations/${organization.slug}`}>{organization.name}</Link>
                     <small className={styles.organizationMeta}>/{organization.slug}</small>
                   </span>
-                  <span className="badge">{formatOrganizationRole(organization.role)}</span>
+                  <span className="badge">{formatOrganizationRole(organization.role, locale)}</span>
                 </li>
               ))}
             </ul>
           </section>
         ) : (
           <section className={styles.panel} aria-labelledby="organization-empty-title">
-            <p className={styles.eyebrow}>Configuración requerida</p>
-            <h2 id="organization-empty-title">Creá una organización</h2>
-            <p className={styles.emptyCopy}>
-              Los torneos y participantes necesitan una organización responsable antes de publicarse.
-            </p>
+            <p className={styles.eyebrow}>{copy.configurationRequired}</p>
+            <h2 id="organization-empty-title">{copy.createOrganization}</h2>
+            <p className={styles.emptyCopy}>{copy.organizationDescription}</p>
             <Link className="button" href="/wizard">
-              Crear organización
+              {copy.createOrganizationAction}
             </Link>
           </section>
         )}

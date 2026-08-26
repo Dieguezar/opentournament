@@ -1,4 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react';
+import { useI18n } from './i18n-provider';
+import { formatMessage } from '../lib/i18n';
 
 import styles from './participant-access-manager.module.css';
 
@@ -8,17 +10,15 @@ interface ParticipantAccessSecretProps {
   onCopy: () => void;
 }
 
-export function ParticipantAccessSecret({
-  teamName,
-  url,
-  onCopy,
-}: ParticipantAccessSecretProps) {
+export function ParticipantAccessSecret({ teamName, url, onCopy }: ParticipantAccessSecretProps) {
+  const { dictionary } = useI18n();
+  const copy = dictionary.participantAccess;
   return (
     <div className={styles.secretBox}>
       <div className={styles.qrFrame}>
         <QRCodeSVG
           value={url}
-          title={`Acceso privado para ${teamName}`}
+          title={formatMessage(copy.privateAccessTitle, { name: teamName })}
           size={192}
           level="M"
           marginSize={4}
@@ -28,16 +28,13 @@ export function ParticipantAccessSecret({
         />
       </div>
       <div className={styles.secretContent}>
-        <strong>Enlace nuevo para {teamName}</strong>
-        <p>Escaneá el QR con el teléfono del participante o copiá el enlace privado.</p>
-        <input aria-label="Enlace privado recién generado" readOnly value={url} />
+        <strong>{formatMessage(copy.newLink, { name: teamName })}</strong>
+        <p>{copy.scanOrCopy}</p>
+        <input aria-label={copy.generatedLinkLabel} readOnly value={url} />
         <button type="button" className="button button-secondary" onClick={onCopy}>
-          Copiar enlace
+          {copy.copyLink}
         </button>
-        <small>
-          El QR se genera en este navegador y no envía el token a terceros. Guardalo ahora: por
-          seguridad no podremos volver a mostrarlo.
-        </small>
+        <small>{copy.qrPrivacy}</small>
       </div>
     </div>
   );

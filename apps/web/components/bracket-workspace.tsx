@@ -8,6 +8,8 @@ import {
 } from '@opentournament/bracket-ui';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
+import { formatMessage, type Dictionary, type Locale } from '@/lib/i18n';
 import { formatBracketType, formatMatchStatus } from '@/lib/presentation';
 import { WalkoverButton } from './walkover-button';
 import styles from './bracket-workspace.module.css';
@@ -44,22 +46,28 @@ function statusClassName(status: string): string {
   return baseClassName;
 }
 
-function formatScheduledAt(value: string | null): string {
-  if (!value) return 'Sin fecha programada';
-  return new Intl.DateTimeFormat('es', {
+function formatScheduledAt(
+  value: string | null,
+  locale: Locale,
+  copy: Dictionary['bracketWorkspace'],
+): string {
+  if (!value) return copy.unscheduled;
+  return new Intl.DateTimeFormat(locale, {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
 }
 
 function TeamRow({ participant, score, isWinner }: TeamRowProps) {
+  const { dictionary } = useI18n();
+  const copy = dictionary.bracketWorkspace;
   return (
     <span className={`${styles.teamRow} ${isWinner ? styles.teamWinner : ''}`}>
       <span className={styles.teamIdentity}>
         {participant?.tag && <small>{participant.tag}</small>}
-        <strong>{participant?.name ?? 'Participante por definir'}</strong>
+        <strong>{participant?.name ?? copy.participantTbd}</strong>
       </span>
-      <span className={styles.score}>{score ?? 'Sin resultado'}</span>
+      <span className={styles.score}>{score ?? copy.noResult}</span>
     </span>
   );
 }
@@ -75,6 +83,7 @@ function MatchCard({
   onSelect: (matchId: string) => void;
   matchLabel: string;
 }) {
+  const { locale } = useI18n();
   return (
     <button
       type="button"
@@ -93,8 +102,12 @@ function MatchCard({
         isWinner={match.winner?.id === match.away?.id}
       />
       <span className={styles.matchFooter}>
-        <span className={statusClassName(match.status)}>{formatMatchStatus(match.status)}</span>
-        <span>{matchLabel} {match.position + 1}</span>
+        <span className={statusClassName(match.status)}>
+          {formatMatchStatus(match.status, locale)}
+        </span>
+        <span>
+          {matchLabel} {match.position + 1}
+        </span>
       </span>
     </button>
   );
@@ -107,14 +120,13 @@ export function BracketWorkspace({
   isSmash,
   matches,
 }: BracketWorkspaceProps) {
-  const matchLabel = isSmash ? 'Set' : 'Partida';
-  const matchLabelPlural = isSmash ? 'sets' : 'partidas';
-  const participantLabelPlural = isSmash ? 'jugadores' : 'equipos';
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.bracketWorkspace;
+  const matchLabel = isSmash ? copy.set : copy.match;
+  const matchLabelPlural = isSmash ? copy.sets : copy.matches;
+  const participantLabelPlural = isSmash ? copy.players : copy.teams;
   const presentation = useMemo(() => buildBracketWorkspacePresentation(matches), [matches]);
-  const matchesById = useMemo(
-    () => new Map(matches.map((match) => [match.id, match])),
-    [matches],
-  );
+  const matchesById = useMemo(() => new Map(matches.map((match) => [match.id, match])), [matches]);
   const presentationById = useMemo(
     () =>
       new Map(
@@ -124,9 +136,7 @@ export function BracketWorkspace({
       ),
     [presentation.rounds],
   );
-  const [selectedMatchId, setSelectedMatchId] = useState(
-    presentation.initialSelectedMatchId,
-  );
+  const [selectedMatchId, setSelectedMatchId] = useState(presentation.initialSelectedMatchId);
   const resolvedSelectedId = presentationById.has(selectedMatchId ?? '')
     ? selectedMatchId
     : presentation.initialSelectedMatchId;
@@ -139,24 +149,23 @@ export function BracketWorkspace({
     return (
       <section id="bracket" className={styles.emptyState} aria-labelledby="bracket-title">
         <p className={styles.eyebrow}>Bracket</p>
-        <h2 id="bracket-title">Todavía no hay {matchLabelPlural}</h2>
-        <p>
-          Generá el bracket cuando haya al menos dos {participantLabelPlural} con check-in.
-        </p>
+        <h2 id="bracket-title">{formatMessage(copy.noItems, { items: matchLabelPlural })}</h2>
+        <p>{formatMessage(copy.generateHint, { participants: participantLabelPlural })}</p>
       </section>
     );
   }
 
   return (
     <section id="bracket" className={styles.workspace} aria-labelledby="bracket-title">
-      <aside className={styles.roundRail} aria-label="Rondas del bracket">
-        <h2 id="bracket-title">Rondas</h2>
+      <aside className={styles.roundRail} aria-label={copy.bracketRounds}>
+        <h2 id="bracket-title">{copy.rounds}</h2>
         <div className={styles.roundList}>
           {presentation.rounds.map((round) => {
             const firstMatch = round.matches[0];
             const roundName = firstMatch
-              ? (matchesById.get(firstMatch.id)?.roundName ?? `Ronda ${round.number}`)
-              : `Ronda ${round.number}`;
+              ? (matchesById.get(firstMatch.id)?.roundName ??
+                formatMessage(copy.round, { number: round.number }))
+              : formatMessage(copy.round, { number: round.number });
             const isComplete = round.matches.every(
               (match) => match.status === 'finalized' || match.status === 'walkover',
             );
@@ -169,7 +178,7 @@ export function BracketWorkspace({
                 onClick={() => firstMatch && setSelectedMatchId(firstMatch.id)}
               >
                 <span>{roundName}</span>
-                <small>{isComplete ? 'Completa' : isCurrent ? 'Activa' : 'Pendiente'}</small>
+                <small>{isComplete ? copy.complete : isCurrent ? copy.active : copy.pending}</small>
               </button>
             );
           })}
@@ -180,13 +189,14 @@ export function BracketWorkspace({
         className={styles.boardScroller}
         role="region"
         tabIndex={0}
-        aria-label={`Cuadro de ${matchLabelPlural} desplazable`}
+        aria-label={formatMessage(copy.scrollableBoard, { items: matchLabelPlural })}
       >
         <div className={styles.board}>
           {presentation.rounds.map((round, index) => {
             const roundName = round.matches[0]
-              ? (matchesById.get(round.matches[0].id)?.roundName ?? `Ronda ${round.number}`)
-              : `Ronda ${round.number}`;
+              ? (matchesById.get(round.matches[0].id)?.roundName ??
+                formatMessage(copy.round, { number: round.number }))
+              : formatMessage(copy.round, { number: round.number });
             const previousRound = presentation.rounds[index - 1];
             const nextRound = presentation.rounds[index + 1];
             const isGroupStart = index === 0 || previousRound?.bracketType !== round.bracketType;
@@ -202,7 +212,12 @@ export function BracketWorkspace({
               >
                 <header>
                   <p>{roundName}</p>
-                  <small>{round.matches.length} {matchLabelPlural}</small>
+                  <small>
+                    {formatMessage(copy.itemCount, {
+                      count: round.matches.length,
+                      items: matchLabelPlural,
+                    })}
+                  </small>
                 </header>
                 <div className={styles.roundMatches}>
                   {round.matches.map((match) => (
@@ -226,11 +241,13 @@ export function BracketWorkspace({
           <>
             <header className={styles.detailsHeader}>
               <div>
-                <p className={styles.eyebrow}>{formatBracketType(selectedDetails.bracketType)}</p>
+                <p className={styles.eyebrow}>
+                  {formatBracketType(selectedDetails.bracketType, locale)}
+                </p>
                 <h2>{selectedDetails.roundName}</h2>
               </div>
               <span className={statusClassName(selectedMatch.status)}>
-                {formatMatchStatus(selectedMatch.status)}
+                {formatMatchStatus(selectedMatch.status, locale)}
               </span>
             </header>
 
@@ -249,26 +266,26 @@ export function BracketWorkspace({
 
             <dl className={styles.definitionList}>
               <div>
-                <dt>Formato de {isSmash ? 'set' : 'serie'}</dt>
+                <dt>{isSmash ? copy.setFormat : copy.seriesFormat}</dt>
                 <dd>BO{seriesBestOf}</dd>
               </div>
               <div>
-                <dt>Fecha programada</dt>
-                <dd>{formatScheduledAt(selectedDetails.scheduledAt)}</dd>
+                <dt>{copy.scheduledDate}</dt>
+                <dd>{formatScheduledAt(selectedDetails.scheduledAt, locale, copy)}</dd>
               </div>
               <div>
-                <dt>Ronda</dt>
+                <dt>{copy.roundLabel}</dt>
                 <dd>{selectedDetails.roundName}</dd>
               </div>
               <div>
-                <dt>Estado</dt>
-                <dd>{formatMatchStatus(selectedMatch.status)}</dd>
+                <dt>{copy.status}</dt>
+                <dd>{formatMatchStatus(selectedMatch.status, locale)}</dd>
               </div>
             </dl>
 
             {canManage && (
               <div className={styles.operations}>
-                <h3>Operaciones</h3>
+                <h3>{copy.operations}</h3>
                 <WalkoverButton
                   matchId={selectedMatch.id}
                   homeTeamId={selectedDetails.homeTeamId}
@@ -281,15 +298,15 @@ export function BracketWorkspace({
                   href={`/tournaments/${tournamentId}/disputas`}
                   className={styles.secondaryAction}
                 >
-                  Revisar disputas
+                  {copy.reviewDisputes}
                 </Link>
               </div>
             )}
           </>
         ) : (
           <div className={styles.detailsEmpty}>
-            <h2>Seleccioná {isSmash ? 'un set' : 'una partida'}</h2>
-            <p>Elegí una tarjeta del bracket para ver sus datos y acciones disponibles.</p>
+            <h2>{isSmash ? copy.selectSet : copy.selectMatch}</h2>
+            <p>{copy.selectHint}</p>
           </div>
         )}
       </aside>

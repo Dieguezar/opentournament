@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultReportingMode } from '@opentournament/shared-types';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { formatMessage, type Dictionary, type Locale } from '@/lib/i18n';
 import { ParticipantAccessSecret } from './participant-access-secret';
 import styles from './participant-access-manager.module.css';
 
@@ -23,8 +25,12 @@ interface AccessPassView {
   createdAt: string;
 }
 
-function errorMessage(error: unknown): string {
-  return error instanceof ApiClientError ? error.message : 'No pudimos completar la acción';
+function errorMessage(
+  error: unknown,
+  locale: Locale,
+  copy: Dictionary['participantAccess'],
+): string {
+  return error instanceof ApiClientError && locale === 'es' ? error.message : copy.actionError;
 }
 
 export function ParticipantAccessManager({
@@ -36,6 +42,8 @@ export function ParticipantAccessManager({
   registrations: EligibleTeam[];
   initialReportingMode: ResultReportingMode;
 }) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.participantAccess;
   const eligibleTeams = useMemo(
     () => registrations.filter((registration) => registration.status === 'approved'),
     [registrations],
@@ -56,8 +64,10 @@ export function ParticipantAccessManager({
   }, [tournamentId]);
 
   useEffect(() => {
-    void loadPasses().catch((loadError: unknown) => setError(errorMessage(loadError)));
-  }, [loadPasses]);
+    void loadPasses().catch((loadError: unknown) =>
+      setError(errorMessage(loadError, locale, copy)),
+    );
+  }, [copy, loadPasses, locale]);
 
   async function saveReportingMode(nextMode: ResultReportingMode) {
     const previousMode = reportingMode;
@@ -69,10 +79,10 @@ export function ParticipantAccessManager({
         method: 'PATCH',
         body: JSON.stringify({ reportingMode: nextMode }),
       });
-      setMessage('Modo de reporte actualizado.');
+      setMessage(copy.reportingModeUpdated);
     } catch (saveError) {
       setReportingMode(previousMode);
-      setError(errorMessage(saveError));
+      setError(errorMessage(saveError, locale, copy));
     }
   }
 
@@ -91,13 +101,13 @@ export function ParticipantAccessManager({
       });
       const team = eligibleTeams.find((candidate) => candidate.teamId === selectedTeamId);
       setLatestLink({
-        teamName: team?.teamName ?? 'Participante',
+        teamName: team?.teamName ?? copy.participantFallback,
         url: `${window.location.origin}${response.path}`,
       });
-      setMessage('Enlace creado. Si ya existía otro para este equipo, quedó revocado.');
+      setMessage(copy.linkCreated);
       await loadPasses();
     } catch (createError) {
-      setError(errorMessage(createError));
+      setError(errorMessage(createError, locale, copy));
     } finally {
       setBusy(false);
     }
@@ -107,9 +117,9 @@ export function ParticipantAccessManager({
     if (!latestLink) return;
     try {
       await navigator.clipboard.writeText(latestLink.url);
-      setMessage('Enlace copiado al portapapeles.');
+      setMessage(copy.linkCopied);
     } catch {
-      setError('No pudimos copiarlo automáticamente. Seleccioná y copiá el enlace.');
+      setError(copy.copyFailed);
     }
   }
 
@@ -122,10 +132,10 @@ export function ParticipantAccessManager({
         method: 'DELETE',
       });
       setLatestLink(null);
-      setMessage('Pase revocado. Sus sesiones ya no tienen acceso.');
+      setMessage(copy.passRevoked);
       await loadPasses();
     } catch (revokeError) {
-      setError(errorMessage(revokeError));
+      setError(errorMessage(revokeError, locale, copy));
     } finally {
       setBusy(false);
     }
@@ -139,36 +149,33 @@ export function ParticipantAccessManager({
     <div className={styles.manager}>
       <div className={styles.block}>
         <div>
-          <h3>Reporte de resultados</h3>
-          <p>Podés cambiar esta política sin volver a crear el torneo.</p>
+          <h3>{copy.resultReporting}</h3>
+          <p>{copy.reportingDescription}</p>
         </div>
         <label>
-          Modo de confirmación
+          {copy.confirmationMode}
           <select
             value={reportingMode}
             onChange={(event) => void saveReportingMode(event.target.value as ResultReportingMode)}
           >
-            <option value="bilateral">Ambos participantes confirman</option>
-            <option value="winner_reports">El ganador reporta</option>
-            <option value="staff_only">Sólo el staff reporta</option>
+            <option value="bilateral">{copy.bilateral}</option>
+            <option value="winner_reports">{copy.winnerReports}</option>
+            <option value="staff_only">{copy.staffOnly}</option>
           </select>
         </label>
       </div>
 
       <div className={styles.block}>
         <div>
-          <h3>Pases privados</h3>
-          <p>
-            Dan acceso sólo a este torneo y equipo. El token se muestra una vez y no viaja en la URL
-            al servidor.
-          </p>
+          <h3>{copy.privatePasses}</h3>
+          <p>{copy.passesDescription}</p>
         </div>
         {eligibleTeams.length === 0 ? (
-          <p>No hay participantes aprobados todavía.</p>
+          <p>{copy.noApprovedParticipants}</p>
         ) : (
           <div className={styles.createRow}>
             <label>
-              Participante
+              {copy.participant}
               <select
                 value={selectedTeamId}
                 onChange={(event) => setSelectedTeamId(event.target.value)}
@@ -182,7 +189,7 @@ export function ParticipantAccessManager({
               </select>
             </label>
             <button type="button" disabled={busy || !selectedTeamId} onClick={createPass}>
-              {busy ? 'Procesando…' : 'Crear o regenerar enlace'}
+              {busy ? copy.processing : copy.createOrRegenerate}
             </button>
           </div>
         )}
@@ -203,8 +210,13 @@ export function ParticipantAccessManager({
                   <strong>{accessPass.teamName}</strong>
                   <small>
                     {accessPass.lastUsedAt
-                      ? `Usado ${new Intl.DateTimeFormat('es', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(accessPass.lastUsedAt))}`
-                      : 'Todavía no fue usado'}
+                      ? formatMessage(copy.usedAt, {
+                          date: new Intl.DateTimeFormat(locale, {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          }).format(new Date(accessPass.lastUsedAt)),
+                        })
+                      : copy.neverUsed}
                   </small>
                 </span>
                 <button
@@ -213,7 +225,7 @@ export function ParticipantAccessManager({
                   disabled={busy}
                   onClick={() => void revokePass(accessPass.id)}
                 >
-                  Revocar
+                  {copy.revoke}
                 </button>
               </li>
             ))}

@@ -12,6 +12,8 @@ import { RulesetSummary } from '@/components/ruleset-summary';
 import { TournamentActions } from '@/components/tournament-actions';
 import { ParticipantAccessManager } from '@/components/participant-access-manager';
 import { ReportPanel } from '@/components/report-panel';
+import { formatMessage, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
+import { getRequestLocale } from '@/lib/i18n-server';
 import {
   formatGameAdapter,
   formatParticipantStatus,
@@ -163,8 +165,11 @@ function toWorkspaceMatches(
   }));
 }
 
-function tournamentFormatLabel(format: string): string {
-  return format === 'double_elimination' ? 'Doble eliminación' : 'Eliminación sencilla';
+function tournamentFormatLabel(format: string, locale: Locale): string {
+  const presentation = getDictionary(locale).presentation;
+  return format === 'double_elimination'
+    ? presentation.doubleElimination
+    : presentation.singleElimination;
 }
 
 function nextActionLabel(
@@ -172,15 +177,23 @@ function nextActionLabel(
   workspaceMatches: readonly BracketWorkspaceMatch[],
   canManage: boolean,
   matchLabel: string,
+  locale: Locale,
+  copy: Dictionary['tournamentAdmin'],
 ): string {
-  if (!nextMatch) return 'Ver bracket';
+  if (!nextMatch) return copy.viewBracket;
   const details = workspaceMatches.find((match) => match.id === nextMatch.id);
-  if (!details) return canManage ? `Gestionar ${matchLabel}` : `Ver ${matchLabel}`;
-  const action = canManage ? 'Gestionar' : 'Ver';
-  return `${action} ${details.roundName.toLocaleLowerCase('es')}`;
+  if (!details) {
+    return formatMessage(canManage ? copy.manageItem : copy.viewItem, { item: matchLabel });
+  }
+  return formatMessage(canManage ? copy.manageItem : copy.viewItem, {
+    item: details.roundName.toLocaleLowerCase(locale),
+  });
 }
 
 export default async function TournamentAdminPage({ params }: { params: Promise<{ id: string }> }) {
+  const locale = await getRequestLocale();
+  const dictionary = getDictionary(locale);
+  const copy = dictionary.tournamentAdmin;
   const { id } = await params;
   const tournamentRes = await serverFetch<{ tournament: TournamentView }>(`/tournaments/${id}`);
   if (tournamentRes.status === 401) redirect('/login');
@@ -204,7 +217,7 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
   const disputes = disputesRes.data?.disputes ?? [];
   const workspaceMatches = toWorkspaceMatches(matches, brackets);
   const presentation = buildBracketWorkspacePresentation(workspaceMatches);
-  const tournamentStatus = getTournamentStatus(tournament.status);
+  const tournamentStatus = getTournamentStatus(tournament.status, locale);
   const seriesBestOf = tournament.seriesConfig?.bo ?? 1;
   const isSmash = tournament.gameAdapterKey === 'smash_ultimate';
   const publicTeamCount = new Set(
@@ -216,10 +229,10 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
 
   return (
     <main className={styles.page} data-game={tournament.gameAdapterKey}>
-      <nav className={styles.utilityLinks} aria-label="Navegación del torneo">
-        <Link href="/dashboard">Panel de torneos</Link>
-        <Link href={`/t/${tournament.slug}`}>Página pública</Link>
-        {isAdmin && <Link href={`/tournaments/${id}/disputas`}>Disputas</Link>}
+      <nav className={styles.utilityLinks} aria-label={copy.tournamentNavigation}>
+        <Link href="/dashboard">{copy.tournamentDashboard}</Link>
+        <Link href={`/t/${tournament.slug}`}>{copy.publicPage}</Link>
+        {isAdmin && <Link href={`/tournaments/${id}/disputas`}>{copy.disputes}</Link>}
       </nav>
 
       <header id="overview" className={styles.hero}>
@@ -229,15 +242,18 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
             <span className={tournamentStatus.className}>{tournamentStatus.label}</span>
           </div>
           <p className={styles.meta}>
-            <span>{formatGameAdapter(tournament.gameAdapterKey)}</span>
-            <span>{tournamentFormatLabel(tournament.format)}</span>
+            <span>{formatGameAdapter(tournament.gameAdapterKey, locale)}</span>
+            <span>{tournamentFormatLabel(tournament.format, locale)}</span>
             <span>
-              Cupo {tournament.capacity} {isSmash ? 'jugadores' : 'equipos'}
+              {formatMessage(copy.capacity, {
+                capacity: tournament.capacity,
+                participants: isSmash ? copy.players : copy.teams,
+              })}
             </span>
             <span>BO{seriesBestOf}</span>
             {tournament.startsAt && (
               <span>
-                {new Intl.DateTimeFormat('es', { dateStyle: 'medium' }).format(
+                {new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
                   new Date(tournament.startsAt),
                 )}
               </span>
@@ -245,21 +261,21 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
           </p>
         </div>
 
-        <div className={styles.metrics} aria-label="Resumen del torneo">
+        <div className={styles.metrics} aria-label={copy.summary}>
           <div className={styles.metric}>
             <strong>{teamCount}</strong>
-            <span>{isSmash ? 'jugadores' : 'equipos'}</span>
+            <span>{isSmash ? copy.players : copy.teams}</span>
           </div>
           <div className={styles.metric}>
             <strong>
               {presentation.metrics.finalizedMatches} / {presentation.metrics.totalMatches}
             </strong>
-            <span>{isSmash ? 'sets finalizados' : 'finalizadas'}</span>
+            <span>{isSmash ? copy.finalizedSets : copy.finalizedMatches}</span>
           </div>
           {isAdmin && (
             <div className={styles.metric}>
               <strong>{disputes.filter((dispute) => dispute.status !== 'resolved').length}</strong>
-              <span>disputas abiertas</span>
+              <span>{copy.openDisputes}</span>
             </div>
           )}
         </div>
@@ -272,16 +288,20 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
             presentation.nextActionableMatch,
             workspaceMatches,
             isAdmin,
-            isSmash ? 'set' : 'partida',
+            isSmash
+              ? dictionary.bracketWorkspace.set.toLocaleLowerCase(locale)
+              : dictionary.bracketWorkspace.match.toLocaleLowerCase(locale),
+            locale,
+            copy,
           )}
         </a>
       </header>
 
-      <nav className={styles.tabs} aria-label="Secciones del torneo">
-        <a href="#overview">Resumen</a>
-        {isAdmin && <a href="#participants">Participantes</a>}
-        <a href="#bracket">{isSmash ? 'Sets y bracket' : 'Partidas y bracket'}</a>
-        {isAdmin && <a href="#settings">Configuración</a>}
+      <nav className={styles.tabs} aria-label={copy.tournamentSections}>
+        <a href="#overview">{copy.overview}</a>
+        {isAdmin && <a href="#participants">{copy.participants}</a>}
+        <a href="#bracket">{isSmash ? copy.setsAndBracket : copy.matchesAndBracket}</a>
+        {isAdmin && <a href="#settings">{copy.settings}</a>}
       </nav>
 
       <RulesetSummary
@@ -289,6 +309,7 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
         format={tournament.format}
         seriesBestOf={seriesBestOf}
         settings={tournament.settings}
+        locale={locale}
       />
 
       <BracketWorkspace
@@ -310,15 +331,18 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
       )}
 
       {isAdmin && (
-        <section id="participants" className={styles.supportGrid} aria-label="Participantes">
+        <section id="participants" className={styles.supportGrid} aria-label={copy.participants}>
           <div className={styles.supportPanel}>
             <h2>
-              Inscripciones de {isSmash ? 'jugadores' : 'equipos'} ({registrations.length})
+              {formatMessage(isSmash ? copy.playerRegistrations : copy.teamRegistrations, {
+                count: registrations.length,
+              })}
             </h2>
             {registrations.length === 0 ? (
               <p>
-                Compartí la <Link href={`/t/${tournament.slug}`}>página pública</Link> para recibir
-                inscripciones.
+                {copy.sharePublicPagePrefix}{' '}
+                <Link href={`/t/${tournament.slug}`}>{copy.sharePublicPageLink}</Link>{' '}
+                {copy.sharePublicPageSuffix}
               </p>
             ) : (
               <ul className={styles.supportList}>
@@ -326,11 +350,13 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
                   <li key={registration.id}>
                     <strong>{registration.teamName}</strong>
                     <span className={styles.itemMeta}>
-                      {registration.teamTag ?? 'Sin tag'} · Capitán:{' '}
-                      {registration.captainName ?? 'Sin asignar'} ·{' '}
-                      {formatRegistrationStatus(registration.status)}
+                      {registration.teamTag ?? copy.noTag} ·{' '}
+                      {formatMessage(copy.captain, {
+                        name: registration.captainName ?? copy.unassigned,
+                      })}{' '}
+                      · {formatRegistrationStatus(registration.status, locale)}
                       {registration.waitlistPosition
-                        ? ` · Espera ${registration.waitlistPosition}`
+                        ? ` · ${formatMessage(copy.waitlist, { position: registration.waitlistPosition })}`
                         : ''}
                     </span>
                     <RegistrationActions tournamentId={id} registration={registration} />
@@ -341,20 +367,17 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
           </div>
 
           <div className={styles.supportPanel}>
-            <h2>Check-in ({participants.length})</h2>
+            <h2>{formatMessage(copy.checkIn, { count: participants.length })}</h2>
             {participants.length === 0 ? (
-              <p>
-                Sin {isSmash ? 'jugadores' : 'participantes'} confirmados. Aprobá inscripciones
-                primero.
-              </p>
+              <p>{isSmash ? copy.noConfirmedPlayers : copy.noConfirmedParticipants}</p>
             ) : (
               <ul className={styles.supportList}>
                 {participants.map((participant) => (
                   <li key={participant.teamName}>
                     <strong>{participant.teamName}</strong>
                     <span className={styles.itemMeta}>
-                      {participant.checkedIn ? 'Check-in hecho' : 'Sin check-in'} ·{' '}
-                      {formatParticipantStatus(participant.status)}
+                      {participant.checkedIn ? copy.checkedIn : copy.notCheckedIn} ·{' '}
+                      {formatParticipantStatus(participant.status, locale)}
                     </span>
                   </li>
                 ))}
@@ -366,8 +389,8 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
 
       {isAdmin && (
         <section id="settings" className={`${styles.supportPanel} ${styles.settings}`}>
-          <h2>Configuración y estado</h2>
-          <p>Publicá, generá el bracket o cancelá el torneo según su estado actual.</p>
+          <h2>{copy.settingsTitle}</h2>
+          <p>{copy.settingsDescription}</p>
           <TournamentActions tournamentId={id} status={tournament.status} />
           <ParticipantAccessManager
             tournamentId={id}

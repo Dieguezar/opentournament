@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 import { shouldShowRegistrationDecisionActions } from '@/lib/presentation';
 
@@ -22,6 +23,8 @@ export function RegistrationActions({
   tournamentId: string;
   registration: RegistrationView;
 }) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.adminActions;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +37,7 @@ export function RegistrationActions({
       });
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'error');
+      setError(err instanceof ApiClientError && locale === 'es' ? err.message : copy.actionError);
     }
   }
 
@@ -43,10 +46,10 @@ export function RegistrationActions({
   return (
     <>
       <button type="button" onClick={() => decide('approved')}>
-        Aprobar
+        {copy.approve}
       </button>{' '}
       <button type="button" className="button button-secondary" onClick={() => decide('rejected')}>
-        Rechazar
+        {copy.reject}
       </button>
       {error && (
         <span className="error" role="alert">

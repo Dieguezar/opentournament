@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 import { canGenerateBracket } from '@/lib/presentation';
 
@@ -12,6 +13,8 @@ export function TournamentActions({
   tournamentId: string;
   status: string;
 }) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.adminActions;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -23,39 +26,50 @@ export function TournamentActions({
       await apiClient(path, { method: 'POST' });
       router.refresh();
     } catch (err) {
-      setError(`${label}: ${err instanceof ApiClientError ? err.message : 'error'}`);
+      const message =
+        err instanceof ApiClientError && locale === 'es' ? err.message : copy.actionError;
+      setError(`${label}: ${message}`);
     } finally {
       setBusy(false);
     }
   }
 
   async function cancel() {
-    if (!window.confirm('¿Seguro que quieres cancelar este torneo?')) return;
-    await run(`/tournaments/${tournamentId}/cancel`, 'Cancelar');
+    if (!window.confirm(copy.cancelConfirmation)) return;
+    await run(`/tournaments/${tournamentId}/cancel`, copy.cancel);
   }
 
   return (
     <div className="actions">
       {status === 'draft' && (
-        <button type="button" disabled={busy} onClick={() => run(`/tournaments/${tournamentId}/publish`, 'Publicar')}>
-          Publicar torneo
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => run(`/tournaments/${tournamentId}/publish`, copy.publish)}
+        >
+          {copy.publishTournament}
         </button>
       )}
       {canGenerateBracket(status) && (
         <button
           type="button"
           disabled={busy}
-          onClick={() => run(`/tournaments/${tournamentId}/bracket/generate`, 'Generar bracket')}
+          onClick={() => run(`/tournaments/${tournamentId}/bracket/generate`, copy.generateBracket)}
         >
-          Generar bracket
+          {copy.generateBracket}
         </button>
       )}
       {!['draft', 'finalized', 'cancelled'].includes(status) && (
         <button type="button" className="button button-secondary" disabled={busy} onClick={cancel}>
-          Cancelar torneo
+          {copy.cancelTournament}
         </button>
       )}
-      {error && <span className="error" role="alert"> {error}</span>}
+      {error && (
+        <span className="error" role="alert">
+          {' '}
+          {error}
+        </span>
+      )}
     </div>
   );
 }
