@@ -1686,6 +1686,16 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
       expect(leagueMatches.every((match) => match.status === 'finalized')).toBe(true);
       expect(leagueMatches.every((match) => (match.result?.lolGames?.length ?? 0) >= 2)).toBe(true);
 
+      const [smashTournament] = await db
+        .select()
+        .from(tournaments)
+        .where(eq(tournaments.id, firstSeed.smashTournamentId));
+      expect(smashTournament).toMatchObject({
+        slug: 'smash-random-showdown',
+        status: 'finalized',
+        gameAdapterKey: 'smash_ultimate',
+      });
+
       const demoTeams = await db
         .select({ id: teams.id })
         .from(teams)

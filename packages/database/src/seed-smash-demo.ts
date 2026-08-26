@@ -194,7 +194,13 @@ export async function seedSmashDemoData(
     .from(demoFlags)
     .where(eq(demoFlags.key, SMASH_DEMO_FLAG))
     .limit(1);
-  if (existingFlag?.value) return SMASH_DEMO_TOURNAMENT_ID;
+  if (existingFlag?.value) {
+    await db
+      .update(tournaments)
+      .set({ status: 'finalized' })
+      .where(eq(tournaments.id, SMASH_DEMO_TOURNAMENT_ID));
+    return SMASH_DEMO_TOURNAMENT_ID;
+  }
 
   await db
     .insert(teams)
@@ -230,7 +236,7 @@ export async function seedSmashDemoData(
         'Singles competitivo: 3 stocks, 7 minutos, objetos y hazards desactivados. BO3 hasta finales y BO5 en las finales.',
       format: 'double_elimination',
       visibility: 'public',
-      status: 'completed',
+      status: 'finalized',
       capacity: 8,
       seriesConfig: { bo: 3, drawsAllowed: false },
       registrationConfig: { manualApproval: false },
