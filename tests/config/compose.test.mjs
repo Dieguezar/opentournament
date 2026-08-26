@@ -211,6 +211,12 @@ test('publishes signed multi-platform images only from semantic version tags', (
   assert.match(releaseWorkflow, /sbom: true/u);
   assert.match(releaseWorkflow, /actions\/attest-build-provenance@v4/u);
   assert.match(releaseWorkflow, /push-to-registry: true/u);
+  assert.match(releaseWorkflow, /release:\s+name: Create GitHub release\s+needs: publish/u);
+  assert.match(releaseWorkflow, /contents: write/u);
+  assert.match(releaseWorkflow, /gh release view "\$\{GITHUB_REF_NAME\}"/u);
+  assert.match(releaseWorkflow, /gh release create "\$\{GITHUB_REF_NAME\}"/u);
+  assert.match(releaseWorkflow, /--verify-tag/u);
+  assert.match(releaseWorkflow, /--generate-notes/u);
 });
 
 test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () => {

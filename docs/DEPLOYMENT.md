@@ -84,12 +84,24 @@ Los workflows de GitHub Actions disponibles son:
   levanta web, API, PostgreSQL y MinIO desde cero, verifica las rutas saludables y destruye los
   volúmenes al finalizar.
 - **Publish container images (tags):** un tag `vX.Y.Z` construye API y web para AMD64/ARM64,
-  publica tags semver en GHCR y adjunta SBOM y procedencia verificable.
+  publica tags semver en GHCR, adjunta SBOM y procedencia verificable y crea el GitHub Release con
+  notas generadas después de publicar correctamente ambas imágenes.
 - **OWASP ZAP baseline (manual):** levanta una instalación aislada, ejecuta un análisis pasivo
   contra la web pública y conserva el reporte como artefacto sin crear issues automáticamente.
 
 Antes del primer release se debe verificar que ambos paquetes de GHCR tengan visibilidad pública.
-La creación del release de GitHub y sus notas sigue pendiente hasta publicar el primer tag.
+El primer tag sigue pendiente; el workflow no crea releases ni paquetes antes de recibir uno.
+
+### 9.1 Publicar una versión
+
+1. Confirmar que CI, CodeQL, el smoke de Compose y el baseline ZAP estén verdes en `main`.
+2. Actualizar la versión y mover las entradas relevantes de `CHANGELOG.md` a la nueva versión.
+3. Crear y subir un tag anotado: `git tag -a vX.Y.Z -m "OpenTournament vX.Y.Z"` y
+   `git push origin vX.Y.Z`.
+4. Esperar a que **Publish container images** termine; el GitHub Release solo se crea si API y web
+   se publicaron y atestaron correctamente.
+5. En el primer release, marcar `opentournament-api` y `opentournament-web` como públicos en GHCR y
+   verificar una instalación usando los tags exactos publicados.
 
 ## 10. Dimensionamiento
 
