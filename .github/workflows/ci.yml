@@ -27,7 +27,7 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm build
-      - run: pnpm audit --prod
+      - run: pnpm audit
 
   integration:
     name: Pruebas de integración (PostgreSQL)
