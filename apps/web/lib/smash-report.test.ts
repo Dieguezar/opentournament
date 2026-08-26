@@ -11,8 +11,8 @@ const HOME_ID = '00000000-0000-4000-8000-000000000101';
 const AWAY_ID = '00000000-0000-4000-8000-000000000102';
 const STAGES = ['Battlefield', 'Final Destination'];
 
-describe('presets de marcador de Smash Ultimate', () => {
-  it('ofrece únicamente resultados definitivos para BO3 y BO5', () => {
+describe('Smash Ultimate score presets', () => {
+  it('only offers decisive outcomes for BO3 and BO5', () => {
     expect(getSmashScorePresets(3, HOME_ID, AWAY_ID)).toMatchObject([
       { homeScore: 2, awayScore: 0, winnerTeamId: HOME_ID },
       { homeScore: 2, awayScore: 1, winnerTeamId: HOME_ID },
@@ -24,7 +24,7 @@ describe('presets de marcador de Smash Ultimate', () => {
     expect(getSmashScorePresets(1, HOME_ID, AWAY_ID)).toEqual([]);
   });
 
-  it('genera exactamente los games del marcador elegido con un ganador global coherente', () => {
+  it('generates exactly the games required by the score with a consistent winner', () => {
     const preset = getSmashScorePresets(3, HOME_ID, AWAY_ID)[1]!;
     const games = createSmashGames(preset);
 
@@ -34,7 +34,7 @@ describe('presets de marcador de Smash Ultimate', () => {
     expect(games.filter((game) => game.winnerTeamId === AWAY_ID)).toHaveLength(1);
   });
 
-  it('pone al perdedor en cero stocks cuando cambia el ganador de un game', () => {
+  it('sets the loser to zero stocks when a game winner changes', () => {
     const preset = getSmashScorePresets(3, HOME_ID, AWAY_ID)[0]!;
     const game = {
       ...createSmashGames(preset)[0]!,
@@ -50,7 +50,7 @@ describe('presets de marcador de Smash Ultimate', () => {
   });
 });
 
-describe('validación del reporte guiado de Smash Ultimate', () => {
+describe('guided Smash Ultimate report validation', () => {
   function getCompleteReport() {
     const preset = getSmashScorePresets(3, HOME_ID, AWAY_ID)[1]!;
     const games = createSmashGames(preset).map((game, index) => ({
@@ -63,7 +63,7 @@ describe('validación del reporte guiado de Smash Ultimate', () => {
     return { preset, games };
   }
 
-  it('señala y localiza el primer campo faltante', () => {
+  it('identifies and localizes the first missing field', () => {
     const { preset, games } = getCompleteReport();
     games[0] = { ...games[0]!, stage: '' };
 
@@ -79,7 +79,7 @@ describe('validación del reporte guiado de Smash Ultimate', () => {
     expect(englishResult.errors['smash-game-1-stage']).toBe('Choose the stage for game 1.');
   });
 
-  it('rechaza escenarios ajenos al ruleset y personajes vacíos', () => {
+  it('rejects stages outside the ruleset and empty characters', () => {
     const { preset, games } = getCompleteReport();
     games[0] = { ...games[0]!, stage: 'Corneria', awayCharacter: '   ' };
 
@@ -91,7 +91,7 @@ describe('validación del reporte guiado de Smash Ultimate', () => {
     );
   });
 
-  it('rechaza stocks inválidos y un resultado que ya no coincide con el preset', () => {
+  it('rejects invalid stocks and an outcome that no longer matches the preset', () => {
     const { preset, games } = getCompleteReport();
     games[0] = { ...games[0]!, winnerTeamId: AWAY_ID, homeStocks: 0, awayStocks: 4 };
 
@@ -105,7 +105,7 @@ describe('validación del reporte guiado de Smash Ultimate', () => {
     );
   });
 
-  it('rechaza stocks asignados al perdedor aunque el total de victorias coincida', () => {
+  it('rejects stocks assigned to the loser even when the win total matches', () => {
     const { preset, games } = getCompleteReport();
     games[0] = { ...games[0]!, homeStocks: 0, awayStocks: 1 };
 
@@ -116,7 +116,7 @@ describe('validación del reporte guiado de Smash Ultimate', () => {
     );
   });
 
-  it('construye el contrato aceptado por el API cuando el reporte es válido', () => {
+  it('builds the API contract when the report is valid', () => {
     const { preset, games } = getCompleteReport();
 
     expect(

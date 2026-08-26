@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('registro → wizard → dashboard', async ({ page }) => {
+test('registration → wizard → dashboard', async ({ page }) => {
   const email = `e2e-${Date.now()}@example.com`;
 
   await page.goto('/register');
@@ -23,7 +23,7 @@ test('registro → wizard → dashboard', async ({ page }) => {
   await expect(page.getByText('Comunidad E2E')).toBeVisible();
 });
 
-test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }) => {
+test('seeded demo → tournament → bracket → resolved dispute', async ({ page }) => {
   await page.goto('/login');
   await page.getByLabel('Correo').fill('admin@opentournament.local');
   await page.getByLabel('Contraseña').fill('demo-password-123');
@@ -62,7 +62,7 @@ test('demo poblada → torneo → bracket → disputa resuelta', async ({ page }
   await expect(page.getByText('La evidencia del servidor confirma')).toBeVisible();
 });
 
-test('la portada autenticada propone acciones útiles y el menú refluye en móvil', async ({
+test('the authenticated home offers useful actions and its menu reflows on mobile', async ({
   page,
 }) => {
   await page.goto('/login');
@@ -81,13 +81,11 @@ test('la portada autenticada propone acciones útiles y el menú refluye en móv
   await page.setViewportSize({ width: 320, height: 800 });
   const mainNavigation = page.getByRole('navigation', { name: 'Principal' });
   await expect
-    .poll(() =>
-      mainNavigation.evaluate((element) => element.scrollWidth <= element.clientWidth),
-    )
+    .poll(() => mainNavigation.evaluate((element) => element.scrollWidth <= element.clientWidth))
     .toBe(true);
 });
 
-test('demo Smash → 8 participantes → personajes y games visibles', async ({ page }) => {
+test('Smash demo → 8 participants → visible characters and games', async ({ page }) => {
   await page.goto('/t/smash-random-showdown');
 
   await expect(page.getByRole('heading', { name: 'Smash Random Showdown' })).toBeVisible();
@@ -97,7 +95,7 @@ test('demo Smash → 8 participantes → personajes y games visibles', async ({ 
   await expect(page.getByText(/^[2-5] games$/)).toHaveCount(15);
 });
 
-test('demo LoL → 8 equipos → reglas y partidas de cada serie visibles', async ({ page }) => {
+test('LoL demo → 8 teams → visible rules and series games', async ({ page }) => {
   await page.goto('/t/liga-nexo-lol');
 
   await expect(page.getByRole('heading', { name: 'Liga Nexo LoL' })).toBeVisible();

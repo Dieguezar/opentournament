@@ -20,7 +20,7 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
     const { id } = request.params as { id: string };
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
 
@@ -48,12 +48,12 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
     const tournament = await getTournament(db, id);
     if (!tournament) {
       return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'El torneo no existe' },
+        error: { code: 'NOT_FOUND', message: 'The tournament does not exist' },
       });
     }
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
 
@@ -91,7 +91,7 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
       return reply.status(409).send({
         error: {
           code: 'TEAM_NOT_ELIGIBLE',
-          message: 'El pase sólo puede asignarse a un participante aprobado',
+          message: 'The pass can only be assigned to an approved participant',
         },
       });
     }
@@ -116,7 +116,7 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
         .insert(users)
         .values({ displayName: `${team.name} · participante` })
         .returning({ id: users.id });
-      if (!actor) throw new Error('No se pudo crear la identidad del participante');
+      if (!actor) throw new Error('The participant identity could not be created');
 
       const [created] = await transaction
         .insert(participantAccessPasses)
@@ -134,7 +134,7 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
           expiresAt: participantAccessPasses.expiresAt,
           createdAt: participantAccessPasses.createdAt,
         });
-      if (!created) throw new Error('No se pudo crear el pase');
+      if (!created) throw new Error('The participant pass could not be created');
 
       await transaction.insert(auditLogs).values({
         organizationId: tournament.organizationId,
@@ -160,12 +160,12 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
     const tournament = await getTournament(db, id);
     if (!tournament) {
       return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'El torneo no existe' },
+        error: { code: 'NOT_FOUND', message: 'The tournament does not exist' },
       });
     }
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
 
@@ -182,7 +182,10 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
       .returning({ id: participantAccessPasses.id, teamId: participantAccessPasses.teamId });
     if (!revoked) {
       return reply.status(404).send({
-        error: { code: 'PASS_NOT_FOUND', message: 'El pase no existe o ya fue revocado' },
+        error: {
+          code: 'PASS_NOT_FOUND',
+          message: 'The participant pass does not exist or was revoked',
+        },
       });
     }
 

@@ -1,16 +1,11 @@
 import { z } from 'zod';
 
-export const emailSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .email('Correo electrónico inválido')
-  .max(254);
+export const emailSchema = z.string().trim().toLowerCase().email('Invalid email address').max(254);
 
 export const passwordSchema = z
   .string()
-  .min(8, 'La contraseña debe tener al menos 8 caracteres')
-  .max(128, 'La contraseña es demasiado larga');
+  .min(8, 'The password must contain at least 8 characters')
+  .max(128, 'The password is too long');
 
 export const displayNameSchema = z.string().trim().min(2).max(60);
 
@@ -19,7 +14,10 @@ export const slugSchema = z
   .trim()
   .min(2)
   .max(40)
-  .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'El slug solo admite minúsculas, números y guiones');
+  .regex(
+    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+    'The slug only allows lowercase letters, numbers, and hyphens',
+  );
 
 export const localeSchema = z.enum(['es', 'en']);
 
@@ -32,7 +30,7 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1, 'La contraseña es obligatoria').max(128),
+  password: z.string().min(1, 'The password is required').max(128),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
@@ -42,13 +40,13 @@ export const forgotPasswordSchema = z.object({
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 
 export const resetPasswordSchema = z.object({
-  token: z.string().min(20, 'Token inválido'),
+  token: z.string().min(20, 'Invalid token'),
   password: passwordSchema,
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 
 export const createOrganizationSchema = z.object({
-  name: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(80),
+  name: z.string().trim().min(2, 'The name must contain at least 2 characters').max(80),
   slug: slugSchema,
   description: z.string().trim().max(500).optional(),
 });
@@ -103,7 +101,7 @@ export const smashUltimateRulesSchema = z
     if (new Set(normalizedStarters).size !== normalizedStarters.length) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Los escenarios iniciales no pueden repetirse',
+        message: 'Starter stages cannot be duplicated',
         path: ['starters'],
       });
     }
@@ -111,7 +109,7 @@ export const smashUltimateRulesSchema = z
     if (new Set(normalizedCounterpicks).size !== normalizedCounterpicks.length) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Los escenarios de counterpick no pueden repetirse',
+        message: 'Counterpick stages cannot be duplicated',
         path: ['counterpicks'],
       });
     }
@@ -129,7 +127,7 @@ export const smashUltimateRulesSchema = z
     if (totalStages > 0 && rules.stageBans >= totalStages) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Los vetos deben dejar al menos un escenario disponible',
+        message: 'Stage bans must leave at least one stage available',
         path: ['stageBans'],
       });
     }
@@ -138,7 +136,7 @@ export const smashUltimateRulesSchema = z
 const leaguePatchVersionSchema = z
   .string()
   .trim()
-  .regex(/^\d{1,2}\.\d{1,2}$/, 'Usá una versión de parche como 26.16')
+  .regex(/^\d{1,2}\.\d{1,2}$/, 'Use a patch version such as 26.16')
   .nullable();
 
 export const leagueOfLegendsRulesSchema = z
@@ -178,14 +176,14 @@ export const leagueOfLegendsRulesSchema = z
     if (rules.patchPolicy === 'fixed' && !rules.patchVersion) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Indicá la versión fija del parche',
+        message: 'Provide the fixed patch version',
         path: ['patchVersion'],
       });
     }
     if (rules.patchPolicy === 'live' && rules.patchVersion !== null) {
       ctx.addIssue({
         code: 'custom',
-        message: 'El parche live no debe fijar una versión',
+        message: 'A live patch policy must not specify a version',
         path: ['patchVersion'],
       });
     }
@@ -209,7 +207,7 @@ export const tournamentSettingsSchema = z.object({
 
 const createTeamBaseShape = {
   organizationId: z.string().uuid(),
-  name: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(40),
+  name: z.string().trim().min(2, 'The name must contain at least 2 characters').max(40),
 };
 
 const competitiveTeamTagSchema = z
@@ -217,7 +215,7 @@ const competitiveTeamTagSchema = z
   .trim()
   .min(2)
   .max(8)
-  .regex(/^[A-Za-z0-9]+$/, 'El tag solo admite letras y números');
+  .regex(/^[A-Za-z0-9]+$/, 'The tag only allows letters and numbers');
 
 const smashPlayerTagSchema = z.string().trim().min(1).max(32);
 
@@ -246,7 +244,7 @@ export type AddTeamMemberInput = z.infer<typeof addTeamMemberSchema>;
 export const assignTeamGameAdapterSchema = z.object({
   gameAdapterKey: gameAdapterKeySchema.refine(
     (gameAdapterKey) => gameAdapterKey !== 'generic',
-    'Seleccioná un juego concreto para el equipo',
+    'Select a specific game for the team',
   ),
 });
 export type AssignTeamGameAdapterInput = z.infer<typeof assignTeamGameAdapterSchema>;
@@ -296,7 +294,7 @@ export const createTournamentSchema = z
     if (gameRules && gameRules.game !== tournament.gameAdapterKey) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Las reglas del juego no corresponden al adaptador seleccionado',
+        message: 'The game rules do not match the selected adapter',
         path: ['settings', 'gameRules', 'game'],
       });
     }
@@ -307,7 +305,7 @@ export const createTournamentSchema = z
     ) {
       ctx.addIssue({
         code: 'custom',
-        message: 'El juego seleccionado no admite empates',
+        message: 'The selected game does not allow draws',
         path: ['seriesConfig', 'drawsAllowed'],
       });
     }
@@ -319,7 +317,7 @@ export const createTournamentSchema = z
     ) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Smash Ultimate sólo admite series BO3 o BO5',
+        message: 'Smash Ultimate only supports BO3 or BO5 sets',
         path: ['seriesConfig', 'bo'],
       });
     }
@@ -334,7 +332,7 @@ export const createTournamentSchema = z
     ) {
       ctx.addIssue({
         code: 'custom',
-        message: 'El adaptador seleccionado no admite metadatos de plantilla',
+        message: 'The selected adapter does not support template metadata',
         path: ['settings', 'templateKey'],
       });
     }
@@ -430,7 +428,7 @@ export const leagueGameResultSchema = z.object({
     .trim()
     .min(1)
     .max(100)
-    .regex(/^[A-Za-z0-9_-]+$/, 'Riot Match ID inválido')
+    .regex(/^[A-Za-z0-9_-]+$/, 'Invalid Riot Match ID')
     .optional(),
 });
 export type LeagueGameResultInput = z.infer<typeof leagueGameResultSchema>;
@@ -507,6 +505,10 @@ export const resolveDisputeSchema = z.object({
   draw: z.boolean().default(false),
   homeScore: z.coerce.number().int().min(0).max(99).optional(),
   awayScore: z.coerce.number().int().min(0).max(99).optional(),
-  rationale: z.string().trim().min(10, 'El motivo debe tener al menos 10 caracteres').max(5000),
+  rationale: z
+    .string()
+    .trim()
+    .min(10, 'The rationale must contain at least 10 characters')
+    .max(5000),
 });
 export type ResolveDisputeInput = z.infer<typeof resolveDisputeSchema>;

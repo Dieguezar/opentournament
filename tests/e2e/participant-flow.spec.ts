@@ -87,9 +87,11 @@ async function createTournament(
     headers: mutationHeaders(owner),
   });
   expect(tournamentResponse.status()).toBe(201);
-  const tournament = ((await tournamentResponse.json()) as {
-    tournament: { id: string; slug: string };
-  }).tournament;
+  const tournament = (
+    (await tournamentResponse.json()) as {
+      tournament: { id: string; slug: string };
+    }
+  ).tournament;
 
   expect(
     (
@@ -177,7 +179,7 @@ async function reportResult(
   await page.getByRole('button', { name: 'Reportar resultado' }).click();
 }
 
-test('pases aislados → navegación participante → acuerdo y conflicto bilateral', async ({
+test('isolated passes → participant navigation → bilateral agreement and conflict', async ({
   browser,
 }) => {
   const owner = await registerOrganizer();
@@ -192,9 +194,11 @@ test('pases aislados → navegación participante → acuerdo y conflicto bilate
       headers: mutationHeaders(owner),
     });
     expect(organizationResponse.status()).toBe(201);
-    const organizationId = ((await organizationResponse.json()) as {
-      organization: { id: string };
-    }).organization.id;
+    const organizationId = (
+      (await organizationResponse.json()) as {
+        organization: { id: string };
+      }
+    ).organization.id;
 
     const teams = await Promise.all([
       createTeam(owner, organizationId, 'Aurora E2E', 'AUR'),
@@ -203,12 +207,7 @@ test('pases aislados → navegación participante → acuerdo y conflicto bilate
       createTeam(owner, organizationId, 'Quetzal E2E', 'QTZ'),
     ]);
 
-    const visibilityTournament = await createTournament(
-      owner,
-      organizationId,
-      teams,
-      'visibility',
-    );
+    const visibilityTournament = await createTournament(owner, organizationId, teams, 'visibility');
     const visibilityMatch = visibilityTournament.matches[0]!;
     const visibilityHomeToken = await createPass(
       owner,
@@ -216,7 +215,9 @@ test('pases aislados → navegación participante → acuerdo y conflicto bilate
       visibilityMatch.homeTeamId,
     );
 
-    const organizerContext = await browser.newContext({ storageState: await owner.api.storageState() });
+    const organizerContext = await browser.newContext({
+      storageState: await owner.api.storageState(),
+    });
     contexts.push(organizerContext);
     const warningPage = await organizerContext.newPage();
     await warningPage.goto(`/access#token=${visibilityHomeToken}`);
@@ -224,7 +225,9 @@ test('pases aislados → navegación participante → acuerdo y conflicto bilate
       warningPage.getByRole('heading', { name: '¿Reemplazar la sesión activa?' }),
     ).toBeVisible();
     await expect(
-      warningPage.getByText(/reemplazará la sesión activa en este navegador y en todas sus pestañas/),
+      warningPage.getByText(
+        /reemplazará la sesión activa en este navegador y en todas sus pestañas/,
+      ),
     ).toBeVisible();
     await warningPage.getByRole('button', { name: 'Continuar con el pase' }).click();
     await warningPage.waitForURL(/\/t\/participant-visibility-/);
@@ -257,24 +260,12 @@ test('pases aislados → navegación participante → acuerdo y conflicto bilate
     const confirmationAway = await openParticipant(browser, confirmationAwayToken);
     contexts.push(confirmationHome.context, confirmationAway.context);
 
-    await reportResult(
-      confirmationHome.page,
-      confirmationMatch,
-      confirmationMatch.homeTeam,
-      13,
-      9,
-    );
+    await reportResult(confirmationHome.page, confirmationMatch, confirmationMatch.homeTeam, 13, 9);
     await expect(
       confirmationHome.page.getByText('Reporte enviado. Esperando la confirmación del rival…'),
     ).toBeVisible();
 
-    await reportResult(
-      confirmationAway.page,
-      confirmationMatch,
-      confirmationMatch.homeTeam,
-      13,
-      9,
-    );
+    await reportResult(confirmationAway.page, confirmationMatch, confirmationMatch.homeTeam, 13, 9);
     await expect(
       confirmationAway.page.getByText('Resultado confirmado y bracket actualizado.'),
     ).toBeVisible();
@@ -310,9 +301,9 @@ test('pases aislados → navegación participante → acuerdo y conflicto bilate
       `/api/v1/tournaments/${conflictTournament.id}/disputes`,
     );
     expect(disputesResponse.ok()).toBe(true);
-    expect((await disputesResponse.json()) as { disputes: Array<{ reason: string }> }).toMatchObject(
-      { disputes: [expect.objectContaining({ reason: 'result_conflict' })] },
-    );
+    expect(
+      (await disputesResponse.json()) as { disputes: Array<{ reason: string }> },
+    ).toMatchObject({ disputes: [expect.objectContaining({ reason: 'result_conflict' })] });
   } finally {
     await Promise.all(contexts.map((context) => context.close()));
     await owner.api.dispose();

@@ -15,8 +15,8 @@ const baseRequest = {
   winnerTeamId: homeTeamId,
 };
 
-describe('política de reporte de resultados', () => {
-  it('mantiene la confirmación bilateral por defecto', () => {
+describe('result reporting policy', () => {
+  it('keeps bilateral confirmation as the default', () => {
     expect(authorizeResultReport(baseRequest)).toEqual({
       ok: true,
       reporterTeamId: homeTeamId,
@@ -24,7 +24,7 @@ describe('política de reporte de resultados', () => {
     });
   });
 
-  it('autoriza a administración como fuente definitiva en cualquier modo', () => {
+  it('authorizes staff as the definitive source in every mode', () => {
     expect(
       authorizeResultReport({
         ...baseRequest,
@@ -35,7 +35,7 @@ describe('política de reporte de resultados', () => {
     ).toEqual({ ok: true, reporterTeamId: null, strategy: 'authoritative' });
   });
 
-  it('limita un pase al torneo y equipo exactos', () => {
+  it('scopes a pass to the exact tournament and team', () => {
     expect(
       authorizeResultReport({
         ...baseRequest,
@@ -57,7 +57,7 @@ describe('política de reporte de resultados', () => {
     ).toMatchObject({ ok: false, code: 'FORBIDDEN' });
   });
 
-  it('sólo deja reportar al ganador en winner_reports', () => {
+  it('only lets the winner report in winner_reports mode', () => {
     expect(
       authorizeResultReport({
         ...baseRequest,
@@ -78,7 +78,7 @@ describe('política de reporte de resultados', () => {
     ).toMatchObject({ ok: false, code: 'WINNER_MUST_REPORT' });
   });
 
-  it('reserva staff_only para administración y rechaza participantes ajenos al match', () => {
+  it('reserves staff_only for staff and rejects participants outside the match', () => {
     expect(authorizeResultReport({ ...baseRequest, reportingMode: 'staff_only' })).toMatchObject({
       ok: false,
       code: 'STAFF_ONLY',

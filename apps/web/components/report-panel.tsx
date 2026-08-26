@@ -784,10 +784,7 @@ export function ReportPanel({
     } catch (reportError) {
       setErrors((current) => ({
         ...current,
-        [matchId]:
-          reportError instanceof ApiClientError && locale === 'es'
-            ? reportError.message
-            : copy.reportError,
+        [matchId]: reportError instanceof ApiClientError ? reportError.message : copy.reportError,
       }));
     } finally {
       setBusyMatchId(null);
@@ -815,9 +812,7 @@ export function ReportPanel({
       setErrors((current) => ({
         ...current,
         [matchId]:
-          disputeError instanceof ApiClientError && locale === 'es'
-            ? disputeError.message
-            : copy.disputeError,
+          disputeError instanceof ApiClientError ? disputeError.message : copy.disputeError,
       }));
     } finally {
       setBusyMatchId(null);

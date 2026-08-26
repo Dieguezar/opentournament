@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { ResultReportingMode } from '@opentournament/shared-types';
 import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
-import { formatMessage, type Dictionary, type Locale } from '@/lib/i18n';
+import { formatMessage, type Dictionary } from '@/lib/i18n';
 import { ParticipantAccessSecret } from './participant-access-secret';
 import styles from './participant-access-manager.module.css';
 
@@ -25,12 +25,8 @@ interface AccessPassView {
   createdAt: string;
 }
 
-function errorMessage(
-  error: unknown,
-  locale: Locale,
-  copy: Dictionary['participantAccess'],
-): string {
-  return error instanceof ApiClientError && locale === 'es' ? error.message : copy.actionError;
+function errorMessage(error: unknown, copy: Dictionary['participantAccess']): string {
+  return error instanceof ApiClientError ? error.message : copy.actionError;
 }
 
 export function ParticipantAccessManager({
@@ -64,10 +60,8 @@ export function ParticipantAccessManager({
   }, [tournamentId]);
 
   useEffect(() => {
-    void loadPasses().catch((loadError: unknown) =>
-      setError(errorMessage(loadError, locale, copy)),
-    );
-  }, [copy, loadPasses, locale]);
+    void loadPasses().catch((loadError: unknown) => setError(errorMessage(loadError, copy)));
+  }, [copy, loadPasses]);
 
   async function saveReportingMode(nextMode: ResultReportingMode) {
     const previousMode = reportingMode;
@@ -82,7 +76,7 @@ export function ParticipantAccessManager({
       setMessage(copy.reportingModeUpdated);
     } catch (saveError) {
       setReportingMode(previousMode);
-      setError(errorMessage(saveError, locale, copy));
+      setError(errorMessage(saveError, copy));
     }
   }
 
@@ -107,7 +101,7 @@ export function ParticipantAccessManager({
       setMessage(copy.linkCreated);
       await loadPasses();
     } catch (createError) {
-      setError(errorMessage(createError, locale, copy));
+      setError(errorMessage(createError, copy));
     } finally {
       setBusy(false);
     }
@@ -135,7 +129,7 @@ export function ParticipantAccessManager({
       setMessage(copy.passRevoked);
       await loadPasses();
     } catch (revokeError) {
-      setError(errorMessage(revokeError, locale, copy));
+      setError(errorMessage(revokeError, copy));
     } finally {
       setBusy(false);
     }

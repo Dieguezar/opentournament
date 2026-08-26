@@ -70,7 +70,7 @@ export async function registerAuthPlugins(app: FastifyInstance, db: Db): Promise
     const headerToken = request.headers['x-csrf-token'];
     if (typeof headerToken !== 'string' || !csrfTokensMatch(cookieToken, headerToken)) {
       return reply.status(403).send({
-        error: { code: 'CSRF_INVALID', message: 'Token CSRF inválido o ausente' },
+        error: { code: 'CSRF_INVALID', message: 'The CSRF token is missing or invalid' },
       });
     }
   });
@@ -122,7 +122,7 @@ export async function loadSessionUser(db: Db, userId: string): Promise<SessionUs
 export function requireAuth(request: FastifyRequest, reply: FastifyReply): boolean {
   if (!request.user) {
     reply.status(401).send({
-      error: { code: 'UNAUTHORIZED', message: 'Se requiere iniciar sesión' },
+      error: { code: 'UNAUTHORIZED', message: 'Authentication is required' },
     });
     return false;
   }

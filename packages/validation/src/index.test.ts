@@ -69,8 +69,8 @@ function createTournament(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('validación de plantillas por juego', () => {
-  it('acepta Smash Ultimate con reglas y metadatos de plantilla válidos', () => {
+describe('game template validation', () => {
+  it('accepts Smash Ultimate with valid rules and template metadata', () => {
     const result = createTournamentSchema.safeParse(createTournament());
 
     expect(result.success).toBe(true);
@@ -80,7 +80,7 @@ describe('validación de plantillas por juego', () => {
     }
   });
 
-  it('rechaza reglas que no correspondan al adaptador seleccionado', () => {
+  it('rejects rules that do not match the selected adapter', () => {
     const result = createTournamentSchema.safeParse(
       createTournament({ gameAdapterKey: 'generic' }),
     );
@@ -88,7 +88,7 @@ describe('validación de plantillas por juego', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rechaza empates en torneos de Smash Ultimate', () => {
+  it('rejects draws in Smash Ultimate tournaments', () => {
     const result = createTournamentSchema.safeParse(
       createTournament({ seriesConfig: { bo: 3, drawsAllowed: true } }),
     );
@@ -96,7 +96,7 @@ describe('validación de plantillas por juego', () => {
     expect(result.success).toBe(false);
   });
 
-  it('acepta una plantilla competitiva de League of Legends coherente', () => {
+  it('accepts a consistent competitive League of Legends template', () => {
     const result = createTournamentSchema.safeParse(
       createTournament({
         gameAdapterKey: 'lol',
@@ -118,7 +118,7 @@ describe('validación de plantillas por juego', () => {
     if (result.success) expect(result.data.settings.gameRules).toEqual(lolRules);
   });
 
-  it('exige versión cuando la política de parche de LoL es fija', () => {
+  it('requires a version when the LoL patch policy is fixed', () => {
     const baseSettings = {
       grandFinalReset: false,
       presencial: false,
@@ -148,7 +148,7 @@ describe('validación de plantillas por juego', () => {
     expect(valid.success).toBe(true);
   });
 
-  it('rechaza reglas de LoL con mapa, región o pausas inválidas', () => {
+  it('rejects LoL rules with an invalid map, region, or pauses', () => {
     for (const gameRules of [
       { ...lolRules, map: 'howling_abyss' },
       { ...lolRules, region: 'desconocida' },
@@ -172,7 +172,7 @@ describe('validación de plantillas por juego', () => {
     }
   });
 
-  it.each([3, 5])('acepta BO%s en torneos de Smash Ultimate', (bestOf) => {
+  it.each([3, 5])('accepts BO%s in Smash Ultimate tournaments', (bestOf) => {
     const result = createTournamentSchema.safeParse(
       createTournament({ seriesConfig: { bo: bestOf, drawsAllowed: false } }),
     );
@@ -181,7 +181,7 @@ describe('validación de plantillas por juego', () => {
   });
 
   it.each([1, 2, 4, 7, 9])(
-    'rechaza BO%s porque la plantilla de Smash sólo admite BO3 o BO5',
+    'rejects BO%s because the Smash template only supports BO3 or BO5',
     (bestOf) => {
       const result = createTournamentSchema.safeParse(
         createTournament({ seriesConfig: { bo: bestOf, drawsAllowed: false } }),
@@ -192,23 +192,23 @@ describe('validación de plantillas por juego', () => {
   );
 
   it.each([
-    ['starters vacíos', { ...smashRules, starters: [] }],
-    ['counterpicks vacíos', { ...smashRules, counterpicks: [] }],
-    ['starters duplicados', { ...smashRules, starters: ['Battlefield', 'battlefield'] }],
+    ['empty starters', { ...smashRules, starters: [] }],
+    ['empty counterpicks', { ...smashRules, counterpicks: [] }],
+    ['duplicate starters', { ...smashRules, starters: ['Battlefield', 'battlefield'] }],
     [
-      'starters duplicados con whitespace interno distinto',
+      'duplicate starters with different internal whitespace',
       { ...smashRules, starters: ['Final Destination', 'Final  Destination'] },
     ],
-    ['counterpicks duplicados', { ...smashRules, counterpicks: ['Smashville', ' smashville '] }],
+    ['duplicate counterpicks', { ...smashRules, counterpicks: ['Smashville', ' smashville '] }],
     [
-      'escenarios solapados',
+      'overlapping stages',
       { ...smashRules, counterpicks: ['Kalos Pokémon League', 'BATTLEFIELD'] },
     ],
     [
-      'escenarios solapados con whitespace interno distinto',
+      'overlapping stages with different internal whitespace',
       { ...smashRules, counterpicks: ['Kalos Pokémon   League', 'Final  Destination'] },
     ],
-  ])('rechaza %s', (_caseName, gameRules) => {
+  ])('rejects %s', (_caseName, gameRules) => {
     const result = createTournamentSchema.safeParse(
       createTournament({
         settings: {
@@ -229,7 +229,7 @@ describe('validación de plantillas por juego', () => {
     ['timeLimitMinutes', { ...smashRules, timeLimitMinutes: 0 }],
     ['launchRate', { ...smashRules, launchRate: 0.4 }],
     ['stageBans', { ...smashRules, stageBans: -1 }],
-  ])('rechaza %s fuera de rango', (_field, gameRules) => {
+  ])('rejects out-of-range %s', (_field, gameRules) => {
     const result = createTournamentSchema.safeParse(
       createTournament({
         settings: {
@@ -246,7 +246,7 @@ describe('validación de plantillas por juego', () => {
   });
 
   it.each(['stocks', 'timeLimitMinutes', 'launchRate', 'stageBans'] as const)(
-    'rechaza booleanos en el campo numérico %s',
+    'rejects booleans in numeric field %s',
     (field) => {
       for (const booleanValue of [true, false]) {
         const result = createTournamentSchema.safeParse(
@@ -266,7 +266,7 @@ describe('validación de plantillas por juego', () => {
     },
   );
 
-  it('conserva la coerción de strings de formulario para reglas numéricas', () => {
+  it('preserves form string coercion for numeric rules', () => {
     const result = createTournamentSchema.safeParse(
       createTournament({
         settings: {
@@ -324,8 +324,8 @@ describe('validación de plantillas por juego', () => {
   );
 });
 
-describe('validación del roster por juego', () => {
-  it('permite tags de jugador de Smash entre 1 y 32 caracteres, incluidos símbolos', () => {
+describe('game roster validation', () => {
+  it('allows Smash player tags between 1 and 32 characters, including symbols', () => {
     expect(
       createTeamSchema.parse({
         organizationId,
@@ -352,7 +352,7 @@ describe('validación del roster por juego', () => {
     ).toBe(false);
   });
 
-  it('conserva tags alfanuméricos de 2 a 8 caracteres para los demás juegos', () => {
+  it('keeps 2-to-8-character alphanumeric tags for other games', () => {
     const team = { organizationId, name: 'Equipo tradicional' };
 
     expect(createTeamSchema.safeParse({ ...team, tag: 'AB12' }).success).toBe(true);
@@ -370,7 +370,7 @@ describe('validación del roster por juego', () => {
     ).toBe(false);
   });
 
-  it('acepta miembros y suplentes, pero nunca permite asignar otro capitán', () => {
+  it('accepts members and substitutes but never allows another captain', () => {
     expect(addTeamMemberSchema.parse({ email: 'PLAYER@EXAMPLE.COM' })).toEqual({
       email: 'player@example.com',
       role: 'member',
@@ -384,7 +384,7 @@ describe('validación del roster por juego', () => {
     ).toBe(false);
   });
 
-  it('solo permite asignar un adaptador competitivo concreto a un equipo genérico', () => {
+  it('only allows assigning a concrete competitive adapter to a generic team', () => {
     expect(assignTeamGameAdapterSchema.parse({ gameAdapterKey: 'smash_ultimate' })).toEqual({
       gameAdapterKey: 'smash_ultimate',
     });
@@ -394,7 +394,7 @@ describe('validación del roster por juego', () => {
   });
 });
 
-describe('detalle de games en reportes de Smash Ultimate', () => {
+describe('Smash Ultimate report game details', () => {
   const validGame = {
     number: 1,
     stage: ' Battlefield ',
@@ -405,7 +405,7 @@ describe('detalle de games en reportes de Smash Ultimate', () => {
     awayStocks: 0,
   };
 
-  it('normaliza un game estructurado válido', () => {
+  it('normalizes a valid structured game', () => {
     const result = reportResultSchema.parse({
       winnerTeamId: homeTeamId,
       homeScore: 2,
@@ -435,7 +435,7 @@ describe('detalle de games en reportes de Smash Ultimate', () => {
     },
   );
 
-  it('rechaza personajes vacíos y más de cinco games', () => {
+  it('rejects empty characters and more than five games', () => {
     expect(
       reportResultSchema.safeParse({
         winnerTeamId: homeTeamId,
@@ -454,7 +454,7 @@ describe('detalle de games en reportes de Smash Ultimate', () => {
   });
 });
 
-describe('detalle de partidas en reportes de League of Legends', () => {
+describe('League of Legends report game details', () => {
   const validGame = {
     number: 1,
     winnerTeamId: homeTeamId,
@@ -463,7 +463,7 @@ describe('detalle de partidas en reportes de League of Legends', () => {
     riotMatchId: ' LA1_123456789 ',
   };
 
-  it('normaliza una partida estructurada válida', () => {
+  it('normalizes a valid structured game', () => {
     const result = reportResultSchema.parse({
       winnerTeamId: homeTeamId,
       homeScore: 2,
@@ -474,7 +474,7 @@ describe('detalle de partidas en reportes de League of Legends', () => {
     expect(result.lolGames).toEqual([{ ...validGame, riotMatchId: 'LA1_123456789' }]);
   });
 
-  it('rechaza duración, identificador o combinación de detalles inválidos', () => {
+  it('rejects an invalid duration, identifier, or detail combination', () => {
     expect(
       reportResultSchema.safeParse({ lolGames: [{ ...validGame, durationMinutes: 4 }] }).success,
     ).toBe(false);
@@ -501,8 +501,8 @@ describe('detalle de partidas en reportes de League of Legends', () => {
   });
 });
 
-describe('acceso sin cuenta y reporte de resultados', () => {
-  it('usa reporte bilateral como opción segura por defecto', () => {
+describe('accountless access and result reporting', () => {
+  it('uses bilateral reporting as the safe default', () => {
     expect(tournamentSettingsSchema.parse({})).toMatchObject({
       reportingMode: 'bilateral',
     });
@@ -515,19 +515,19 @@ describe('acceso sin cuenta y reporte de resultados', () => {
     },
   );
 
-  it('rechaza modos de reporte desconocidos', () => {
+  it('rejects unknown reporting modes', () => {
     expect(tournamentSettingsSchema.safeParse({ reportingMode: 'anyone_reports' }).success).toBe(
       false,
     );
   });
 
-  it('permite cambiar sólo el modo de reporte de un torneo existente', () => {
+  it('only allows changing the reporting mode of an existing tournament', () => {
     expect(updateTournamentSchema.parse({ reportingMode: 'staff_only' })).toEqual({
       reportingMode: 'staff_only',
     });
   });
 
-  it('valida el equipo y la duración de un pase de participante', () => {
+  it('validates the team and duration of a participant pass', () => {
     expect(
       createParticipantAccessPassSchema.parse({
         teamId: homeTeamId,
@@ -549,7 +549,7 @@ describe('acceso sin cuenta y reporte de resultados', () => {
     ).toBe(false);
   });
 
-  it('normaliza un token de acceso y rechaza tokens demasiado cortos', () => {
+  it('normalizes an access token and rejects tokens that are too short', () => {
     const token = 'a'.repeat(64);
 
     expect(exchangeParticipantAccessPassSchema.parse({ token: `  ${token}  ` })).toEqual({

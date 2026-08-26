@@ -71,7 +71,7 @@ export interface GameAdapterConfig {
 
 export const genericAdapter: GameAdapterConfig = {
   key: 'generic',
-  name: 'Genérico',
+  name: 'Generic',
   platforms: ['cualquiera'],
   team: { minPlayers: 1, maxPlayers: 10, substitutes: 2 },
   playerId: {
@@ -115,7 +115,7 @@ export const cs2Adapter: GameAdapterConfig = {
   name: 'Counter-Strike 2',
   platforms: ['pc'],
   team: { minPlayers: 5, maxPlayers: 5, substitutes: 1 },
-  playerId: { label: 'Steam ID 64', format: /^7656119\d{10}$/, hint: 'SteamID64 (17 dígitos)' },
+  playerId: { label: 'Steam ID 64', format: /^7656119\d{10}$/, hint: 'SteamID64 (17 digits)' },
   regions: ['latam', 'na', 'eu', 'apac'],
   maps: ['Ancient', 'Anubis', 'Dust2', 'Inferno', 'Mirage', 'Nuke', 'Overpass', 'Train', 'Vertigo'],
   scoring: { type: 'series', drawAllowed: false, defaultSeries: [1, 3, 5] },

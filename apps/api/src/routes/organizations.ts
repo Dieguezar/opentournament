@@ -1,11 +1,6 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import {
-  auditLogs,
-  organizationMembers,
-  organizations,
-  users,
-} from '@opentournament/database';
+import { auditLogs, organizationMembers, organizations, users } from '@opentournament/database';
 import { createOrganizationSchema, inviteMemberSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
@@ -35,7 +30,7 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
       .limit(1);
     if (existing.length > 0) {
       return reply.status(409).send({
-        error: { code: 'SLUG_TAKEN', message: 'Ese slug ya está en uso' },
+        error: { code: 'SLUG_TAKEN', message: 'That slug is already in use' },
       });
     }
 
@@ -49,7 +44,7 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
       .returning();
     if (!org) {
       return reply.status(500).send({
-        error: { code: 'ORG_CREATE_FAILED', message: 'No se pudo crear la organización' },
+        error: { code: 'ORG_CREATE_FAILED', message: 'The organization could not be created' },
       });
     }
 
@@ -80,7 +75,7 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
     const member = await getMembership(orgId, request.user!.id);
     if (!member) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'No perteneces a esta organización' },
+        error: { code: 'FORBIDDEN', message: 'You are not a member of this organization' },
       });
     }
     const [org] = await db
@@ -89,7 +84,9 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
       .where(and(eq(organizations.id, orgId), isNull(organizations.deletedAt)))
       .limit(1);
     if (!org) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     return reply.send({ organization: org, role: member.role });
   });
@@ -103,12 +100,14 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
       .where(and(eq(organizations.slug, slug), isNull(organizations.deletedAt)))
       .limit(1);
     if (!org) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     const member = await getMembership(org.id, request.user!.id);
     if (!member) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'No perteneces a esta organización' },
+        error: { code: 'FORBIDDEN', message: 'You are not a member of this organization' },
       });
     }
     const members = await db
@@ -131,7 +130,7 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
     const member = await getMembership(orgId, request.user!.id);
     if (!member) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'No perteneces a esta organización' },
+        error: { code: 'FORBIDDEN', message: 'You are not a member of this organization' },
       });
     }
     const members = await db
@@ -154,13 +153,13 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
     const member = await getMembership(orgId, request.user!.id);
     if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin u owner' },
+        error: { code: 'FORBIDDEN', message: 'An organization admin or owner role is required' },
       });
     }
     const body = inviteMemberSchema.parse(request.body);
     if (body.role === 'owner' && member.role !== 'owner') {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Sólo un owner puede asignar el rol de owner' },
+        error: { code: 'FORBIDDEN', message: 'Only an owner can assign the owner role' },
       });
     }
     const [target] = await db
@@ -172,14 +171,17 @@ export async function registerOrganizationRoutes(app: FastifyInstance): Promise<
       return reply.status(404).send({
         error: {
           code: 'USER_NOT_FOUND',
-          message: 'No existe una cuenta con ese correo; invítala a registrarse primero',
+          message: 'No account exists with that email address; ask the user to register first',
         },
       });
     }
     const existing = await getMembership(orgId, target.id);
     if (existing) {
       return reply.status(409).send({
-        error: { code: 'ALREADY_MEMBER', message: 'El usuario ya pertenece a la organización' },
+        error: {
+          code: 'ALREADY_MEMBER',
+          message: 'The user is already a member of the organization',
+        },
       });
     }
     await db.insert(organizationMembers).values({

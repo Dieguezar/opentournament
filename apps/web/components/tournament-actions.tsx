@@ -13,7 +13,7 @@ export function TournamentActions({
   tournamentId: string;
   status: string;
 }) {
-  const { dictionary, locale } = useI18n();
+  const { dictionary } = useI18n();
   const copy = dictionary.adminActions;
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +26,7 @@ export function TournamentActions({
       await apiClient(path, { method: 'POST' });
       router.refresh();
     } catch (err) {
-      const message =
-        err instanceof ApiClientError && locale === 'es' ? err.message : copy.actionError;
+      const message = err instanceof ApiClientError ? err.message : copy.actionError;
       setError(`${label}: ${message}`);
     } finally {
       setBusy(false);

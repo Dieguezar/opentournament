@@ -40,8 +40,8 @@ export interface MatchContext {
   match: typeof matches.$inferSelect;
   stage: StageRow;
   tournament: TournamentRow;
-  home: (typeof tournamentParticipants.$inferSelect) | null;
-  away: (typeof tournamentParticipants.$inferSelect) | null;
+  home: typeof tournamentParticipants.$inferSelect | null;
+  away: typeof tournamentParticipants.$inferSelect | null;
 }
 
 async function lockTournamentForMatchProgress(
@@ -55,19 +55,22 @@ async function lockTournamentForMatchProgress(
     .limit(1)
     .for('update');
   if (!tournament) {
-    throw new DomainError(404, 'TOURNAMENT_NOT_FOUND', 'El torneo no existe');
+    throw new DomainError(404, 'TOURNAMENT_NOT_FOUND', 'The tournament does not exist');
   }
   if (tournament.status !== 'in_progress') {
     throw new DomainError(
       409,
       'INVALID_TOURNAMENT_STATUS',
-      'El torneo no acepta resultados en su estado actual',
+      'The tournament does not accept results in its current status',
     );
   }
   return tournament;
 }
 
-export async function loadMatchContext(db: DbExecutor, matchId: string): Promise<MatchContext | null> {
+export async function loadMatchContext(
+  db: DbExecutor,
+  matchId: string,
+): Promise<MatchContext | null> {
   const [row] = await db
     .select({
       match: matches,
@@ -82,11 +85,7 @@ export async function loadMatchContext(db: DbExecutor, matchId: string): Promise
     .limit(1);
   if (!row) return null;
 
-  const [stage] = await db
-    .select()
-    .from(stages)
-    .where(eq(stages.id, row.stageId))
-    .limit(1);
+  const [stage] = await db.select().from(stages).where(eq(stages.id, row.stageId)).limit(1);
   const [tournament] = await db
     .select()
     .from(tournaments)
@@ -98,10 +97,7 @@ export async function loadMatchContext(db: DbExecutor, matchId: string): Promise
     (id): id is string => Boolean(id),
   );
   const participants = ids.length
-    ? await db
-        .select()
-        .from(tournamentParticipants)
-        .where(inArray(tournamentParticipants.id, ids))
+    ? await db.select().from(tournamentParticipants).where(inArray(tournamentParticipants.id, ids))
     : [];
   const home = participants.find((p) => p.id === row.match.homeParticipantId) ?? null;
   const away = participants.find((p) => p.id === row.match.awayParticipantId) ?? null;
@@ -122,7 +118,7 @@ export async function lockMatchStage(
     .where(eq(matches.id, matchId))
     .limit(1);
   if (!stageReference) {
-    throw new DomainError(404, 'MATCH_NOT_FOUND', 'La partida no existe');
+    throw new DomainError(404, 'MATCH_NOT_FOUND', 'The match does not exist');
   }
 
   await lockTournamentForMatchProgress(transaction, stageReference.tournamentId);
@@ -135,7 +131,7 @@ export async function lockMatchStage(
 
   const context = await loadMatchContext(transaction, matchId);
   if (!context) {
-    throw new DomainError(404, 'MATCH_NOT_FOUND', 'La partida no existe');
+    throw new DomainError(404, 'MATCH_NOT_FOUND', 'The match does not exist');
   }
   return context;
 }
@@ -159,7 +155,7 @@ export async function generateTournamentBracket(
     throw new DomainError(
       409,
       'BRACKET_ALREADY_EXISTS',
-      'El torneo ya tiene un bracket generado',
+      'The tournament already has a generated bracket',
     );
   }
 
@@ -178,7 +174,7 @@ export async function generateTournamentBracket(
     seed: p.seed,
   }));
   if (engineParticipants.length < 2) {
-    throw new DomainError(400, 'NOT_ENOUGH_PARTICIPANTS', 'Se necesitan al menos 2 participantes');
+    throw new DomainError(400, 'NOT_ENOUGH_PARTICIPANTS', 'At least two participants are required');
   }
 
   const engine = finalizeByes(
@@ -199,7 +195,7 @@ export async function generateTournamentBracket(
       config: { engineBracket: engine },
     })
     .returning();
-  if (!stage) throw new DomainError(500, 'STAGE_CREATE_FAILED', 'No se pudo crear la etapa');
+  if (!stage) throw new DomainError(500, 'STAGE_CREATE_FAILED', 'The stage could not be created');
 
   await persistEngineBracket(db, stage, engine);
   await db
@@ -260,7 +256,8 @@ async function persistEngineBracket(
         homeParticipantId: participants.home,
         awayParticipantId: participants.away,
         status: match.status,
-        result: match.status === 'finalized' && match.winner ? { winnerId: match.winner } : undefined,
+        result:
+          match.status === 'finalized' && match.winner ? { winnerId: match.winner } : undefined,
         series: {},
       });
     }
@@ -273,7 +270,11 @@ export async function loadEngineBracket(db: DbExecutor, stage: StageRow): Promis
   return engine;
 }
 
-export async function syncMatchesFromEngine(db: DbExecutor, stage: StageRow, engine: EngineBracket) {
+export async function syncMatchesFromEngine(
+  db: DbExecutor,
+  stage: StageRow,
+  engine: EngineBracket,
+) {
   const rows = await db
     .select({ id: matches.id, engineId: matches.engineId })
     .from(matches)
@@ -329,7 +330,7 @@ export async function advanceMatchWinnerAtomically(
       .where(eq(stages.id, stageId))
       .limit(1);
     if (!stageReference) {
-      throw new DomainError(404, 'STAGE_NOT_FOUND', 'La etapa no existe');
+      throw new DomainError(404, 'STAGE_NOT_FOUND', 'The stage does not exist');
     }
 
     await lockTournamentForMatchProgress(transaction, stageReference.tournamentId);
@@ -338,7 +339,7 @@ export async function advanceMatchWinnerAtomically(
       .from(stages)
       .where(eq(stages.id, stageId))
       .for('update');
-    if (!stage) throw new DomainError(404, 'STAGE_NOT_FOUND', 'La etapa no existe');
+    if (!stage) throw new DomainError(404, 'STAGE_NOT_FOUND', 'The stage does not exist');
 
     return applyMatchWinner(transaction, stage, engineId, winnerId);
   });
@@ -353,10 +354,10 @@ export async function applyWalkoverAtomically(
   return db.transaction(async (transaction) => {
     const context = await lockMatchStage(transaction, matchId);
     if (context.match.status !== 'scheduled' && context.match.status !== 'in_progress') {
-      throw new DomainError(409, 'INVALID_MATCH', 'La partida no está disponible');
+      throw new DomainError(409, 'INVALID_MATCH', 'The match is not available');
     }
     if (!context.home || !context.away) {
-      throw new DomainError(409, 'MATCH_NOT_READY', 'Aún no se conocen ambos participantes');
+      throw new DomainError(409, 'MATCH_NOT_READY', 'Both participants are not known yet');
     }
 
     const [winner] = await transaction
@@ -370,10 +371,10 @@ export async function applyWalkoverAtomically(
       )
       .limit(1);
     if (!winner) {
-      throw new DomainError(404, 'NOT_FOUND', 'El equipo no participa en el torneo');
+      throw new DomainError(404, 'NOT_FOUND', 'The team does not participate in the tournament');
     }
     if (winner.id !== context.home.id && winner.id !== context.away.id) {
-      throw new DomainError(409, 'INVALID_WINNER', 'El equipo no participa en esta partida');
+      throw new DomainError(409, 'INVALID_WINNER', 'The team does not participate in this match');
     }
 
     const { champion } = await applyMatchWinner(
@@ -411,8 +412,7 @@ export function applyCheckInWalkovers(
 ): EngineBracket {
   const firstRoundMatchIds = engine.matches
     .filter(
-      (match) =>
-        match.bracket === 'winners' && match.round === 1 && match.status === 'scheduled',
+      (match) => match.bracket === 'winners' && match.round === 1 && match.status === 'scheduled',
     )
     .map((match) => match.id);
   let currentEngine = engine;

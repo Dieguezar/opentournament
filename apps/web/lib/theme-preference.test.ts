@@ -6,8 +6,8 @@ import {
   serializeThemePreference,
 } from './theme-preference';
 
-describe('preferencia de tema', () => {
-  it('prioriza una preferencia guardada válida sobre el tema del sistema', () => {
+describe('theme preference', () => {
+  it('prioritizes a valid saved preference over the system theme', () => {
     const darkState = getThemeState('dark', false);
     const lightState = getThemeState('light', true);
 
@@ -15,7 +15,7 @@ describe('preferencia de tema', () => {
     expect(lightState).toEqual({ preference: 'light', resolvedTheme: 'light' });
   });
 
-  it('respeta prefers-color-scheme cuando no existe una preferencia guardada', () => {
+  it('respects prefers-color-scheme when no saved preference exists', () => {
     const darkSystemState = getThemeState(null, true);
     const lightSystemState = getThemeState(null, false);
 
@@ -23,19 +23,19 @@ describe('preferencia de tema', () => {
     expect(lightSystemState).toEqual({ preference: 'system', resolvedTheme: 'light' });
   });
 
-  it('trata los valores guardados inválidos como preferencia del sistema', () => {
+  it('treats invalid saved values as the system preference', () => {
     const state = getThemeState('sepia', true);
 
     expect(state).toEqual({ preference: 'system', resolvedTheme: 'dark' });
   });
 
-  it('serializa las tres elecciones persistibles sin perder información', () => {
+  it('serializes all three persistent choices without losing information', () => {
     expect(serializeThemePreference('light')).toBe('light');
     expect(serializeThemePreference('dark')).toBe('dark');
     expect(serializeThemePreference('system')).toBe('system');
   });
 
-  it('degrada a system cuando localStorage rechaza la lectura', () => {
+  it('falls back to system when localStorage rejects reads', () => {
     const storage = {
       getItem() {
         throw new Error('SecurityError');
@@ -50,7 +50,7 @@ describe('preferencia de tema', () => {
     });
   });
 
-  it('no interrumpe la elección en memoria cuando localStorage rechaza la escritura', () => {
+  it('keeps the in-memory choice when localStorage rejects writes', () => {
     const storage = {
       setItem() {
         throw new Error('SecurityError');

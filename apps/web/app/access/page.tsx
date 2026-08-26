@@ -9,7 +9,7 @@ import { formatMessage } from '@/lib/i18n';
 import styles from './page.module.css';
 
 export default function ParticipantAccessPage() {
-  const { dictionary, locale } = useI18n();
+  const { dictionary } = useI18n();
   const copy = dictionary.secondaryFlows;
   const router = useRouter();
   const [state, setState] = useState<
@@ -35,13 +35,11 @@ export default function ParticipantAccessPage() {
         setState({
           kind: 'error',
           message:
-            exchangeError instanceof ApiClientError && locale === 'es'
-              ? exchangeError.message
-              : copy.accessOpenError,
+            exchangeError instanceof ApiClientError ? exchangeError.message : copy.accessOpenError,
         });
       }
     },
-    [copy.accessOpenError, locale, router],
+    [copy.accessOpenError, router],
   );
 
   useEffect(() => {

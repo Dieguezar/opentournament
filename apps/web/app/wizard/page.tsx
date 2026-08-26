@@ -6,7 +6,7 @@ import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 
 export default function WizardPage() {
-  const { dictionary, locale } = useI18n();
+  const { dictionary } = useI18n();
   const copy = dictionary.secondaryFlows;
   const router = useRouter();
   const [name, setName] = useState('');
@@ -26,11 +26,7 @@ export default function WizardPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof ApiClientError && locale === 'es'
-          ? err.message
-          : copy.createOrganizationError,
-      );
+      setError(err instanceof ApiClientError ? err.message : copy.createOrganizationError);
     } finally {
       setSubmitting(false);
     }

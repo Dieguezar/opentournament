@@ -61,7 +61,9 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
     const body = createDisputeSchema.parse(request.body);
     const ctx = await loadMatchContext(db, body.matchId);
     if (!ctx) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
 
     let isCaptain = false;
@@ -77,7 +79,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       return reply.status(403).send({
         error: {
           code: 'FORBIDDEN',
-          message: 'Sólo los participantes de la partida pueden abrir disputas',
+          message: 'Only match participants can open disputes',
         },
       });
     }
@@ -86,7 +88,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       !(await isTournamentAdmin(db, ctx.tournament.id, request.user!.id))
     ) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo el staff abre disputas de sistema' },
+        error: { code: 'FORBIDDEN', message: 'Only tournament staff can open system disputes' },
       });
     }
 
@@ -110,7 +112,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
         })
         .returning();
       if (!dispute) {
-        throw new DomainError(500, 'DISPUTE_FAILED', 'No se pudo abrir la disputa');
+        throw new DomainError(500, 'DISPUTE_FAILED', 'The dispute could not be opened');
       }
       if (body.message) {
         await transaction.insert(disputeMessages).values({
@@ -152,7 +154,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
     const { id } = request.params as { id: string };
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const homeParticipants = alias(tournamentParticipants, 'home_participants');
@@ -192,7 +194,9 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
     }
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     if (!dispute) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     const messages = await db
       .select({
@@ -256,12 +260,14 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
     const { disputeId } = request.params as { disputeId: string };
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     if (!dispute) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     const ctx = await loadMatchContext(db, dispute.matchId);
     if (!ctx || !(await isTournamentAdmin(db, ctx.tournament.id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo el admin asigna árbitros' },
+        error: { code: 'FORBIDDEN', message: 'Only tournament admins can assign referees' },
       });
     }
     const body = assignRefereeSchema.parse(request.body);
@@ -286,21 +292,28 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
     const { disputeId } = request.params as { disputeId: string };
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
     if (!dispute) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     const ctx = await loadMatchContext(db, dispute.matchId);
     if (!ctx) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     const isAdmin = await isTournamentAdmin(db, ctx.tournament.id, request.user!.id);
     if (!isAdmin && dispute.assigneeId !== request.user!.id) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo el árbitro asignado o el admin resuelven' },
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Only the assigned referee or an admin can resolve this dispute',
+        },
       });
     }
     if (dispute.status === 'resolved') {
       return reply.status(409).send({
-        error: { code: 'ALREADY_RESOLVED', message: 'La disputa ya está resuelta' },
+        error: { code: 'ALREADY_RESOLVED', message: 'The dispute has already been resolved' },
       });
     }
 
@@ -310,7 +323,10 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       const winner = [ctx.home, ctx.away].find((p) => p && p.teamId === body.winnerTeamId);
       if (!winner) {
         return reply.status(409).send({
-          error: { code: 'INVALID_WINNER', message: 'El ganador no participa en la partida' },
+          error: {
+            code: 'INVALID_WINNER',
+            message: 'The winner does not participate in the match',
+          },
         });
       }
       winnerId = winner.id;
@@ -324,10 +340,10 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
         .where(eq(disputes.id, disputeId))
         .limit(1);
       if (!currentDispute) {
-        throw new DomainError(404, 'NOT_FOUND', 'La disputa no existe');
+        throw new DomainError(404, 'NOT_FOUND', 'The dispute does not exist');
       }
       if (currentDispute.status === 'resolved') {
-        throw new DomainError(409, 'ALREADY_RESOLVED', 'La disputa ya está resuelta');
+        throw new DomainError(409, 'ALREADY_RESOLVED', 'The dispute has already been resolved');
       }
 
       const { champion } = winnerId

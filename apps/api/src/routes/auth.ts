@@ -72,7 +72,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         .returning();
       if (!user) {
         return reply.status(500).send({
-          error: { code: 'REGISTER_FAILED', message: 'No se pudo crear la cuenta' },
+          error: { code: 'REGISTER_FAILED', message: 'The account could not be created' },
         });
       }
 
@@ -86,7 +86,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         await sendMail({
           to: body.email,
           subject: 'Verifica tu correo en OpenTournament',
-          text: `Tu enlace de verificación (válido 24 h): ${env.API_URL}/api/v1/auth/verify?token=${resetToken}`,
+          text: `Your verification link (valid for 24 hours): ${env.API_URL}/api/v1/auth/verify?token=${resetToken}`,
         });
       }
 
@@ -117,7 +117,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
 
       if (!user?.passwordHash || !(await verifyPassword(user.passwordHash, body.password))) {
         return reply.status(401).send({
-          error: { code: 'INVALID_CREDENTIALS', message: 'Correo o contraseña incorrectos' },
+          error: {
+            code: 'INVALID_CREDENTIALS',
+            message: 'The email address or password is incorrect',
+          },
         });
       }
       if (!user.emailVerifiedAt && !env.ALLOW_UNVERIFIED_EMAILS) {
@@ -180,7 +183,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         .limit(1);
       if (!accessPass) {
         return reply.status(401).send({
-          error: { code: 'INVALID_PARTICIPANT_PASS', message: 'El pase es inválido o expiró' },
+          error: {
+            code: 'INVALID_PARTICIPANT_PASS',
+            message: 'The participant pass is invalid or expired',
+          },
         });
       }
 
@@ -244,7 +250,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     const { token } = request.query as { token?: string };
     if (!token) {
       return reply.status(400).send({
-        error: { code: 'INVALID_VERIFICATION_TOKEN', message: 'El enlace es inválido o expiró' },
+        error: {
+          code: 'INVALID_VERIFICATION_TOKEN',
+          message: 'The verification link is invalid or expired',
+        },
       });
     }
 
@@ -286,7 +295,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
     });
     if (!verifiedUserId) {
       return reply.status(400).send({
-        error: { code: 'INVALID_VERIFICATION_TOKEN', message: 'El enlace es inválido o expiró' },
+        error: {
+          code: 'INVALID_VERIFICATION_TOKEN',
+          message: 'The verification link is invalid or expired',
+        },
       });
     }
 
@@ -310,8 +322,8 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
       });
       await sendMail({
         to: body.email,
-        subject: 'Recupera tu contraseña en OpenTournament',
-        text: `Tu enlace de recuperación (válido 1 h): ${env.API_URL}/api/v1/auth/reset-password?token=${resetToken}`,
+        subject: 'Reset your OpenTournament password',
+        text: `Your password reset link (valid for 1 hour): ${env.API_URL}/api/v1/auth/reset-password?token=${resetToken}`,
       });
     }
     // Keep the response generic so it does not reveal whether the email exists.
@@ -329,7 +341,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
 
     if (!reset || reset.expiresAt < new Date()) {
       return reply.status(400).send({
-        error: { code: 'INVALID_RESET_TOKEN', message: 'El enlace es inválido o expiró' },
+        error: {
+          code: 'INVALID_RESET_TOKEN',
+          message: 'The password reset link is invalid or expired',
+        },
       });
     }
 
@@ -352,7 +367,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/auth/discord', async (_request, reply) => {
     if (!env.DISCORD_CLIENT_ID || !env.DISCORD_CLIENT_SECRET || !env.DISCORD_REDIRECT_URI) {
       return reply.status(503).send({
-        error: { code: 'DISCORD_NOT_CONFIGURED', message: 'Discord OAuth no está configurado' },
+        error: { code: 'DISCORD_NOT_CONFIGURED', message: 'Discord OAuth is not configured' },
       });
     }
     const state = randomBytes(16).toString('hex');
@@ -375,13 +390,13 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
   app.get('/auth/discord/callback', async (request, reply) => {
     if (!env.DISCORD_CLIENT_ID || !env.DISCORD_CLIENT_SECRET || !env.DISCORD_REDIRECT_URI) {
       return reply.status(503).send({
-        error: { code: 'DISCORD_NOT_CONFIGURED', message: 'Discord OAuth no está configurado' },
+        error: { code: 'DISCORD_NOT_CONFIGURED', message: 'Discord OAuth is not configured' },
       });
     }
     const { code, state } = request.query as { code?: string; state?: string };
     if (!code || !state || state !== request.cookies.oauth_state) {
       return reply.status(400).send({
-        error: { code: 'DISCORD_OAUTH_STATE', message: 'Parámetros OAuth inválidos' },
+        error: { code: 'DISCORD_OAUTH_STATE', message: 'The OAuth parameters are invalid' },
       });
     }
 
@@ -426,7 +441,10 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
           .returning({ id: users.id });
         if (!created) {
           return reply.status(500).send({
-            error: { code: 'DISCORD_LINK_FAILED', message: 'No se pudo crear el usuario' },
+            error: {
+              code: 'DISCORD_LINK_FAILED',
+              message: 'The user account could not be created',
+            },
           });
         }
         userId = created.id;

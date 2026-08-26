@@ -63,8 +63,8 @@ const matches: readonly BracketMatchNode[] = [
   },
 ];
 
-describe('presentación del workspace de bracket', () => {
-  it('agrupa partidas por ronda y las ordena sin mutar el contrato recibido', () => {
+describe('bracket workspace presentation', () => {
+  it('groups matches by round and sorts them without mutating the input contract', () => {
     // Arrange
     const originalOrder = matches.map((match) => match.id);
 
@@ -81,7 +81,7 @@ describe('presentación del workspace de bracket', () => {
     expect(matches.map((match) => match.id)).toEqual(originalOrder);
   });
 
-  it('deriva las métricas y selecciona la próxima partida accionable', () => {
+  it('derives metrics and selects the next actionable match', () => {
     // Arrange
     const bracketMatches = matches;
 
@@ -97,7 +97,7 @@ describe('presentación del workspace de bracket', () => {
     expect(presentation.initialSelectedMatchId).toBe('grand-final');
   });
 
-  it('expone el participante ganador a partir del winnerId de cada partida', () => {
+  it('exposes the winning participant from each match winnerId', () => {
     // Arrange
     const bracketMatches = matches;
 
@@ -110,7 +110,7 @@ describe('presentación del workspace de bracket', () => {
     expect(presentation.rounds[1]?.matches[0]?.winner).toBeNull();
   });
 
-  it('mantiene separados los brackets que comparten número de ronda', () => {
+  it('keeps brackets with the same round number separate', () => {
     // Arrange
     const doubleEliminationMatches: readonly BracketMatchNode[] = [
       {

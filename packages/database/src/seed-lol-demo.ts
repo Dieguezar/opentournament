@@ -94,7 +94,7 @@ function simulateLeagueBracket(): { bracket: EngineBracket; playedMatches: Playe
 
 function teamIdForParticipant(participantId: string): string {
   const index = PARTICIPANT_IDS.indexOf(participantId);
-  if (index < 0) throw new Error(`Participante de LoL desconocido: ${participantId}`);
+  if (index < 0) throw new Error(`Unknown LoL participant: ${participantId}`);
   return TEAM_IDS[index]!;
 }
 
@@ -288,7 +288,7 @@ export async function seedLeagueDemoData(
   const matchRows = engineBracket.matches.map((engineMatch, matchIndex) => {
     const playedMatch = playedByEngineId.get(engineMatch.id);
     if (!playedMatch || !engineMatch.home || !engineMatch.away || !engineMatch.winner) {
-      throw new Error(`La serie de LoL ${engineMatch.id} no quedó finalizada`);
+      throw new Error(`LoL series ${engineMatch.id} was not finalized`);
     }
     const result = createGameResults(playedMatch, matchIndex);
     return {

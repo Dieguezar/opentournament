@@ -18,7 +18,7 @@ export function DisputeResolveForm({
   homeName: string | null;
   awayName: string | null;
 }) {
-  const { dictionary, locale } = useI18n();
+  const { dictionary } = useI18n();
   const copy = dictionary.disputes;
   const router = useRouter();
   const [winnerTeamId, setWinnerTeamId] = useState('');
@@ -35,7 +35,7 @@ export function DisputeResolveForm({
       });
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError && locale === 'es' ? err.message : copy.actionError);
+      setError(err instanceof ApiClientError ? err.message : copy.actionError);
     }
   }
 

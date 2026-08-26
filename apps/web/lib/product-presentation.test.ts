@@ -17,8 +17,8 @@ import {
   shouldShowRegistrationDecisionActions,
 } from './presentation';
 
-describe('presentación del producto', () => {
-  it('convierte estados internos en etiquetas comprensibles', () => {
+describe('product presentation', () => {
+  it('converts internal states into understandable labels', () => {
     expect(formatGameAdapter('valorant')).toBe('Valorant');
     expect(formatGameAdapter('smash_ultimate')).toBe('Super Smash Bros. Ultimate');
     expect(getTournamentStatus('in_progress')).toEqual({
@@ -79,7 +79,7 @@ describe('presentación del producto', () => {
     });
   });
 
-  it('presenta las reglas competitivas esenciales de Smash Ultimate', () => {
+  it('presents the essential competitive Smash Ultimate rules', () => {
     expect(
       buildRulesetSummary({
         gameAdapterKey: 'smash_ultimate',
@@ -113,7 +113,7 @@ describe('presentación del producto', () => {
     });
   });
 
-  it('presenta las reglas operativas esenciales de League of Legends', () => {
+  it('presents the essential operational League of Legends rules', () => {
     expect(
       buildRulesetSummary({
         gameAdapterKey: 'lol',
@@ -145,7 +145,7 @@ describe('presentación del producto', () => {
     });
   });
 
-  it('no inventa un resumen especializado para juegos sin plantilla', () => {
+  it('does not invent a specialized summary for games without a template', () => {
     expect(
       buildRulesetSummary({
         gameAdapterKey: 'valorant',
@@ -157,7 +157,7 @@ describe('presentación del producto', () => {
     ).toBeNull();
   });
 
-  it('descarta reglas de juego incompletas sin romper el render del servidor', () => {
+  it('discards incomplete game rules without breaking server rendering', () => {
     expect(
       buildRulesetSummary({
         gameAdapterKey: 'smash_ultimate',
@@ -190,7 +190,7 @@ describe('presentación del producto', () => {
     ).toBeNull();
   });
 
-  it('explica la disponibilidad pública según el estado del torneo', () => {
+  it('explains public availability according to tournament status', () => {
     expect(getPublicRegistrationMessage('draft', true)).toBe(
       'Las inscripciones todavía no abrieron.',
     );
@@ -216,19 +216,19 @@ describe('presentación del producto', () => {
     );
   });
 
-  it('conserva un fallback legible para valores futuros', () => {
+  it('keeps a readable fallback for future values', () => {
     expect(formatGameAdapter('nuevo-juego')).toBe('Nuevo juego');
     expect(formatMatchStatus('awaiting_review')).toBe('Awaiting review');
   });
 
-  it('solo muestra acciones de decisión para inscripciones pendientes', () => {
+  it('only shows decision actions for pending registrations', () => {
     expect(shouldShowRegistrationDecisionActions('pending')).toBe(true);
     expect(shouldShowRegistrationDecisionActions('waitlisted')).toBe(true);
     expect(shouldShowRegistrationDecisionActions('approved')).toBe(false);
     expect(shouldShowRegistrationDecisionActions('rejected')).toBe(false);
   });
 
-  it('oculta acciones que el estado del torneo o la partida ya no permite', () => {
+  it('hides actions no longer allowed by tournament or match status', () => {
     expect(canGenerateBracket('open')).toBe(true);
     expect(canGenerateBracket('in_progress')).toBe(false);
     expect(canDeclareWalkover('scheduled')).toBe(true);
@@ -237,8 +237,8 @@ describe('presentación del producto', () => {
   });
 });
 
-describe('acceso seguro a la API', () => {
-  it('devuelve 503 cuando la API no está disponible', async () => {
+describe('resilient API access', () => {
+  it('returns 503 when the API is unavailable', async () => {
     const fetcher = vi.fn().mockRejectedValue(new Error('connection refused'));
 
     await expect(
@@ -246,7 +246,7 @@ describe('acceso seguro a la API', () => {
     ).resolves.toEqual({ status: 503, data: {} });
   });
 
-  it('preserva el estado y contenido de una respuesta válida', async () => {
+  it('preserves the status and content of a valid response', async () => {
     const fetcher = vi.fn().mockResolvedValue(
       new Response(JSON.stringify({ user: { displayName: 'Admin Demo' } }), {
         status: 200,

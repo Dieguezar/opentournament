@@ -14,9 +14,7 @@ import { updateMatchSchema, walkoverSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { isTournamentAdmin } from '../services/permissions.js';
-import {
-  applyWalkoverAtomically,
-} from '../services/tournaments.js';
+import { applyWalkoverAtomically } from '../services/tournaments.js';
 import { emitTournamentEvent } from '../services/realtime.js';
 
 async function findMatchWithStage(matchId: string) {
@@ -78,11 +76,13 @@ export async function registerMatchRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const row = await findMatchWithStage(id);
     if (!row) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (!(await isTournamentAdmin(db, row.tournamentId, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const body = updateMatchSchema.parse(request.body);
@@ -110,11 +110,13 @@ export async function registerMatchRoutes(app: FastifyInstance): Promise<void> {
     const { id } = request.params as { id: string };
     const row = await findMatchWithStage(id);
     if (!row) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (!(await isTournamentAdmin(db, row.tournamentId, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const body = walkoverSchema.parse(request.body);

@@ -22,7 +22,7 @@
 - Breaking changes require `/api/v2` or a new major release.
 - Code-generated OpenAPI documentation is available at `/docs` in development.
 
-The error `code`, not the human-readable `message`, is the stable client contract. Clients should localize messages from the code and use the server message only as a fallback.
+The error `code`, not the human-readable `message`, is the stable client contract. Stable codes are declared in `packages/shared-types/src/index.ts`; browser translations live in `apps/web/lib/api-error-messages.ts`. The API keeps its fallback messages in English, while clients localize known codes and only use the server message as an English fallback.
 
 ## Authentication
 

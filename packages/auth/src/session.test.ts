@@ -3,7 +3,7 @@ import { generateSessionToken, hashSessionToken } from './session.js';
 import { csrfTokensMatch, generateCsrfToken } from './csrf.js';
 
 describe('session tokens', () => {
-  it('genera tokens únicos y los hashea de forma estable', () => {
+  it('generates unique tokens and hashes them consistently', () => {
     const a = generateSessionToken();
     const b = generateSessionToken();
     expect(a).not.toBe(b);
@@ -13,7 +13,7 @@ describe('session tokens', () => {
 });
 
 describe('csrf', () => {
-  it('valida tokens coincidentes y rechaza distintos', () => {
+  it('accepts matching tokens and rejects different tokens', () => {
     const token = generateCsrfToken();
     expect(csrfTokensMatch(token, token)).toBe(true);
     expect(csrfTokensMatch(token, 'otro')).toBe(false);

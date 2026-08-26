@@ -234,7 +234,7 @@ export default function NewTournamentPage() {
       });
       router.push(`/tournaments/${result.tournament.id}`);
     } catch (err) {
-      setError(err instanceof ApiClientError && locale === 'es' ? err.message : copy.createError);
+      setError(err instanceof ApiClientError ? err.message : copy.createError);
     } finally {
       setSubmitting(false);
     }

@@ -71,7 +71,7 @@ export function roundCountForSingleElimination(participantCount: number): number
  */
 export function seedOrder(size: number): number[] {
   if (!isPowerOfTwo(size)) {
-    throw new Error(`seedOrder requiere una potencia de 2; recibió ${size}`);
+    throw new Error(`seedOrder requires a power of 2; received ${size}`);
   }
   if (size === 1) return [1];
   const order: number[] = [];
@@ -244,7 +244,7 @@ function pairSeats(
  */
 export function generateSingleElimination(participants: EngineParticipant[]): EngineBracket {
   if (participants.length < 2) {
-    throw new Error('Se necesitan al menos 2 participantes');
+    throw new Error('At least two participants are required');
   }
   const { matches } = buildWinnersBracket(participants);
   const byes = matches.filter((m) => m.isBye && m.home).map((m) => m.home!) ?? [];
@@ -262,7 +262,7 @@ export function generateDoubleElimination(
   options: BracketGenerationOptions = {},
 ): EngineBracket {
   if (participants.length < 2) {
-    throw new Error('Se necesitan al menos 2 participantes');
+    throw new Error('At least two participants are required');
   }
   const { grandFinalReset = false } = options;
   const n = participants.length;
@@ -381,11 +381,11 @@ export function advanceMatch(
 ): AdvanceResult {
   const matches = bracket.matches.map((m) => ({ ...m }));
   const idx = matches.findIndex((m) => m.id === matchId);
-  if (idx < 0) throw new Error(`Partida desconocida: ${matchId}`);
+  if (idx < 0) throw new Error(`Unknown match: ${matchId}`);
   const match = matches[idx]!;
-  if (match.status === 'finalized') throw new Error(`La partida ${matchId} ya está finalizada`);
+  if (match.status === 'finalized') throw new Error(`Match ${matchId} is already finalized`);
   if (match.home !== winnerId && match.away !== winnerId) {
-    throw new Error(`El ganador ${winnerId} no participa en ${matchId}`);
+    throw new Error(`Winner ${winnerId} does not participate in ${matchId}`);
   }
 
   const updated = { ...match, status: 'finalized' as const, winner: winnerId };

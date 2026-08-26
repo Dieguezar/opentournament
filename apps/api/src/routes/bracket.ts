@@ -23,11 +23,13 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
     const { id } = request.params as { id: string };
     const tournament = await getTournament(db, id);
     if (!tournament) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const outcome = await db.transaction(async (transaction) => {
@@ -51,11 +53,13 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
       return { kind: 'generated' as const, stage };
     });
     if (outcome.kind === 'not_found') {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (outcome.kind === 'invalid_status') {
       return reply.status(409).send({
-        error: { code: 'INVALID_STATUS', message: 'El torneo debe estar abierto' },
+        error: { code: 'INVALID_STATUS', message: 'The tournament must be open' },
       });
     }
     emitTournamentEvent(id, 'bracket.updated', { stageId: outcome.stage.id });
@@ -64,19 +68,12 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
 
   app.get('/tournaments/:id/bracket', async (request, reply) => {
     const { id } = request.params as { id: string };
-    const [stage] = await db
-      .select()
-      .from(stages)
-      .where(eq(stages.tournamentId, id))
-      .limit(1);
+    const [stage] = await db.select().from(stages).where(eq(stages.tournamentId, id)).limit(1);
     if (!stage) {
       return reply.send({ stage: null, brackets: [] });
     }
 
-    const bracketRows = await db
-      .select()
-      .from(brackets)
-      .where(eq(brackets.stageId, stage.id));
+    const bracketRows = await db.select().from(brackets).where(eq(brackets.stageId, stage.id));
     const bracketIds = bracketRows.map((b) => b.id);
     const roundRows = bracketIds.length
       ? await db.select().from(rounds).where(inArray(rounds.bracketId, bracketIds))
@@ -122,9 +119,7 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
     const teamView = (participantId: string | null) => {
       if (!participantId) return null;
       const p = teamByParticipant.get(participantId);
-      return p
-        ? { participantId: p.id, teamId: p.teamId, name: p.teamName, tag: p.teamTag }
-        : null;
+      return p ? { participantId: p.id, teamId: p.teamId, name: p.teamName, tag: p.teamTag } : null;
     };
 
     const result = bracketRows.map((b) => ({
@@ -160,11 +155,13 @@ export async function registerBracketRoutes(app: FastifyInstance): Promise<void>
     const { id } = request.params as { id: string };
     const tournament = await getTournament(db, id);
     if (!tournament) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const body = seedsSchema.parse(request.body);

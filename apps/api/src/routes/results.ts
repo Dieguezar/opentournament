@@ -80,12 +80,14 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     const { matchId } = request.params as { matchId: string };
     const ctx = await loadMatchContext(db, matchId);
     if (!ctx) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
 
     if (!ctx.home || !ctx.away) {
       return reply.status(409).send({
-        error: { code: 'INVALID_MATCH', message: 'La partida aún no tiene dos participantes' },
+        error: { code: 'INVALID_MATCH', message: 'The match does not have both participants yet' },
       });
     }
 
@@ -95,7 +97,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     }
     if (ctx.match.status !== 'scheduled' && ctx.match.status !== 'in_progress') {
       return reply.status(409).send({
-        error: { code: 'INVALID_MATCH', message: 'La partida no acepta reportes' },
+        error: { code: 'INVALID_MATCH', message: 'The match does not accept result reports' },
       });
     }
 
@@ -103,7 +105,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     const drawsAllowed = ctx.tournament.seriesConfig?.drawsAllowed === true;
     if (body.draw && !drawsAllowed) {
       return reply.status(409).send({
-        error: { code: 'DRAW_NOT_ALLOWED', message: 'Este torneo no admite empates' },
+        error: { code: 'DRAW_NOT_ALLOWED', message: 'This tournament does not allow draws' },
       });
     }
 
@@ -112,7 +114,10 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       const winner = [ctx.home, ctx.away].find((p) => p && p.teamId === body.winnerTeamId);
       if (!winner) {
         return reply.status(409).send({
-          error: { code: 'INVALID_WINNER', message: 'El ganador no participa en la partida' },
+          error: {
+            code: 'INVALID_WINNER',
+            message: 'The winner does not participate in the match',
+          },
         });
       }
       winnerId = winner.id;
@@ -180,7 +185,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         lockedContext.match.status !== 'scheduled' &&
         lockedContext.match.status !== 'in_progress'
       ) {
-        throw new DomainError(409, 'INVALID_MATCH', 'La partida no acepta reportes');
+        throw new DomainError(409, 'INVALID_MATCH', 'The match does not accept result reports');
       }
 
       const [openDispute] = await transaction
@@ -189,7 +194,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         .where(and(eq(disputes.matchId, matchId), ne(disputes.status, 'resolved')))
         .limit(1);
       if (openDispute) {
-        throw new DomainError(409, 'DISPUTE_OPEN', 'La partida tiene una disputa abierta');
+        throw new DomainError(409, 'DISPUTE_OPEN', 'The match has an open dispute');
       }
 
       if (authorization.reporterTeamId) {
@@ -207,7 +212,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
           throw new DomainError(
             409,
             'RESULT_ALREADY_REPORTED',
-            'El equipo ya reportó este resultado',
+            'The team has already reported this result',
           );
         }
       }
@@ -230,7 +235,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         })
         .returning();
       if (!submission) {
-        throw new DomainError(500, 'SUBMISSION_FAILED', 'No se pudo registrar el reporte');
+        throw new DomainError(500, 'SUBMISSION_FAILED', 'The result report could not be recorded');
       }
 
       const finalizeResult = async () => {
@@ -404,11 +409,13 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     const { matchId } = request.params as { matchId: string };
     const ctx = await loadMatchContext(db, matchId);
     if (!ctx) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (!(await canAccessResults(ctx, request.user!.id, request.participantAccess))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Sin acceso a los reportes' },
+        error: { code: 'FORBIDDEN', message: 'You do not have access to these reports' },
       });
     }
     const rows = await db

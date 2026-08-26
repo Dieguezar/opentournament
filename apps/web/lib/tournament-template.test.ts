@@ -24,15 +24,15 @@ const editedForm: TournamentTemplateFormState = {
   gameRules: null,
 };
 
-describe('selección explícita de una plantilla de juego', () => {
-  it('normaliza las listas editables de escenarios', () => {
+describe('explicit game template selection', () => {
+  it('normalizes editable stage lists', () => {
     expect(parseStageList(' Battlefield\n\nFinal Destination \n')).toEqual([
       'Battlefield',
       'Final Destination',
     ]);
   });
 
-  it('aplica los defaults editables de Smash Ultimate al seleccionar el juego', () => {
+  it('applies editable Smash Ultimate defaults when selecting the game', () => {
     const result = applyGameTemplateSelection(
       'smash_ultimate',
       editedForm,
@@ -57,7 +57,7 @@ describe('selección explícita de una plantilla de juego', () => {
     });
   });
 
-  it('sanea BO1 a BO3 al pasar de un torneo genérico a Smash Ultimate', () => {
+  it('sanitizes BO1 to BO3 when switching from generic to Smash Ultimate', () => {
     const result = applyGameTemplateSelection(
       'smash_ultimate',
       { ...editedForm, bo: '1' },
@@ -67,7 +67,7 @@ describe('selección explícita de una plantilla de juego', () => {
     expect(result.bo).toBe('3');
   });
 
-  it('aplica y clona los defaults editables de League of Legends', () => {
+  it('applies and clones editable League of Legends defaults', () => {
     const result = applyGameTemplateSelection('lol', editedForm, leagueOfLegendsStandardTemplate);
 
     expect(result).toMatchObject({
@@ -91,12 +91,12 @@ describe('selección explícita de una plantilla de juego', () => {
     });
   });
 
-  it('ofrece sólo BO3 y BO5 para Smash y conserva BO1 en otros juegos', () => {
+  it('offers only BO3 and BO5 for Smash and keeps BO1 for other games', () => {
     expect(getSeriesBestOfOptions('smash_ultimate')).toEqual(['3', '5']);
     expect(getSeriesBestOfOptions('generic')).toEqual(['1', '3', '5']);
   });
 
-  it('preserva la configuración general y limpia la plantilla al elegir otro juego', () => {
+  it('preserves general settings and clears the template when choosing another game', () => {
     const smashForm = applyGameTemplateSelection(
       'smash_ultimate',
       editedForm,
@@ -119,7 +119,7 @@ describe('selección explícita de una plantilla de juego', () => {
     });
   });
 
-  it('clona las listas de escenarios para que editar el formulario no mute el registry', () => {
+  it('clones stage lists so form edits do not mutate the registry', () => {
     const first = applyGameTemplateSelection(
       'smash_ultimate',
       editedForm,
@@ -142,7 +142,7 @@ describe('selección explícita de una plantilla de juego', () => {
     }
   });
 
-  it('restaura todos los defaults competitivos sin reemplazar el resto del estado', () => {
+  it('restores all competitive defaults without replacing the rest of the state', () => {
     const customized = applyGameTemplateSelection(
       'smash_ultimate',
       editedForm,
@@ -187,7 +187,7 @@ describe('selección explícita de una plantilla de juego', () => {
   });
 });
 
-describe('validación local de reglas de League of Legends', () => {
+describe('local League of Legends rule validation', () => {
   function getRules() {
     const result = applyGameTemplateSelection('lol', editedForm, leagueOfLegendsStandardTemplate);
     if (result.gameRules?.game !== 'lol')
@@ -195,7 +195,7 @@ describe('validación local de reglas de League of Legends', () => {
     return result.gameRules;
   }
 
-  it('acepta parche live sin versión y normaliza una versión fija', () => {
+  it('accepts a live patch without a version and normalizes a fixed version', () => {
     expect(validateLeagueOfLegendsRules(getRules())).toMatchObject({
       errors: {},
       firstInvalidField: null,
@@ -214,7 +214,7 @@ describe('validación local de reglas de League of Legends', () => {
     });
   });
 
-  it('señala parche y límites operativos inválidos', () => {
+  it('identifies invalid patch and operational limits', () => {
     const result = validateLeagueOfLegendsRules({
       ...getRules(),
       patchPolicy: 'fixed',
@@ -231,7 +231,7 @@ describe('validación local de reglas de League of Legends', () => {
     expect(result.firstInvalidField).toBe('patchVersion');
   });
 
-  it('devuelve los errores de validación en inglés cuando se solicita', () => {
+  it('returns validation errors in English when requested', () => {
     const result = validateLeagueOfLegendsRules(
       {
         ...getRules(),
@@ -253,7 +253,7 @@ describe('validación local de reglas de League of Legends', () => {
   });
 });
 
-describe('validación local de reglas de Smash Ultimate', () => {
+describe('local Smash Ultimate rule validation', () => {
   function getRules() {
     const result = applyGameTemplateSelection(
       'smash_ultimate',
@@ -267,7 +267,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     return result.gameRules;
   }
 
-  it('normaliza listas válidas antes de construir el payload', () => {
+  it('normalizes valid lists before building the payload', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: [' Battlefield ', '', 'Final Destination'],
@@ -281,7 +281,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.rules.counterpicks).toEqual(['Small Battlefield']);
   });
 
-  it('señala escenarios iniciales repetidos sin distinguir mayúsculas o forma Unicode', () => {
+  it('identifies duplicate starter stages regardless of case or Unicode form', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: ['Battlefield', ' battlefield '],
@@ -293,7 +293,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.firstInvalidField).toBe('starters');
   });
 
-  it('colapsa whitespace interno al detectar escenarios repetidos', () => {
+  it('collapses internal whitespace when detecting duplicate stages', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: ['Final Destination', 'Final\t  Destination'],
@@ -305,7 +305,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.firstInvalidField).toBe('starters');
   });
 
-  it('señala escenarios counterpick repetidos', () => {
+  it('identifies duplicate counterpick stages', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: ['Battlefield'],
@@ -317,7 +317,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.firstInvalidField).toBe('counterpicks');
   });
 
-  it('señala un escenario presente en ambos pools', () => {
+  it('identifies a stage present in both pools', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: ['Battlefield'],
@@ -330,7 +330,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     );
   });
 
-  it('aplica NFKC, whitespace y mayúsculas al comparar ambos pools', () => {
+  it('applies NFKC, whitespace, and case normalization when comparing pools', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: ['Ｆｉｎａｌ   Ｄｅｓｔｉｎａｔｉｏｎ'],
@@ -344,7 +344,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.firstInvalidField).toBe('counterpicks');
   });
 
-  it('exige al menos un escenario en cada pool', () => {
+  it('requires at least one stage in each pool', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: [],
@@ -355,7 +355,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.errors.counterpicks).toBe('Agregá al menos un escenario counterpick.');
   });
 
-  it('limita cada pool a veinte escenarios', () => {
+  it('limits each pool to twenty stages', () => {
     const stages = Array.from({ length: 21 }, (_, index) => `Escenario ${index + 1}`);
     const result = validateSmashUltimateRules({
       ...getRules(),
@@ -366,7 +366,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.errors.starters).toBe('Usá como máximo 20 escenarios iniciales.');
   });
 
-  it('exige que los vetos dejen al menos un escenario disponible', () => {
+  it('requires stage bans to leave at least one stage available', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       starters: ['Battlefield'],
@@ -378,7 +378,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.firstInvalidField).toBe('stageBans');
   });
 
-  it('valida el launch rate editable dentro del rango competitivo admitido', () => {
+  it('validates the editable launch rate within the supported competitive range', () => {
     const result = validateSmashUltimateRules({
       ...getRules(),
       launchRate: 2.5,
@@ -388,7 +388,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
     expect(result.firstInvalidField).toBe('launchRate');
   });
 
-  it('devuelve los errores de validación en inglés cuando se solicita', () => {
+  it('returns validation errors in English when requested', () => {
     const result = validateSmashUltimateRules(
       {
         ...getRules(),

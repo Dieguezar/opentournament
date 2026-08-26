@@ -10,10 +10,7 @@ import {
   tournaments,
   users,
 } from '@opentournament/database';
-import {
-  registerTeamSchema,
-  registrationDecisionSchema,
-} from '@opentournament/validation';
+import { registerTeamSchema, registrationDecisionSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { isTournamentAdmin } from '../services/permissions.js';
@@ -21,10 +18,7 @@ import {
   countRosterRoles,
   getRegistrationCompatibilityIssue,
 } from '../services/team-game-compatibility.js';
-import {
-  canDecideRegistration,
-  isRegistrationClosed,
-} from '../services/registration-policy.js';
+import { canDecideRegistration, isRegistrationClosed } from '../services/registration-policy.js';
 
 async function countApproved(database: DbExecutor, tournamentId: string): Promise<number> {
   const rows = await database
@@ -39,10 +33,7 @@ async function countApproved(database: DbExecutor, tournamentId: string): Promis
   return rows.length;
 }
 
-async function nextWaitlistPosition(
-  database: DbExecutor,
-  tournamentId: string,
-): Promise<number> {
+async function nextWaitlistPosition(database: DbExecutor, tournamentId: string): Promise<number> {
   const rows = await database
     .select({ position: tournamentRegistrations.waitlistPosition })
     .from(tournamentRegistrations)
@@ -84,11 +75,7 @@ async function addParticipant(
     });
 }
 
-async function deactivateParticipant(
-  database: DbExecutor,
-  tournamentId: string,
-  teamId: string,
-) {
+async function deactivateParticipant(database: DbExecutor, tournamentId: string, teamId: string) {
   await database
     .update(tournamentParticipants)
     .set({ checkedIn: false, status: 'inactive' })
@@ -180,29 +167,31 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
     });
 
     if (outcome.kind === 'not_found') {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (outcome.kind === 'closed') {
       return reply.status(409).send({
-        error: { code: 'INVALID_STATUS', message: 'Las inscripciones están cerradas' },
+        error: { code: 'INVALID_STATUS', message: 'Registration is closed' },
       });
     }
     if (outcome.kind === 'registration_closed') {
       return reply.status(409).send({
         error: {
           code: 'REGISTRATION_CLOSED',
-          message: 'La fecha límite de inscripción ya pasó',
+          message: 'The registration deadline has passed',
         },
       });
     }
     if (outcome.kind === 'team_not_found') {
       return reply.status(404).send({
-        error: { code: 'TEAM_NOT_FOUND', message: 'El equipo no existe' },
+        error: { code: 'TEAM_NOT_FOUND', message: 'The team does not exist' },
       });
     }
     if (outcome.kind === 'forbidden') {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo el capitán inscribe al equipo' },
+        error: { code: 'FORBIDDEN', message: 'Only the team captain can register the team' },
       });
     }
     if (outcome.kind === 'incompatible') {
@@ -216,12 +205,12 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
     }
     if (outcome.kind === 'duplicate') {
       return reply.status(409).send({
-        error: { code: 'ALREADY_REGISTERED', message: 'El equipo ya está inscrito' },
+        error: { code: 'ALREADY_REGISTERED', message: 'The team is already registered' },
       });
     }
     if (outcome.kind === 'failed') {
       return reply.status(500).send({
-        error: { code: 'REGISTRATION_FAILED', message: 'No se pudo inscribir' },
+        error: { code: 'REGISTRATION_FAILED', message: 'The team could not be registered' },
       });
     }
     return reply.status(201).send({ registration: outcome.registration });
@@ -232,7 +221,7 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
     const { id } = request.params as { id: string };
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const rows = await db
@@ -260,7 +249,7 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
     const { id, regId } = request.params as { id: string; regId: string };
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const body = registrationDecisionSchema.parse(request.body);
@@ -280,10 +269,7 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
         .select()
         .from(tournamentRegistrations)
         .where(
-          and(
-            eq(tournamentRegistrations.id, regId),
-            eq(tournamentRegistrations.tournamentId, id),
-          ),
+          and(eq(tournamentRegistrations.id, regId), eq(tournamentRegistrations.tournamentId, id)),
         )
         .limit(1);
       if (!registration) return { kind: 'not_found' as const };
@@ -337,14 +323,14 @@ export async function registerRegistrationRoutes(app: FastifyInstance): Promise<
 
     if (outcome.kind === 'not_found') {
       return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'Inscripción no encontrada' },
+        error: { code: 'NOT_FOUND', message: 'The registration does not exist' },
       });
     }
     if (outcome.kind === 'invalid_status') {
       return reply.status(409).send({
         error: {
           code: 'INVALID_STATUS',
-          message: 'Las inscripciones ya no se pueden aprobar ni rechazar',
+          message: 'Registrations can no longer be approved or rejected',
         },
       });
     }

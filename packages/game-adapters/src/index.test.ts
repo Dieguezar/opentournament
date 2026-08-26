@@ -8,8 +8,8 @@ import {
   smashUltimateStandardTemplate,
 } from './index.js';
 
-describe('adaptadores de juegos', () => {
-  it('expone los adaptadores del MVP', () => {
+describe('game adapters', () => {
+  it('exposes the MVP adapters', () => {
     expect(Object.keys(adapters).sort()).toEqual([
       'cs2',
       'generic',
@@ -19,7 +19,7 @@ describe('adaptadores de juegos', () => {
     ]);
   });
 
-  it('los juegos oficiales son 5v5 sin empate', () => {
+  it('models the official team games as 5v5 without draws', () => {
     for (const key of ['valorant', 'cs2', 'lol'] as const) {
       const adapter = getAdapter(key);
       expect(adapter.team.minPlayers).toBe(5);
@@ -28,7 +28,7 @@ describe('adaptadores de juegos', () => {
     }
   });
 
-  it('valida identificadores de jugador', () => {
+  it('validates player identifiers', () => {
     expect(adapters.valorant.playerId.format.test('Diego#LAN1')).toBe(true);
     expect(adapters.valorant.playerId.format.test('sin-tag')).toBe(false);
     expect(adapters.cs2.playerId.format.test('76561198000000000')).toBe(true);
@@ -36,7 +36,7 @@ describe('adaptadores de juegos', () => {
     expect(adapters.lol.playerId.format.test('sin-tag')).toBe(false);
   });
 
-  it('modela League of Legends como competencia 5v5 con terminología propia', () => {
+  it('models League of Legends as a 5v5 competition with game-specific terminology', () => {
     expect(leagueOfLegendsAdapter).toMatchObject({
       key: 'lol',
       name: 'League of Legends',
@@ -55,7 +55,7 @@ describe('adaptadores de juegos', () => {
     });
   });
 
-  it('expone una plantilla estándar v1 de LoL sin fijar un parche que quede obsoleto', () => {
+  it('exposes a standard LoL v1 template without pinning an obsolete patch', () => {
     expect(leagueOfLegendsStandardTemplate).toEqual({
       key: 'lol.standard_v1',
       version: 1,
@@ -88,7 +88,7 @@ describe('adaptadores de juegos', () => {
     expect(leagueOfLegendsAdapter.tournamentTemplate).toBe(leagueOfLegendsStandardTemplate);
   });
 
-  it('modela Smash Ultimate como singles competitivo sin empates', () => {
+  it('models Smash Ultimate as competitive singles without draws', () => {
     expect(smashUltimateAdapter).toMatchObject({
       key: 'smash_ultimate',
       name: 'Super Smash Bros. Ultimate',
@@ -105,7 +105,7 @@ describe('adaptadores de juegos', () => {
     });
   });
 
-  it('expone una plantilla estándar v1 editable con reglas competitivas', () => {
+  it('exposes an editable standard v1 template with competitive rules', () => {
     expect(smashUltimateStandardTemplate).toEqual({
       key: 'smash_ultimate.standard_v1',
       version: 1,

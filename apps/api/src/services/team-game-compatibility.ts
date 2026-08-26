@@ -18,9 +18,7 @@ export interface TeamRosterCounts {
   substitutes: number;
 }
 
-export function countRosterRoles(
-  roster: ReadonlyArray<{ role: string }>,
-): TeamRosterCounts {
+export function countRosterRoles(roster: ReadonlyArray<{ role: string }>): TeamRosterCounts {
   return roster.reduce<TeamRosterCounts>(
     (counts, member) => ({
       activePlayers:
@@ -50,7 +48,7 @@ function unknownAdapterIssue(adapterKey: string): TeamGameCompatibilityIssue {
   return {
     statusCode: 409,
     code: 'UNKNOWN_GAME_ADAPTER',
-    message: 'El juego configurado no está disponible',
+    message: 'The configured game is not available',
     details: { gameAdapterKey: adapterKey },
   };
 }
@@ -67,7 +65,7 @@ export function getRegistrationCompatibilityIssue({
     return {
       statusCode: 409,
       code: 'TEAM_GAME_MISMATCH',
-      message: 'El equipo está configurado para otro juego',
+      message: 'The team is configured for a different game',
       details: {
         expectedGameAdapterKey: tournamentAdapterKey,
         actualGameAdapterKey: teamAdapterKey,
@@ -98,8 +96,8 @@ export function getRosterCompatibilityIssue(
       code: 'TEAM_ROSTER_SIZE_INVALID',
       message:
         minPlayers === maxPlayers
-          ? `El equipo debe tener exactamente ${minPlayers} integrante(s) activo(s)`
-          : `El equipo debe tener entre ${minPlayers} y ${maxPlayers} integrantes activos`,
+          ? `The team must have exactly ${minPlayers} active player(s)`
+          : `The team must have between ${minPlayers} and ${maxPlayers} active players`,
       details: { minPlayers, maxPlayers, activePlayers },
     };
   }
@@ -108,7 +106,7 @@ export function getRosterCompatibilityIssue(
     return {
       statusCode: 409,
       code: 'TEAM_SUBSTITUTE_LIMIT',
-      message: `El roster admite como máximo ${maxSubstitutes} suplente(s)`,
+      message: `The roster allows at most ${maxSubstitutes} substitute(s)`,
       details: { maxSubstitutes, substitutes },
     };
   }
@@ -130,7 +128,7 @@ export function getMemberCapacityIssue(
     return {
       statusCode: 409,
       code: 'TEAM_SUBSTITUTE_LIMIT',
-      message: `El roster admite como máximo ${maxSubstitutes} suplente(s)`,
+      message: `The roster allows at most ${maxSubstitutes} substitute(s)`,
       details: { maxSubstitutes, substitutes },
     };
   }
@@ -139,7 +137,7 @@ export function getMemberCapacityIssue(
     return {
       statusCode: 409,
       code: 'TEAM_ROSTER_LIMIT',
-      message: `El roster admite como máximo ${maxPlayers} integrante(s) activo(s)`,
+      message: `The roster allows at most ${maxPlayers} active player(s)`,
       details: { maxPlayers, activePlayers },
     };
   }

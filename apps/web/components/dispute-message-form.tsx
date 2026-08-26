@@ -6,7 +6,7 @@ import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 
 export function DisputeMessageForm({ disputeId }: { disputeId: string }) {
-  const { dictionary, locale } = useI18n();
+  const { dictionary } = useI18n();
   const copy = dictionary.disputes;
   const router = useRouter();
   const [body, setBody] = useState('');
@@ -23,7 +23,7 @@ export function DisputeMessageForm({ disputeId }: { disputeId: string }) {
       setBody('');
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError && locale === 'es' ? err.message : copy.actionError);
+      setError(err instanceof ApiClientError ? err.message : copy.actionError);
     }
   }
 

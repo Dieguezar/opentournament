@@ -13,6 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Changed
 
+- API errors now use a shared stable-code catalog, English server fallbacks, and client-side English/Spanish localization.
+- Contributor-facing test titles and operational messages are now written in English.
 - Contributor, security, issue, and pull request guidance is now written in English.
 - Data-model, engine, backlog, and architecture documentation now distinguish implemented behavior from future design.
 

@@ -37,7 +37,7 @@ export function validateLeagueGameReport(
     return {
       ok: false,
       code: 'LOL_GAME_DETAILS_NOT_ALLOWED',
-      message: 'El detalle por partida sólo está disponible para League of Legends',
+      message: 'Per-game details are only available for League of Legends',
     };
   }
 
@@ -50,12 +50,12 @@ export function validateLeagueGameReport(
       ? {
           ok: false,
           code: 'INVALID_LOL_GAME_SEQUENCE',
-          message: 'Las partidas deben numerarse consecutivamente desde 1',
+          message: 'Games must be numbered consecutively from 1',
         }
       : {
           ok: false,
           code: 'INVALID_LOL_SERIES_LENGTH',
-          message: 'La serie contiene más partidas que el BO configurado',
+          message: 'The series contains more games than the configured best-of allows',
         };
   }
 
@@ -80,14 +80,14 @@ export function validateLeagueGameReport(
       return {
         ok: false,
         code: 'INVALID_LOL_GAME_SIDE',
-        message: `El equipo azul de la partida ${game.number} no participa en la serie`,
+        message: `The blue-side team in game ${game.number} does not participate in the series`,
       };
     }
     if (!teamIds.has(game.winnerTeamId)) {
       return {
         ok: false,
         code: 'INVALID_LOL_GAME_WINNER',
-        message: `El ganador de la partida ${game.number} no participa en la serie`,
+        message: `The winner of game ${game.number} does not participate in the series`,
       };
     }
 
@@ -101,7 +101,7 @@ export function validateLeagueGameReport(
       return {
         ok: false,
         code: 'INVALID_LOL_SERIES_LENGTH',
-        message: 'La serie contiene partidas posteriores a una victoria definitiva',
+        message: 'The series contains games after a decisive victory',
       };
     }
   }
@@ -110,14 +110,14 @@ export function validateLeagueGameReport(
     return {
       ok: false,
       code: 'INVALID_LOL_SERIES_LENGTH',
-      message: 'El reporte no completa la serie configurada',
+      message: 'The report does not complete the configured series',
     };
   }
   if (homeWins !== report.homeScore || awayWins !== report.awayScore) {
     return {
       ok: false,
       code: 'INVALID_LOL_SERIES_SCORE',
-      message: 'El marcador global no coincide con las partidas reportadas',
+      message: 'The overall score does not match the reported games',
     };
   }
 
@@ -126,7 +126,7 @@ export function validateLeagueGameReport(
     return {
       ok: false,
       code: 'INVALID_LOL_SERIES_WINNER',
-      message: 'El ganador global no coincide con las partidas reportadas',
+      message: 'The overall winner does not match the reported games',
     };
   }
 

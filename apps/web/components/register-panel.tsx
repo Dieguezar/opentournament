@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { GameAdapterKey, TournamentStatus } from '@opentournament/shared-types';
 import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
-import { formatMessage, type Dictionary, type Locale } from '@/lib/i18n';
+import { formatMessage, type Dictionary } from '@/lib/i18n';
 import { formatGameAdapter } from '@/lib/presentation';
 import {
   classifyTeamsForRegistration,
@@ -37,12 +37,8 @@ interface PanelData {
   isAuthenticated: boolean;
 }
 
-function getRequestErrorMessage(
-  error: unknown,
-  locale: Locale,
-  copy: Dictionary['registrationPanel'],
-): string {
-  if (error instanceof ApiClientError && locale === 'es') return error.message;
+function getRequestErrorMessage(error: unknown, copy: Dictionary['registrationPanel']): string {
+  if (error instanceof ApiClientError) return error.message;
   return copy.actionError;
 }
 
@@ -164,7 +160,7 @@ export function RegisterPanel({
       setStatusMessage(action === 'checkin' ? copy.checkInConfirmed : copy.registrationSent);
       router.refresh();
     } catch (err) {
-      setActionError(getRequestErrorMessage(err, locale, copy));
+      setActionError(getRequestErrorMessage(err, copy));
     } finally {
       setBusyTeam(null);
     }
@@ -183,7 +179,7 @@ export function RegisterPanel({
       await refreshPanelData();
       setStatusMessage(formatMessage(copy.profileConfigured, { game: gameName }));
     } catch (requestError) {
-      setActionError(getRequestErrorMessage(requestError, locale, copy));
+      setActionError(getRequestErrorMessage(requestError, copy));
     } finally {
       setBusyTeam(null);
     }

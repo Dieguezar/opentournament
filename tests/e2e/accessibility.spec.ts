@@ -7,7 +7,7 @@ const publicTournamentPages = [
 ] as const;
 
 for (const tournament of publicTournamentPages) {
-  test(`${tournament.title} no tiene violaciones WCAG A/AA detectables`, async ({ page }) => {
+  test(`${tournament.title} has no detectable WCAG A/AA violations`, async ({ page }) => {
     await page.goto(tournament.path);
     await expect(page.getByRole('heading', { name: tournament.title, level: 1 })).toBeVisible();
     await expect(page).toHaveTitle(`${tournament.title} | OpenTournament`);

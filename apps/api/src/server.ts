@@ -10,7 +10,7 @@ async function main() {
   await runMigrations(env.DATABASE_URL);
   if (env.SEED_DEMO_DATA) {
     await seedDemoData(db);
-    console.log('Escenario de demostración listo.');
+    console.log('Demo scenario is ready.');
   }
 
   const app = await initServer();
@@ -33,6 +33,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('No se pudo iniciar la API:', err);
+  console.error('The API could not be started:', err);
   process.exit(1);
 });

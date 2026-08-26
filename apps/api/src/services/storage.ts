@@ -30,10 +30,7 @@ export function newEvidenceKey(contentType: string): string {
   return `private/evidence/${randomUUID()}.${ext}`;
 }
 
-export async function createPresignedUpload(
-  key: string,
-  contentType: string,
-): Promise<string> {
+export async function createPresignedUpload(key: string, contentType: string): Promise<string> {
   const command = new PutObjectCommand({
     Bucket: env.S3_BUCKET,
     Key: key,

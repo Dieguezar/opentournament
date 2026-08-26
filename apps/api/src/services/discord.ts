@@ -69,7 +69,7 @@ export async function registerSlashCommands(clientId: string, botToken: string):
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`No se pudieron registrar comandos: ${res.status} ${text}`);
+    throw new Error(`Discord commands could not be registered: ${res.status} ${text}`);
   }
 }
 
@@ -88,7 +88,7 @@ export async function handleInteraction(
 ): Promise<Record<string, unknown>> {
   if (payload.type === 1) return { type: 1 }; // PING
   if (payload.type !== 2) {
-    return { type: 4, data: { content: 'Interacción no soportada' } };
+    return { type: 4, data: { content: 'Unsupported interaction' } };
   }
 
   const member = payload.member as { user?: { id?: string } } | undefined;
@@ -101,7 +101,7 @@ export async function handleInteraction(
     return { type: 4, data: { content: 'Falta el ID del torneo' } };
   }
   if (!discordId) {
-    return { type: 4, data: { content: 'No se pudo identificar tu cuenta de Discord' } };
+    return { type: 4, data: { content: 'Your Discord account could not be identified' } };
   }
 
   const [identity] = await db
@@ -114,14 +114,14 @@ export async function handleInteraction(
       type: 4,
       data: {
         content:
-          'Tu Discord no está vinculado a una cuenta de OpenTournament. Vincula tu cuenta iniciando sesión con Discord.',
+          'Your Discord account is not linked to OpenTournament. Sign in with Discord to link it.',
       },
     };
   }
 
   const team = await findCaptainTeam(db, identity.userId);
   if (!team) {
-    return { type: 4, data: { content: 'No eres capitán de ningún equipo.' } };
+    return { type: 4, data: { content: 'You are not the captain of any team.' } };
   }
 
   if (data.name === 'checkin') {
@@ -137,7 +137,7 @@ export async function handleInteraction(
       .where(eq(tournaments.id, tournamentId))
       .limit(1);
     if (!tournament) {
-      return { type: 4, data: { content: 'Torneo no encontrado.' } };
+      return { type: 4, data: { content: 'Tournament not found.' } };
     }
     const [registration] = await db
       .select({ status: tournamentRegistrations.status })
@@ -161,8 +161,8 @@ export async function handleInteraction(
       .limit(1);
     const content = [
       `**${tournament.name}** (${tournament.status})`,
-      `Equipo: ${team.name}`,
-      `Inscripción: ${registration?.status ?? 'sin inscripción'}`,
+      `Team: ${team.name}`,
+      `Registration: ${registration?.status ?? 'not registered'}`,
       `Check-in: ${participant?.checkedIn ? '✅' : '❌'}`,
     ].join('\n');
     return { type: 4, data: { content } };
@@ -178,7 +178,7 @@ export function startDiscordBot(envConfig: ApiEnv): void {
   }
   void registerSlashCommands(envConfig.DISCORD_CLIENT_ID, envConfig.DISCORD_BOT_TOKEN)
     .then(() => console.log('[discord-bot] Comandos slash registrados.'))
-    .catch((error) => console.error('[discord-bot] Error registrando comandos:', error));
+    .catch((error) => console.error('[discord-bot] Failed to register commands:', error));
 }
 
 export async function sendDiscordWebhook(content: string): Promise<void> {

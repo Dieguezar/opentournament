@@ -15,15 +15,10 @@ export async function registerDiscordRoutes(app: FastifyInstance): Promise<void>
     if (
       typeof signature !== 'string' ||
       typeof timestamp !== 'string' ||
-      !verifyDiscordRequest(
-        env.DISCORD_PUBLIC_KEY,
-        signature,
-        timestamp,
-        request.rawBody ?? '',
-      )
+      !verifyDiscordRequest(env.DISCORD_PUBLIC_KEY, signature, timestamp, request.rawBody ?? '')
     ) {
       return reply.status(401).send({
-        error: { code: 'INVALID_SIGNATURE', message: 'Firma inválida' },
+        error: { code: 'INVALID_SIGNATURE', message: 'The request signature is invalid' },
       });
     }
     return reply.send(await handleInteraction(db, request.body as Record<string, unknown>));

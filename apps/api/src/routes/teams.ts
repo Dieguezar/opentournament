@@ -21,7 +21,7 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
     const body = createTeamSchema.parse(request.body);
     if (!(await isOrgMember(db, body.organizationId, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'No perteneces a esta organización' },
+        error: { code: 'FORBIDDEN', message: 'You are not a member of this organization' },
       });
     }
 
@@ -38,7 +38,7 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
       .returning();
     if (!team) {
       return reply.status(500).send({
-        error: { code: 'TEAM_CREATE_FAILED', message: 'No se pudo crear el equipo' },
+        error: { code: 'TEAM_CREATE_FAILED', message: 'The team could not be created' },
       });
     }
 
@@ -98,7 +98,7 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
     const { teamId } = request.params as { teamId: string };
     if (!(await isTeamCaptain(db, teamId, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo el capitán gestiona el roster' },
+        error: { code: 'FORBIDDEN', message: 'Only the team captain can manage the roster' },
       });
     }
     const body = addTeamMemberSchema.parse(request.body);
@@ -109,7 +109,7 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
       .limit(1);
     if (!user) {
       return reply.status(404).send({
-        error: { code: 'USER_NOT_FOUND', message: 'No existe una cuenta con ese correo' },
+        error: { code: 'USER_NOT_FOUND', message: 'No account exists with that email address' },
       });
     }
 
@@ -145,7 +145,7 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
 
     if (outcome.kind === 'not_found') {
       return reply.status(404).send({
-        error: { code: 'TEAM_NOT_FOUND', message: 'El equipo no existe' },
+        error: { code: 'TEAM_NOT_FOUND', message: 'The team does not exist' },
       });
     }
     if (outcome.kind === 'incompatible') {
@@ -216,19 +216,19 @@ export async function registerTeamRoutes(app: FastifyInstance): Promise<void> {
 
     if (outcome.kind === 'not_found') {
       return reply.status(404).send({
-        error: { code: 'TEAM_NOT_FOUND', message: 'El equipo no existe' },
+        error: { code: 'TEAM_NOT_FOUND', message: 'The team does not exist' },
       });
     }
     if (outcome.kind === 'forbidden') {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo el capitán configura el juego' },
+        error: { code: 'FORBIDDEN', message: 'Only the team captain can configure the game' },
       });
     }
     if (outcome.kind === 'locked') {
       return reply.status(409).send({
         error: {
           code: 'TEAM_GAME_LOCKED',
-          message: 'El equipo ya está configurado para otro juego',
+          message: 'The team is already configured for another game',
           details: { currentGameAdapterKey: outcome.currentGameAdapterKey },
         },
       });

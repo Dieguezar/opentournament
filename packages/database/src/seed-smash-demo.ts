@@ -126,7 +126,7 @@ function simulateSmashBracket(): { bracket: EngineBracket; playedMatches: Played
 
 function teamIdForParticipant(participantId: string): string {
   const index = PARTICIPANT_IDS.indexOf(participantId);
-  if (index < 0) throw new Error(`Participante Smash desconocido: ${participantId}`);
+  if (index < 0) throw new Error(`Unknown Smash participant: ${participantId}`);
   return TEAM_IDS[index]!;
 }
 
@@ -369,7 +369,7 @@ export async function seedSmashDemoData(
   const matchRows = engineBracket.matches.map((engineMatch, matchIndex) => {
     const playedMatch = playedByEngineId.get(engineMatch.id);
     if (!playedMatch || !engineMatch.home || !engineMatch.away || !engineMatch.winner) {
-      throw new Error(`El set Smash ${engineMatch.id} no quedó finalizado`);
+      throw new Error(`Smash set ${engineMatch.id} was not finalized`);
     }
     const bestOf: 3 | 5 =
       engineMatch.bracket === 'final' ||

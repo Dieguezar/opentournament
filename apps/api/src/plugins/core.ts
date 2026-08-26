@@ -9,8 +9,7 @@ import apiPackage from '../../package.json' with { type: 'json' };
 import { env } from '../config.js';
 
 export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
-  // Parser JSON que conserva el cuerpo crudo (necesario para verificar
-  // firmas de Discord sobre el payload exacto).
+  // Preserve the raw JSON body so Discord signatures can be verified against the exact payload.
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (request, body, done) => {
     try {
       request.rawBody = body as string;
@@ -45,7 +44,7 @@ export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
     openapi: {
       info: {
         title: 'OpenTournament API',
-        description: 'API de la plataforma open source de torneos de esports.',
+        description: 'API for the open-source esports tournament platform.',
         version: apiPackage.version,
       },
       servers: [{ url: env.API_URL }],
@@ -57,13 +56,13 @@ export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
   });
 
   app.setErrorHandler((error: FastifyError, request, reply) => {
-    request.log.error({ err: error }, 'error en request');
+    request.log.error({ err: error }, 'request failed');
 
     if (error instanceof ZodError) {
       return reply.status(400).send({
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Datos de entrada inválidos',
+          message: 'Invalid input data',
           details: error.flatten().fieldErrors,
         },
       });
@@ -73,7 +72,7 @@ export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
     return reply.status(statusCode).send({
       error: {
         code: error.code ?? 'INTERNAL_ERROR',
-        message: statusCode === 500 ? 'Error interno del servidor' : error.message,
+        message: statusCode === 500 ? 'Internal server error' : error.message,
       },
     });
   });

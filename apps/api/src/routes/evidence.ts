@@ -49,7 +49,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance): Promise<void
     }
     if (body.sizeBytes > env.MAX_EVIDENCE_SIZE_MB * 1024 * 1024) {
       return reply.status(400).send({
-        error: { code: 'FILE_TOO_LARGE', message: 'El archivo supera el tamaño máximo' },
+        error: { code: 'FILE_TOO_LARGE', message: 'The file exceeds the maximum size' },
       });
     }
     const key = newEvidenceKey(body.contentType);
@@ -74,18 +74,20 @@ export async function registerEvidenceRoutes(app: FastifyInstance): Promise<void
       .where(eq(resultSubmissions.id, resultId))
       .limit(1);
     if (!submission) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
 
     if (body.kind === 'screenshot') {
       if (!body.key?.startsWith('private/evidence/')) {
         return reply.status(400).send({
-          error: { code: 'INVALID_KEY', message: 'Clave de archivo inválida' },
+          error: { code: 'INVALID_KEY', message: 'The file key is invalid' },
         });
       }
       if (!(await objectExists(body.key))) {
         return reply.status(400).send({
-          error: { code: 'FILE_MISSING', message: 'El archivo no existe en el almacenamiento' },
+          error: { code: 'FILE_MISSING', message: 'The file does not exist in storage' },
         });
       }
       const [countRow] = await db
@@ -94,7 +96,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance): Promise<void
         .where(eq(evidence.resultSubmissionId, resultId));
       if ((countRow?.value ?? 0) >= env.MAX_EVIDENCE_FILES_PER_SUBMISSION) {
         return reply.status(400).send({
-          error: { code: 'TOO_MANY_FILES', message: 'Límite de evidencias alcanzado' },
+          error: { code: 'TOO_MANY_FILES', message: 'The evidence file limit has been reached' },
         });
       }
     }

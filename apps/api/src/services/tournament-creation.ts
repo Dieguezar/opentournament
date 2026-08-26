@@ -71,10 +71,7 @@ export function resolveTournamentCreationRequest(request: unknown): CreateTourna
     ...template.defaults,
     ...requestObject,
     gameAdapterKey: adapterKey,
-    seriesConfig: mergeNestedDefaults(
-      template.defaults.seriesConfig,
-      requestObject.seriesConfig,
-    ),
+    seriesConfig: mergeNestedDefaults(template.defaults.seriesConfig, requestObject.seriesConfig),
     checkinConfig: mergeNestedDefaults(
       template.defaults.checkinConfig,
       requestObject.checkinConfig,

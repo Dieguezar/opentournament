@@ -7,7 +7,7 @@ export async function registerEventRoutes(app: FastifyInstance): Promise<void> {
     const { tournament } = request.query as { tournament?: string };
     if (!tournament) {
       return reply.status(400).send({
-        error: { code: 'MISSING_TOURNAMENT', message: 'Falta el parámetro tournament' },
+        error: { code: 'MISSING_TOURNAMENT', message: 'The tournament parameter is required' },
       });
     }
     sseReply(reply, [`tournament:${tournament}`]);
@@ -16,9 +16,6 @@ export async function registerEventRoutes(app: FastifyInstance): Promise<void> {
   app.get('/events', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     const tournamentIds = request.user!.organizations.map((o) => o.id);
-    sseReply(reply, [
-      `user:${request.user!.id}`,
-      ...tournamentIds.map((orgId) => `org:${orgId}`),
-    ]);
+    sseReply(reply, [`user:${request.user!.id}`, ...tournamentIds.map((orgId) => `org:${orgId}`)]);
   });
 }

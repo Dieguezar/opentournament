@@ -20,12 +20,7 @@ export async function tournamentAdminIds(db: Db, tournamentId: string): Promise<
   const staff = await db
     .select({ userId: tournamentStaff.userId })
     .from(tournamentStaff)
-    .where(
-      and(
-        eq(tournamentStaff.tournamentId, tournamentId),
-        eq(tournamentStaff.role, 'admin'),
-      ),
-    );
+    .where(and(eq(tournamentStaff.tournamentId, tournamentId), eq(tournamentStaff.role, 'admin')));
   const members = await db
     .select({ userId: organizationMembers.userId })
     .from(organizationMembers)
@@ -47,9 +42,7 @@ export async function tournamentAdminIds(db: Db, tournamentId: string): Promise<
   return [...new Set([...staff, ...members, ...owners].map((r) => r.userId))];
 }
 
-export type CheckInResult =
-  | { ok: true }
-  | { ok: false; code: string; message: string };
+export type CheckInResult = { ok: true } | { ok: false; code: string; message: string };
 
 export async function performCheckIn(
   db: Db,
@@ -64,15 +57,16 @@ export async function performCheckIn(
       .where(eq(tournaments.id, tournamentId))
       .limit(1)
       .for('update');
-    if (!tournament) return { ok: false, code: 'NOT_FOUND', message: 'Torneo no encontrado' };
+    if (!tournament)
+      return { ok: false, code: 'NOT_FOUND', message: 'The tournament does not exist' };
     if (!['open', 'checkin_open'].includes(tournament.status)) {
-      return { ok: false, code: 'INVALID_STATUS', message: 'El check-in no está disponible' };
+      return { ok: false, code: 'INVALID_STATUS', message: 'Check-in is not available' };
     }
     const closesAt = tournament.checkinConfig?.closesAt
       ? new Date(tournament.checkinConfig.closesAt)
       : null;
     if (closesAt && closesAt < new Date()) {
-      return { ok: false, code: 'CHECKIN_CLOSED', message: 'El check-in ya cerró' };
+      return { ok: false, code: 'CHECKIN_CLOSED', message: 'Check-in is closed' };
     }
 
     const [registration] = await transaction
@@ -87,7 +81,7 @@ export async function performCheckIn(
       )
       .limit(1);
     if (!registration) {
-      return { ok: false, code: 'NOT_REGISTERED', message: 'El equipo no está aprobado' };
+      return { ok: false, code: 'NOT_REGISTERED', message: 'The team is not approved' };
     }
 
     await transaction

@@ -8,7 +8,7 @@ const baseRequest = {
 };
 
 describe('resolveTournamentCreationRequest', () => {
-  it('aplica la plantilla competitiva de Smash del lado del servidor', () => {
+  it('applies the competitive Smash template on the server', () => {
     const tournament = resolveTournamentCreationRequest({
       ...baseRequest,
       gameAdapterKey: 'smash_ultimate',
@@ -32,7 +32,7 @@ describe('resolveTournamentCreationRequest', () => {
     });
   });
 
-  it('aplica la plantilla competitiva de League of Legends del lado del servidor', () => {
+  it('applies the competitive League of Legends template on the server', () => {
     const tournament = resolveTournamentCreationRequest({
       ...baseRequest,
       slug: 'liga-nexo',
@@ -65,7 +65,7 @@ describe('resolveTournamentCreationRequest', () => {
     });
   });
 
-  it('preserva invariantes y acepta overrides editables de la plantilla de LoL', () => {
+  it('preserves invariants and accepts editable LoL template overrides', () => {
     const tournament = resolveTournamentCreationRequest({
       ...baseRequest,
       gameAdapterKey: 'lol',
@@ -94,7 +94,7 @@ describe('resolveTournamentCreationRequest', () => {
     });
   });
 
-  it('deep-mergea overrides editables sin perder defaults anidados', () => {
+  it('deep-merges editable overrides without losing nested defaults', () => {
     const tournament = resolveTournamentCreationRequest({
       ...baseRequest,
       gameAdapterKey: 'smash_ultimate',
@@ -127,7 +127,7 @@ describe('resolveTournamentCreationRequest', () => {
     });
   });
 
-  it('preserva la identidad invariante de la plantilla y del juego', () => {
+  it('preserves the invariant template and game identity', () => {
     const tournament = resolveTournamentCreationRequest({
       ...baseRequest,
       gameAdapterKey: 'smash_ultimate',
@@ -146,7 +146,7 @@ describe('resolveTournamentCreationRequest', () => {
     });
   });
 
-  it('no convierte overrides anidados inválidos en defaults válidos', () => {
+  it('does not turn invalid nested overrides into valid defaults', () => {
     expect(() =>
       resolveTournamentCreationRequest({
         ...baseRequest,
@@ -164,7 +164,7 @@ describe('resolveTournamentCreationRequest', () => {
     ).toThrow();
   });
 
-  it('conserva los defaults históricos para torneos genéricos', () => {
+  it('keeps the historical defaults for generic tournaments', () => {
     const tournament = resolveTournamentCreationRequest(baseRequest);
 
     expect(tournament).toMatchObject({

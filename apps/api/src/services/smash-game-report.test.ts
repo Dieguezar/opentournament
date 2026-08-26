@@ -55,29 +55,29 @@ function report(overrides: Partial<ReportResultInput> = {}): ReportResultInput {
   };
 }
 
-describe('validación contextual de games de Smash Ultimate', () => {
-  it('acepta un BO3 coherente y canoniza el nombre del escenario', () => {
+describe('contextual Smash Ultimate game validation', () => {
+  it('accepts a consistent BO3 and canonicalizes the stage name', () => {
     const result = validateGameReport(context, report());
 
     expect(result).toMatchObject({ ok: true });
     if (result.ok) expect(result.games?.[0]?.stage).toBe('Battlefield');
   });
 
-  it('mantiene compatibles los reportes sin detalle durante la transición de UI', () => {
+  it('keeps reports without details compatible during the UI transition', () => {
     expect(validateGameReport(context, report({ games: undefined }))).toEqual({
       ok: true,
       games: undefined,
     });
   });
 
-  it('rechaza detalle específico en adaptadores que no sean Smash', () => {
+  it('rejects Smash-specific details for other adapters', () => {
     expect(validateGameReport({ ...context, gameAdapterKey: 'valorant' }, report())).toMatchObject({
       ok: false,
       code: 'GAME_DETAILS_NOT_ALLOWED',
     });
   });
 
-  it('rechaza games no secuenciales y sets más largos que el BO', () => {
+  it('rejects non-sequential games and sets longer than the configured best-of', () => {
     expect(
       validateGameReport(
         context,
@@ -90,7 +90,7 @@ describe('validación contextual de games de Smash Ultimate', () => {
     ).toMatchObject({ ok: false, code: 'INVALID_SET_LENGTH' });
   });
 
-  it('rechaza escenarios fuera del ruleset y ganadores ajenos al match', () => {
+  it('rejects stages outside the ruleset and winners outside the match', () => {
     expect(
       validateGameReport(
         context,
@@ -114,7 +114,7 @@ describe('validación contextual de games de Smash Ultimate', () => {
     ).toMatchObject({ ok: false, code: 'INVALID_GAME_WINNER' });
   });
 
-  it('rechaza stocks incompatibles con el ganador o con el límite del torneo', () => {
+  it('rejects stocks incompatible with the winner or tournament limit', () => {
     for (const invalidGame of [
       { ...games[0]!, homeStocks: 0 },
       { ...games[0]!, awayStocks: 1 },
@@ -126,7 +126,7 @@ describe('validación contextual de games de Smash Ultimate', () => {
     }
   });
 
-  it('rechaza marcador, ganador o cierre del set incoherentes con los games', () => {
+  it('rejects a score, winner, or set ending inconsistent with the games', () => {
     expect(validateGameReport(context, report({ homeScore: 1 }))).toMatchObject({
       ok: false,
       code: 'INVALID_SET_SCORE',

@@ -5,14 +5,14 @@ const hasDb = Boolean(process.env.TEST_DATABASE_URL);
 const INTEGRATION_TEST_TIMEOUT_MS = 30_000;
 process.env.ALLOW_UNVERIFIED_EMAILS ??= 'true';
 
-describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
+describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
   afterAll(async () => {
     const { pool } = await import('./db.js');
     await pool.end();
   });
 
   it(
-    'registro → me → crear organización → logout',
+    'registration → me → create organization → logout',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -94,7 +94,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   );
 
   it(
-    'flujo completo: torneo → inscripción → check-in → bracket → reporte bilateral',
+    'complete flow: tournament → registration → check-in → bracket → bilateral report',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -1310,7 +1310,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   );
 
   it(
-    'serializa avances y rechaza walkovers duplicados',
+    'serializes advancement and rejects duplicate walkovers',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -1446,7 +1446,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   );
 
   it(
-    'reclama jobs de forma exclusiva y recupera leases vencidos',
+    'claims jobs exclusively and recovers expired leases',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -1519,7 +1519,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   );
 
   it(
-    'separa verificación de correo y recuperación de contraseña',
+    'separates email verification from password recovery',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -1615,7 +1615,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   );
 
   it(
-    'crea una experiencia demo poblada e idempotente',
+    'creates a seeded and idempotent demo experience',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -1802,7 +1802,7 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
   );
 
   it(
-    'crea, canjea y revoca un pase de participante sin cuenta',
+    'creates, exchanges, and revokes an accountless participant pass',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;

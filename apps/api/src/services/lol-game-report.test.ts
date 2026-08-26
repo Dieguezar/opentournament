@@ -33,22 +33,22 @@ function report(overrides: Partial<ReportResultInput> = {}): ReportResultInput {
 
 const context = { gameAdapterKey: 'lol', bestOf: 3, homeTeamId, awayTeamId };
 
-describe('validación contextual de partidas de League of Legends', () => {
-  it('acepta un BO3 coherente y conserva los detalles normalizados', () => {
+describe('contextual League of Legends game validation', () => {
+  it('accepts a consistent BO3 and preserves normalized details', () => {
     expect(validateLeagueGameReport(context, report())).toEqual({
       ok: true,
       games: report().lolGames,
     });
   });
 
-  it('mantiene compatibles los reportes sin detalle', () => {
+  it('keeps reports without details compatible', () => {
     expect(validateLeagueGameReport(context, report({ lolGames: undefined }))).toEqual({
       ok: true,
       games: undefined,
     });
   });
 
-  it('rechaza detalles de LoL en otros adaptadores', () => {
+  it('rejects LoL details for other adapters', () => {
     expect(
       validateLeagueGameReport({ ...context, gameAdapterKey: 'valorant' }, report()),
     ).toMatchObject({
@@ -57,7 +57,7 @@ describe('validación contextual de partidas de League of Legends', () => {
     });
   });
 
-  it('rechaza secuencia, participantes y Riot Match IDs repetidos', () => {
+  it('rejects invalid sequences, participants, and duplicate Riot Match IDs', () => {
     expect(
       validateLeagueGameReport(
         context,
@@ -80,7 +80,7 @@ describe('validación contextual de partidas de League of Legends', () => {
     ).toMatchObject({ ok: false, code: 'DUPLICATE_RIOT_MATCH_ID' });
   });
 
-  it('rechaza marcador, ganador o longitud incompatibles con la serie', () => {
+  it('rejects a score, winner, or length incompatible with the series', () => {
     expect(validateLeagueGameReport(context, report({ homeScore: 1 }))).toMatchObject({
       ok: false,
       code: 'INVALID_LOL_SERIES_SCORE',

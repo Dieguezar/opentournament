@@ -24,7 +24,7 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
     const body = resolveTournamentCreationRequest(request.body);
     if (!(await isOrgMember(db, body.organizationId, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'No perteneces a esta organización' },
+        error: { code: 'FORBIDDEN', message: 'You are not a member of this organization' },
       });
     }
     const existing = await db
@@ -40,7 +40,7 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .limit(1);
     if (existing.length > 0) {
       return reply.status(409).send({
-        error: { code: 'SLUG_TAKEN', message: 'Ya existe un torneo con ese slug' },
+        error: { code: 'SLUG_TAKEN', message: 'A tournament already uses that slug' },
       });
     }
 
@@ -67,7 +67,7 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .returning();
     if (!tournament) {
       return reply.status(500).send({
-        error: { code: 'TOURNAMENT_CREATE_FAILED', message: 'No se pudo crear el torneo' },
+        error: { code: 'TOURNAMENT_CREATE_FAILED', message: 'The tournament could not be created' },
       });
     }
 
@@ -101,11 +101,13 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
     const { id } = request.params as { id: string };
     const tournament = await getTournament(db, id);
     if (!tournament) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (tournament.visibility === 'unlisted' && !request.user) {
       return reply.status(401).send({
-        error: { code: 'UNAUTHORIZED', message: 'Torneo no listado' },
+        error: { code: 'UNAUTHORIZED', message: 'The tournament is unlisted' },
       });
     }
     const [org] = await db
@@ -145,11 +147,13 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
     const { id } = request.params as { id: string };
     const tournament = await getTournament(db, id);
     if (!tournament) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const outcome = await db.transaction(async (transaction) => {
@@ -178,11 +182,13 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       return { kind: 'cancelled' as const };
     });
     if (outcome.kind === 'not_found') {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (outcome.kind === 'invalid_status') {
       return reply.status(409).send({
-        error: { code: 'INVALID_STATUS', message: 'El torneo no se puede cancelar' },
+        error: { code: 'INVALID_STATUS', message: 'The tournament cannot be cancelled' },
       });
     }
     emitTournamentEvent(id, 'tournament.updated', { status: 'cancelled' });
@@ -194,13 +200,13 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
     const { id } = request.params as { id: string };
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const tournament = await getTournament(db, id);
     if (!tournament) {
       return reply.status(404).send({
-        error: { code: 'NOT_FOUND', message: 'El torneo no existe' },
+        error: { code: 'NOT_FOUND', message: 'The tournament does not exist' },
       });
     }
     const body = updateTournamentSchema.parse(request.body);
@@ -237,16 +243,18 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
     const { id } = request.params as { id: string };
     const tournament = await getTournament(db, id);
     if (!tournament) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     if (tournament.status !== 'draft') {
       return reply.status(409).send({
-        error: { code: 'INVALID_STATUS', message: 'El torneo ya fue publicado' },
+        error: { code: 'INVALID_STATUS', message: 'The tournament has already been published' },
       });
     }
     await db
@@ -274,7 +282,7 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       resourceId: id,
     });
     emitTournamentEvent(id, 'tournament.updated', { status: 'open' });
-    void sendDiscordWebhook(`📢 Torneo publicado: **${tournament.name}**`);
+    void sendDiscordWebhook(`📢 Tournament published: **${tournament.name}**`);
     return reply.send({ ok: true });
   });
 
@@ -286,11 +294,13 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .where(and(eq(tournaments.slug, slug), isNull(tournaments.deletedAt)))
       .limit(1);
     if (!tournament) {
-      return reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'No existe' } });
+      return reply
+        .status(404)
+        .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
     if (tournament.visibility === 'unlisted' && !request.user) {
       return reply.status(401).send({
-        error: { code: 'UNAUTHORIZED', message: 'Se requiere iniciar sesión' },
+        error: { code: 'UNAUTHORIZED', message: 'Authentication is required' },
       });
     }
     const [org] = await db

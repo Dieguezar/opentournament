@@ -62,35 +62,35 @@ function championOf(result: SimResult): string | null {
   return last?.winner ?? null;
 }
 
-describe('utilidades del bracket', () => {
-  it('detecta potencias de 2', () => {
+describe('bracket utilities', () => {
+  it('detects powers of 2', () => {
     expect(isPowerOfTwo(1)).toBe(true);
     expect(isPowerOfTwo(8)).toBe(true);
     expect(isPowerOfTwo(12)).toBe(false);
   });
 
-  it('calcula la siguiente potencia de 2 y BYEs', () => {
+  it('calculates the next power of 2 and BYEs', () => {
     expect(nextPowerOfTwo(8)).toBe(8);
     expect(nextPowerOfTwo(12)).toBe(16);
     expect(countByes(8)).toBe(0);
     expect(countByes(12)).toBe(4);
   });
 
-  it('calcula rondas de sencilla', () => {
+  it('calculates single-elimination rounds', () => {
     expect(roundCountForSingleElimination(1)).toBe(0);
     expect(roundCountForSingleElimination(8)).toBe(3);
     expect(roundCountForSingleElimination(128)).toBe(7);
   });
 
-  it('ordena seeds en bracket estándar', () => {
+  it('orders seeds in a standard bracket', () => {
     expect(seedOrder(4)).toEqual([1, 4, 2, 3]);
     expect(seedOrder(8)).toEqual([1, 8, 4, 5, 2, 7, 3, 6]);
   });
 });
 
-describe('eliminación sencilla', () => {
+describe('single elimination', () => {
   for (const n of [2, 3, 4, 5, 8, 12, 16, 33, 64, 128]) {
-    it(`genera un bracket válido para ${n} participantes`, () => {
+    it(`generates a valid bracket for ${n} participants`, () => {
       const bracket = generateSingleElimination(participants(n));
       expect(bracket.byes.length).toBe(countByes(n));
       const result = simulate(bracket);
@@ -112,19 +112,19 @@ describe('eliminación sencilla', () => {
     });
   }
 
-  it('asigna BYEs a los mejores seeds', () => {
+  it('assigns BYEs to the highest seeds', () => {
     const bracket = generateSingleElimination(participants(12));
     expect(new Set(bracket.byes)).toEqual(new Set(['p1', 'p2', 'p3', 'p4']));
   });
 
-  it('rechaza participar con menos de 2 equipos', () => {
+  it('rejects brackets with fewer than two participants', () => {
     expect(() => generateSingleElimination(participants(1))).toThrow();
   });
 });
 
-describe('doble eliminación', () => {
+describe('double elimination', () => {
   for (const n of [2, 3, 4, 5, 8, 12, 16, 33, 64]) {
-    it(`sin reset genera 2n-2 partidas reales y un campeón válido (${n})`, () => {
+    it(`without reset generates 2n-2 real matches and a valid champion (${n})`, () => {
       const bracket = generateDoubleElimination(participants(n));
       const result = simulate(bracket);
       expect(result.realMatches).toBe(2 * n - 2);
@@ -143,7 +143,7 @@ describe('doble eliminación', () => {
     });
   }
 
-  it('con reset genera 2n-1 partidas y GF-2 cuando gana el bracket de perdedores', () => {
+  it('with reset generates 2n-1 matches and GF-2 when the losers bracket wins', () => {
     const n = 4;
     const bracket = generateDoubleElimination(participants(n), { grandFinalReset: true });
     const result = simulate(bracket);
@@ -157,7 +157,7 @@ describe('doble eliminación', () => {
     expect(result.losses.get(champion!) ?? 0).toBeLessThanOrEqual(1);
   });
 
-  it('valida que el ganador pertenezca a la partida', () => {
+  it('validates that the winner participates in the match', () => {
     const bracket = generateDoubleElimination(participants(8));
     const first = bracket.matches.find((m) => m.home && m.away)!;
     expect(() => advanceMatch(bracket, first.id, 'forastero')).toThrow();

@@ -5,7 +5,7 @@ import {
 } from './team-game-compatibility.js';
 
 describe('getRegistrationCompatibilityIssue', () => {
-  it('mantiene los torneos genéricos compatibles con cualquier equipo', () => {
+  it('keeps generic tournaments compatible with any team', () => {
     expect(
       getRegistrationCompatibilityIssue({
         tournamentAdapterKey: 'generic',
@@ -16,7 +16,7 @@ describe('getRegistrationCompatibilityIssue', () => {
     ).toBeNull();
   });
 
-  it('rechaza un equipo configurado para otro juego', () => {
+  it('rejects a team configured for another game', () => {
     expect(
       getRegistrationCompatibilityIssue({
         tournamentAdapterKey: 'smash_ultimate',
@@ -30,7 +30,7 @@ describe('getRegistrationCompatibilityIssue', () => {
     });
   });
 
-  it('exige exactamente un integrante activo para Smash Ultimate', () => {
+  it('requires exactly one active player for Smash Ultimate', () => {
     expect(
       getRegistrationCompatibilityIssue({
         tournamentAdapterKey: 'smash_ultimate',
@@ -60,7 +60,7 @@ describe('getRegistrationCompatibilityIssue', () => {
     ).toMatchObject({ code: 'TEAM_ROSTER_SIZE_INVALID' });
   });
 
-  it('separa titulares y suplentes para un roster de Valorant 5+1', () => {
+  it('separates starters and substitutes for a 5+1 Valorant roster', () => {
     expect(
       getRegistrationCompatibilityIssue({
         tournamentAdapterKey: 'valorant',
@@ -95,7 +95,7 @@ describe('getRegistrationCompatibilityIssue', () => {
     });
   });
 
-  it('rechaza suplentes en Smash Ultimate', () => {
+  it('rejects substitutes in Smash Ultimate', () => {
     expect(
       getRegistrationCompatibilityIssue({
         tournamentAdapterKey: 'smash_ultimate',
@@ -111,7 +111,7 @@ describe('getRegistrationCompatibilityIssue', () => {
 });
 
 describe('getMemberCapacityIssue', () => {
-  it('impide agregar un segundo integrante a un equipo de Smash Ultimate', () => {
+  it('prevents adding a second player to a Smash Ultimate team', () => {
     expect(
       getMemberCapacityIssue('smash_ultimate', {
         activePlayers: 1,
@@ -124,7 +124,7 @@ describe('getMemberCapacityIssue', () => {
     });
   });
 
-  it('permite agregar integrantes mientras haya cupo en el adaptador', () => {
+  it('allows members while the adapter has capacity', () => {
     expect(
       getMemberCapacityIssue('valorant', {
         activePlayers: 4,
@@ -134,7 +134,7 @@ describe('getMemberCapacityIssue', () => {
     ).toBeNull();
   });
 
-  it('aplica cupos independientes para titulares y suplentes', () => {
+  it('applies separate capacity limits to starters and substitutes', () => {
     expect(
       getMemberCapacityIssue('valorant', {
         activePlayers: 5,

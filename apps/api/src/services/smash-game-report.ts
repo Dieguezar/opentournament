@@ -43,7 +43,7 @@ export function validateGameReport(
     return {
       ok: false,
       code: 'GAME_DETAILS_NOT_ALLOWED',
-      message: 'El detalle por game sólo está disponible para Smash Ultimate',
+      message: 'Per-game details are only available for Smash Ultimate',
     };
   }
 
@@ -56,12 +56,12 @@ export function validateGameReport(
       ? {
           ok: false,
           code: 'INVALID_GAME_SEQUENCE',
-          message: 'Los games deben numerarse consecutivamente desde 1',
+          message: 'Games must be numbered consecutively from 1',
         }
       : {
           ok: false,
           code: 'INVALID_SET_LENGTH',
-          message: 'El set contiene más games que el BO configurado',
+          message: 'The set contains more games than the configured best-of allows',
         };
   }
 
@@ -79,14 +79,14 @@ export function validateGameReport(
       return {
         ok: false,
         code: 'INVALID_GAME_STAGE',
-        message: `El escenario del game ${game.number} no pertenece al ruleset`,
+        message: `The stage in game ${game.number} is not part of the ruleset`,
       };
     }
     if (game.winnerTeamId !== context.homeTeamId && game.winnerTeamId !== context.awayTeamId) {
       return {
         ok: false,
         code: 'INVALID_GAME_WINNER',
-        message: `El ganador del game ${game.number} no participa en el match`,
+        message: `The winner of game ${game.number} does not participate in the match`,
       };
     }
 
@@ -103,7 +103,7 @@ export function validateGameReport(
       return {
         ok: false,
         code: 'INVALID_GAME_STOCKS',
-        message: `Los stocks del game ${game.number} no coinciden con su ganador`,
+        message: `The stocks in game ${game.number} do not match its winner`,
       };
     }
 
@@ -116,7 +116,7 @@ export function validateGameReport(
       return {
         ok: false,
         code: 'INVALID_SET_LENGTH',
-        message: 'El set contiene games posteriores a una victoria definitiva',
+        message: 'The set contains games after a decisive victory',
       };
     }
     normalizedGames.push({ ...game, stage: canonicalStage });
@@ -126,14 +126,14 @@ export function validateGameReport(
     return {
       ok: false,
       code: 'INVALID_SET_SCORE',
-      message: 'El marcador global no coincide con los games reportados',
+      message: 'The overall score does not match the reported games',
     };
   }
   if (homeWins !== requiredWins && awayWins !== requiredWins) {
     return {
       ok: false,
       code: 'INVALID_SET_LENGTH',
-      message: 'El reporte no completa el set configurado',
+      message: 'The report does not complete the configured set',
     };
   }
 
@@ -142,7 +142,7 @@ export function validateGameReport(
     return {
       ok: false,
       code: 'INVALID_SET_WINNER',
-      message: 'El ganador global no coincide con los games reportados',
+      message: 'The overall winner does not match the reported games',
     };
   }
 

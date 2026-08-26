@@ -34,14 +34,18 @@ export function authorizeResultReport(
     return {
       ok: false,
       code: 'STAFF_ONLY',
-      message: 'Este torneo reserva el reporte de resultados para administración',
+      message: 'This tournament reserves result reporting for staff',
     };
   }
 
   let reporterTeamId: string | undefined;
   if (request.participantAccess) {
     if (request.participantAccess.tournamentId !== request.tournamentId) {
-      return { ok: false, code: 'FORBIDDEN', message: 'El pase no pertenece a este torneo' };
+      return {
+        ok: false,
+        code: 'FORBIDDEN',
+        message: 'The pass does not belong to this tournament',
+      };
     }
     reporterTeamId = request.participantAccess.teamId;
   } else {
@@ -54,7 +58,7 @@ export function authorizeResultReport(
     return {
       ok: false,
       code: 'FORBIDDEN',
-      message: 'No podés reportar resultados para este enfrentamiento',
+      message: 'You cannot report results for this match',
     };
   }
 

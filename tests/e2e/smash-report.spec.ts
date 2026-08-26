@@ -31,7 +31,7 @@ function mutationHeaders(user: ApiUser) {
   return { 'x-csrf-token': user.csrfToken };
 }
 
-test('capitán completa y envía un set guiado de Smash Ultimate', async ({ page }) => {
+test('captain completes and submits a guided Smash Ultimate set', async ({ page }) => {
   const owner = await registerApiUser('Smash A');
   const rival = await registerApiUser('Smash B');
   const suffix = crypto.randomUUID().replaceAll('-', '').slice(0, 12);

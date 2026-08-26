@@ -11,7 +11,7 @@ const participants = Array.from({ length: 4 }, (_, index) => ({
 }));
 
 describe('applyCheckInWalkovers', () => {
-  it('avanza a quienes hicieron check-in y conserva varios walkovers de la ronda', () => {
+  it('advances checked-in participants and preserves multiple round walkovers', () => {
     const bracket = generateSingleElimination(participants);
     const firstRound = bracket.matches.filter(
       (match) => match.bracket === 'winners' && match.round === 1,
@@ -28,17 +28,19 @@ describe('applyCheckInWalkovers', () => {
     const result = applyCheckInWalkovers(bracket, checkedIn);
 
     expect(result.matches.find((match) => match.id === firstRound[0]!.id)?.winner).toBe(first.home);
-    expect(result.matches.find((match) => match.id === firstRound[1]!.id)?.winner).toBe(second.away);
+    expect(result.matches.find((match) => match.id === firstRound[1]!.id)?.winner).toBe(
+      second.away,
+    );
   });
 
-  it('no asigna ganador cuando ninguno hizo check-in', () => {
+  it('does not assign a winner when neither participant checked in', () => {
     const bracket = generateSingleElimination(participants);
     const checkedIn = new Map(participants.map((participant) => [participant.id, false]));
 
     const result = applyCheckInWalkovers(bracket, checkedIn);
 
-    expect(result.matches.filter((match) => match.round === 1).every((match) => !match.winner)).toBe(
-      true,
-    );
+    expect(
+      result.matches.filter((match) => match.round === 1).every((match) => !match.winner),
+    ).toBe(true);
   });
 });

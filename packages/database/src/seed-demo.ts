@@ -110,7 +110,7 @@ async function findUserIdByEmail(db: DbExecutor, email: string): Promise<string>
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
-  if (!user) throw new Error(`No se pudo preparar el usuario demo ${email}`);
+  if (!user) throw new Error(`Demo user ${email} could not be prepared`);
   return user.id;
 }
 
@@ -120,7 +120,7 @@ async function findOrganizationIdBySlug(db: DbExecutor, slug: string): Promise<s
     .from(organizations)
     .where(eq(organizations.slug, slug))
     .limit(1);
-  if (!organization) throw new Error(`No se pudo preparar la organización demo ${slug}`);
+  if (!organization) throw new Error(`Demo organization ${slug} could not be prepared`);
   return organization.id;
 }
 
@@ -144,7 +144,7 @@ export async function seedDemoData(db: Db): Promise<DemoSeedResult> {
       .from(tournaments)
       .where(eq(tournaments.id, IDS.tournament))
       .limit(1);
-    if (!tournament) throw new Error('El escenario demo está marcado pero incompleto');
+    if (!tournament) throw new Error('The demo scenario is marked as ready but is incomplete');
     const adminUserId = await findUserIdByEmail(db, 'admin@opentournament.local');
     const smashTournamentId = await db.transaction((transaction) =>
       seedSmashDemoData(transaction, adminUserId, tournament.organizationId),

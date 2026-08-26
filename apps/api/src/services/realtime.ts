@@ -43,11 +43,7 @@ export function emitTournamentEvent(
   });
 }
 
-export function emitUserEvent(
-  userId: string,
-  type: string,
-  data: Record<string, unknown>,
-): void {
+export function emitUserEvent(userId: string, type: string, data: Record<string, unknown>): void {
   publish(`user:${userId}`, { id: randomUUID(), type, data });
 }
 

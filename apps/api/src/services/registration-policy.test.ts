@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import {
-  canDecideRegistration,
-  isRegistrationClosed,
-} from './registration-policy.js';
+import { canDecideRegistration, isRegistrationClosed } from './registration-policy.js';
 
-describe('política temporal de inscripciones', () => {
+describe('registration timing policy', () => {
   it.each(['open', 'checkin_open'])(
     'permite decidir inscripciones durante %s',
     (tournamentStatus) => {
@@ -19,7 +16,7 @@ describe('política temporal de inscripciones', () => {
     },
   );
 
-  it('cierra el registro en el instante configurado, no después', () => {
+  it('closes registration at the configured instant, not after it', () => {
     const now = new Date('2026-08-23T12:00:00.000Z');
 
     expect(isRegistrationClosed(undefined, now)).toBe(false);

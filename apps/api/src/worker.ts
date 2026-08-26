@@ -14,14 +14,14 @@ const handlers: Record<string, JobHandler> = {
   'tournament.checkin_close': async (database, payload) => {
     const tournamentId = payload.tournamentId;
     if (typeof tournamentId !== 'string') {
-      throw new Error('tournamentId ausente en el job');
+      throw new Error('tournamentId is missing from the job');
     }
     await closeCheckIn(database, tournamentId);
   },
   'match.result_escalate': async (database, payload) => {
     const matchId = payload.matchId;
     if (typeof matchId !== 'string') {
-      throw new Error('matchId ausente en el job');
+      throw new Error('matchId is missing from the job');
     }
     await database
       .update(resultSubmissions)
@@ -45,7 +45,7 @@ export async function claimDueJobs(
         status: 'failed',
         lockedUntil: null,
         lockToken: null,
-        lastError: 'El job agotó sus intentos después de vencer su lease',
+        lastError: 'The job exhausted its attempts after its lease expired',
       })
       .where(
         and(
@@ -80,7 +80,12 @@ export async function claimDueJobs(
         lockedUntil,
         lockToken,
       })
-      .where(inArray(jobs.id, dueJobs.map((job) => job.id)));
+      .where(
+        inArray(
+          jobs.id,
+          dueJobs.map((job) => job.id),
+        ),
+      );
 
     return dueJobs.map((job) => ({
       ...job,
@@ -102,13 +107,13 @@ async function extendJobLease(database: Db, job: ClaimedJob): Promise<void> {
 async function runClaimedJob(database: Db, job: ClaimedJob): Promise<void> {
   const heartbeat = setInterval(() => {
     void extendJobLease(database, job).catch((error) => {
-      console.error(`No se pudo extender el lease del job ${job.id}:`, error);
+      console.error(`The lease for job ${job.id} could not be extended:`, error);
     });
   }, JOB_HEARTBEAT_MS);
 
   try {
     const handler = handlers[job.kind];
-    if (!handler) throw new Error(`No hay handler para el job ${job.kind}`);
+    if (!handler) throw new Error(`No handler exists for job ${job.kind}`);
 
     await handler(database, job.payload);
     await database
@@ -152,7 +157,7 @@ export function startScheduler(db: Db, intervalMs = 5000) {
 
   timer = setInterval(() => {
     void tick().catch((error) => {
-      console.error('Error en el scheduler:', error);
+      console.error('Scheduler error:', error);
     });
   }, intervalMs);
 

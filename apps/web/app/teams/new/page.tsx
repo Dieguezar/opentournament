@@ -50,9 +50,7 @@ export default function NewTeamPage() {
       });
       router.push('/dashboard');
     } catch (err) {
-      setError(
-        err instanceof ApiClientError && locale === 'es' ? err.message : copy.createTeamError,
-      );
+      setError(err instanceof ApiClientError ? err.message : copy.createTeamError);
     } finally {
       setSubmitting(false);
     }

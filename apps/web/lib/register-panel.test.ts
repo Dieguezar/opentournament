@@ -45,7 +45,7 @@ const teams = [
 ];
 
 describe('classifyTeamsForRegistration', () => {
-  it('separa perfiles compatibles de perfiles legacy configurables por su capitán', () => {
+  it('separates compatible profiles from legacy profiles configurable by their captain', () => {
     const result = classifyTeamsForRegistration(teams, 'smash_ultimate', 'captain');
 
     expect(result.compatibleTeams.map((team) => team.id)).toEqual(['compatible']);
@@ -57,7 +57,7 @@ describe('classifyTeamsForRegistration', () => {
     expect(result.hiddenTeamCount).toBe(2);
   });
 
-  it('limita las acciones al capitán también en torneos genéricos', () => {
+  it('limits actions to the captain in generic tournaments too', () => {
     const result = classifyTeamsForRegistration(teams, 'generic', 'captain');
 
     expect(result.compatibleTeams.map((team) => team.id)).toEqual([
@@ -95,7 +95,7 @@ describe('getRegistrationEntryPresentation', () => {
     });
   });
 
-  it('ofrece inscripción solamente mientras el torneo está abierto', () => {
+  it('offers registration only while the tournament is open', () => {
     expect(getRegistrationEntryPresentation('open', null)).toMatchObject({
       statusLabel: 'Sin inscripción',
       action: 'register',
@@ -107,7 +107,7 @@ describe('getRegistrationEntryPresentation', () => {
     });
   });
 
-  it('ofrece check-in en open y checkin_open para inscripciones aprobadas', () => {
+  it('offers check-in in open and checkin_open for approved registrations', () => {
     const approved = { registrationStatus: 'approved', checkedIn: false };
 
     expect(getRegistrationEntryPresentation('open', approved)).toEqual({
@@ -121,7 +121,7 @@ describe('getRegistrationEntryPresentation', () => {
     });
   });
 
-  it('evita ofrecer check-in tardío cuando el torneo ya está en curso', () => {
+  it('does not offer late check-in after the tournament starts', () => {
     expect(
       getRegistrationEntryPresentation('in_progress', {
         registrationStatus: 'approved',
@@ -134,7 +134,7 @@ describe('getRegistrationEntryPresentation', () => {
     });
   });
 
-  it('elimina la acción después de confirmar el check-in', () => {
+  it('removes the action after check-in is confirmed', () => {
     expect(
       getRegistrationEntryPresentation('checkin_open', {
         registrationStatus: 'approved',
@@ -147,7 +147,7 @@ describe('getRegistrationEntryPresentation', () => {
     });
   });
 
-  it('no ofrece acciones para inscripciones canceladas o con estado desconocido', () => {
+  it('offers no actions for cancelled or unknown registration states', () => {
     expect(
       getRegistrationEntryPresentation('open', {
         registrationStatus: 'cancelled',
@@ -164,7 +164,7 @@ describe('getRegistrationEntryPresentation', () => {
 });
 
 describe('getRegisterPanelLoadState', () => {
-  it('prioriza el fallo de carga sobre el estado vacío', () => {
+  it('prioritizes a load failure over the empty state', () => {
     expect(
       getRegisterPanelLoadState({
         isLoading: false,
@@ -174,7 +174,7 @@ describe('getRegisterPanelLoadState', () => {
     ).toBe('error');
   });
 
-  it('conserva estados separados para carga, sesión anónima y datos listos', () => {
+  it('keeps separate states for loading, anonymous sessions, and ready data', () => {
     expect(
       getRegisterPanelLoadState({
         isLoading: true,

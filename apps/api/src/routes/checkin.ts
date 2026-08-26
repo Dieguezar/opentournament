@@ -1,10 +1,6 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import {
-  auditLogs,
-  teams,
-  tournamentParticipants,
-} from '@opentournament/database';
+import { auditLogs, teams, tournamentParticipants } from '@opentournament/database';
 import { checkInSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
@@ -19,7 +15,7 @@ export async function registerCheckInRoutes(app: FastifyInstance): Promise<void>
     const body = checkInSchema.parse(request.body);
     if (!(await isTeamCaptain(db, body.teamId, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Solo el capitán hace check-in' },
+        error: { code: 'FORBIDDEN', message: 'Only the team captain can check in' },
       });
     }
     const result = await performCheckIn(db, id, body.teamId, request.user!.id);
@@ -43,7 +39,7 @@ export async function registerCheckInRoutes(app: FastifyInstance): Promise<void>
     const { id } = request.params as { id: string };
     if (!(await isTournamentAdmin(db, id, request.user!.id))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Se requiere rol de admin del torneo' },
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
       });
     }
     const rows = await db

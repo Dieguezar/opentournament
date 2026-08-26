@@ -40,13 +40,26 @@ export function WalkoverButton({
   return (
     <span>
       {' '}
-      <button type="button" className="button button-secondary" onClick={() => walkover(homeTeamId!)}>
+      <button
+        type="button"
+        className="button button-secondary"
+        onClick={() => walkover(homeTeamId!)}
+      >
         WO: {homeName}
       </button>{' '}
-      <button type="button" className="button button-secondary" onClick={() => walkover(awayTeamId!)}>
+      <button
+        type="button"
+        className="button button-secondary"
+        onClick={() => walkover(awayTeamId!)}
+      >
         WO: {awayName}
       </button>
-      {error && <span className="error" role="alert"> {error}</span>}
+      {error && (
+        <span className="error" role="alert">
+          {' '}
+          {error}
+        </span>
+      )}
     </span>
   );
 }
