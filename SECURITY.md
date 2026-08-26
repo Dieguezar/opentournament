@@ -1,18 +1,19 @@
 # Política de seguridad
 
-OpenTournament se toma la seguridad en serio. Si encuentras una vulnerabilidad, agradécelo: nos ayudas a proteger a la comunidad.
+OpenTournament se toma la seguridad en serio. Si encuentras una vulnerabilidad, reportarla de forma responsable ayuda a proteger a toda la comunidad.
 
 ## Reportar una vulnerabilidad
 
 **No abras un issue público** para vulnerabilidades. En su lugar:
 
-1. Escribe un correo al equipo de seguridad (dirección por definir antes del primer release; mientras tanto, contacta a los mantenedores vía el canal de la organización).
+1. Usa [Report a vulnerability](https://github.com/Dieguezar/opentournament/security/advisories/new)
+   para enviar un reporte privado a los mantenedores mediante GitHub.
 2. Incluye:
    - Descripción del problema y su impacto.
    - Pasos para reproducirlo (sin exponer datos reales de otros usuarios).
    - Versión afectada y entorno (autoalojado, Docker, versión de Node, etc.).
    - Si es posible, una prueba de concepto.
-3. Espera confirmación de recepción antes de publicar detalles.
+3. Conserva los detalles en privado y espera confirmación de recepción antes de publicarlos.
 
 ## Proceso de divulgación
 
@@ -34,7 +35,9 @@ OpenTournament se toma la seguridad en serio. Si encuentras una vulnerabilidad, 
 - Modelo de amenazas y controles documentados en [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
 - Autorización siempre en backend; nunca confiar en controles de interfaz.
 - Secretos fuera del repositorio; solo se publica `.env.example`.
-- Dependencias auditadas en CI y actualizadas con Dependabot.
+- Grafo de dependencias, alertas de vulnerabilidades y malware, y actualizaciones de seguridad
+  agrupadas mediante Dependabot.
+- Reportes privados de vulnerabilidades habilitados en GitHub Security Advisories.
 - Revisión de seguridad en cada PR que toque autenticación, autorización, subida de archivos o pagos.
 
 ## Checklist para instancias autoalojadas

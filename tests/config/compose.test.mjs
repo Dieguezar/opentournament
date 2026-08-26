@@ -24,6 +24,7 @@ const releaseNotesConfig = await readFile(
   new URL('../../.github/release.yml', import.meta.url),
   'utf8',
 ).catch(() => '');
+const securityPolicy = await readFile(new URL('../../SECURITY.md', import.meta.url), 'utf8');
 const securityScanWorkflow = await readFile(
   new URL('../../.github/workflows/security-scan.yml', import.meta.url),
   'utf8',
@@ -231,6 +232,15 @@ test('groups generated release notes into useful changelog categories', () => {
   assert.match(releaseNotesConfig, /documentation/u);
   assert.match(releaseNotesConfig, /dependencies/u);
   assert.match(releaseNotesConfig, /- ['"]\*['"]/u);
+});
+
+test('publishes a private vulnerability reporting channel without placeholder contacts', () => {
+  assert.match(
+    securityPolicy,
+    /https:\/\/github\.com\/Dieguezar\/opentournament\/security\/advisories\/new/u,
+  );
+  assert.doesNotMatch(securityPolicy, /dirección por definir/iu);
+  assert.match(securityPolicy, /No abras un issue público/u);
 });
 
 test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () => {
