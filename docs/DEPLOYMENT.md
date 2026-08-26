@@ -99,8 +99,9 @@ El primer tag sigue pendiente; el workflow no crea releases ni paquetes antes de
    comprobar que los PR tengan las etiquetas que alimentan `.github/release.yml`.
 3. Crear y subir un tag anotado: `git tag -a vX.Y.Z -m "OpenTournament vX.Y.Z"` y
    `git push origin vX.Y.Z`.
-4. Esperar a que **Publish container images** termine; el GitHub Release solo se crea si API y web
-   se publicaron y atestaron correctamente.
+4. Esperar a que **Publish container images** termine. Si el origen del push no genera eventos de
+   Actions, ejecutar manualmente el mismo workflow indicando el tag existente `vX.Y.Z`; el job
+   valida el formato y compila exactamente ese checkout.
 5. En el primer release, marcar `opentournament-api` y `opentournament-web` como públicos en GHCR y
    verificar una instalación usando los tags exactos publicados.
 

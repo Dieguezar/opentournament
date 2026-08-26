@@ -250,7 +250,11 @@ test('can select local builds or immutable release images in Compose', () => {
 
 test('publishes signed multi-platform images only from semantic version tags', () => {
   assert.match(releaseWorkflow, /tags:\s+[- ]+'v\*\.\*\.\*'/u);
-  assert.doesNotMatch(releaseWorkflow, /workflow_dispatch:/u);
+  assert.match(releaseWorkflow, /workflow_dispatch:/u);
+  assert.match(releaseWorkflow, /tag:\s+description:/u);
+  assert.match(releaseWorkflow, /RELEASE_TAG:/u);
+  assert.match(releaseWorkflow, /\^v\[0-9\]\+\\\.\[0-9\]\+\\\.\[0-9\]\+\$/u);
+  assert.match(releaseWorkflow, /ref: \$\{\{ env\.RELEASE_TAG \}\}/u);
   assert.match(releaseWorkflow, /packages: write/u);
   assert.match(releaseWorkflow, /attestations: write/u);
   assert.match(releaseWorkflow, /id-token: write/u);
@@ -269,8 +273,8 @@ test('publishes signed multi-platform images only from semantic version tags', (
   assert.match(releaseWorkflow, /push-to-registry: true/u);
   assert.match(releaseWorkflow, /release:\s+name: Create GitHub release\s+needs: publish/u);
   assert.match(releaseWorkflow, /contents: write/u);
-  assert.match(releaseWorkflow, /gh release view "\$\{GITHUB_REF_NAME\}"/u);
-  assert.match(releaseWorkflow, /gh release create "\$\{GITHUB_REF_NAME\}"/u);
+  assert.match(releaseWorkflow, /gh release view "\$\{RELEASE_TAG\}"/u);
+  assert.match(releaseWorkflow, /gh release create "\$\{RELEASE_TAG\}"/u);
   assert.match(releaseWorkflow, /--verify-tag/u);
   assert.match(releaseWorkflow, /--generate-notes/u);
 });
