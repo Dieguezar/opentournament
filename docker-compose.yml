@@ -33,6 +33,8 @@ services:
       retries: 10
 
   api:
+    image: ${API_IMAGE:-opentournament-api:local}
+    pull_policy: ${IMAGE_PULL_POLICY:-build}
     build:
       context: .
       dockerfile: infrastructure/Dockerfile.api
@@ -84,6 +86,8 @@ services:
       retries: 12
 
   web:
+    image: ${WEB_IMAGE:-opentournament-web:local}
+    pull_policy: ${IMAGE_PULL_POLICY:-build}
     build:
       context: .
       dockerfile: infrastructure/Dockerfile.web

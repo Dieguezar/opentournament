@@ -16,6 +16,10 @@ const codeqlWorkflow = await readFile(
   new URL('../../.github/workflows/codeql.yml', import.meta.url),
   'utf8',
 );
+const releaseWorkflow = await readFile(
+  new URL('../../.github/workflows/release-images.yml', import.meta.url),
+  'utf8',
+).catch(() => '');
 const envExampleEntries = Object.fromEntries(
   envExample
     .split(/\r?\n/u)
@@ -155,7 +159,7 @@ test('provides a safe manual smoke test for a clean Compose installation', () =>
 });
 
 test('uses GitHub Actions backed by the supported Node 24 runtime', () => {
-  const workflows = [ciWorkflow, codeqlWorkflow, composeSmoke].join('\n');
+  const workflows = [ciWorkflow, codeqlWorkflow, composeSmoke, releaseWorkflow].join('\n');
 
   assert.doesNotMatch(workflows, /actions\/checkout@v[1-6]\b/u);
   assert.doesNotMatch(workflows, /actions\/setup-node@v[1-6]\b/u);
@@ -166,4 +170,34 @@ test('uses GitHub Actions backed by the supported Node 24 runtime', () => {
   assert.match(workflows, /pnpm\/action-setup@v6/u);
   assert.match(workflows, /github\/codeql-action\/init@v4/u);
   assert.match(workflows, /github\/codeql-action\/analyze@v4/u);
+});
+
+test('can select local builds or immutable release images in Compose', () => {
+  assert.match(compose, /image: \$\{API_IMAGE:-opentournament-api:local\}/u);
+  assert.match(compose, /image: \$\{WEB_IMAGE:-opentournament-web:local\}/u);
+  assert.match(compose, /pull_policy: \$\{IMAGE_PULL_POLICY:-build\}/u);
+  assert.equal(envExampleEntries.API_IMAGE, 'opentournament-api:local');
+  assert.equal(envExampleEntries.WEB_IMAGE, 'opentournament-web:local');
+  assert.equal(envExampleEntries.IMAGE_PULL_POLICY, 'build');
+});
+
+test('publishes signed multi-platform images only from semantic version tags', () => {
+  assert.match(releaseWorkflow, /tags:\s+[- ]+'v\*\.\*\.\*'/u);
+  assert.doesNotMatch(releaseWorkflow, /workflow_dispatch:/u);
+  assert.match(releaseWorkflow, /packages: write/u);
+  assert.match(releaseWorkflow, /attestations: write/u);
+  assert.match(releaseWorkflow, /id-token: write/u);
+  assert.match(releaseWorkflow, /infrastructure\/Dockerfile\.api/u);
+  assert.match(releaseWorkflow, /infrastructure\/Dockerfile\.web/u);
+  assert.match(releaseWorkflow, /docker\/setup-qemu-action@v4/u);
+  assert.match(releaseWorkflow, /docker\/setup-buildx-action@v4/u);
+  assert.match(releaseWorkflow, /docker\/login-action@v4/u);
+  assert.match(releaseWorkflow, /docker\/metadata-action@v6/u);
+  assert.match(releaseWorkflow, /docker\/build-push-action@v7/u);
+  assert.match(releaseWorkflow, /platforms: linux\/amd64,linux\/arm64/u);
+  assert.match(releaseWorkflow, /push: true/u);
+  assert.match(releaseWorkflow, /provenance: mode=max/u);
+  assert.match(releaseWorkflow, /sbom: true/u);
+  assert.match(releaseWorkflow, /actions\/attest-build-provenance@v4/u);
+  assert.match(releaseWorkflow, /push-to-registry: true/u);
 });

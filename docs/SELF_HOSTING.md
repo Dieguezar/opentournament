@@ -9,6 +9,8 @@
 
 ## 2. Instalación rápida
 
+### Desde el código fuente
+
 ```bash
 git clone https://github.com/Dieguezar/opentournament.git
 cd opentournament
@@ -17,6 +19,34 @@ cp .env.example .env
 openssl rand -hex 32
 docker compose up -d
 ```
+
+Compose compila el checkout local porque `.env.example` usa `IMAGE_PULL_POLICY=build`.
+
+### Desde imágenes de una release
+
+Cuando exista una release publicada, es preferible fijar su versión exacta y evitar compilar en el
+servidor. El checkout y las imágenes deben usar la misma versión; por ejemplo, para `v1.0.0`:
+
+```bash
+git checkout v1.0.0
+```
+
+Después cambiar estas variables en `.env`:
+
+```dotenv
+API_IMAGE=ghcr.io/dieguezar/opentournament-api:1.0.0
+WEB_IMAGE=ghcr.io/dieguezar/opentournament-web:1.0.0
+IMAGE_PULL_POLICY=always
+```
+
+Después iniciar sin builds locales:
+
+```bash
+docker compose up -d --no-build
+```
+
+En producción se recomienda fijar `X.Y.Z`, no `latest`, para que una actualización sea explícita y
+reversible.
 
 `SESSION_SECRET` es obligatorio en Compose y la API rechaza el valor de ejemplo en producción.
 Si `openssl` no está disponible, se puede generar un valor hexadecimal seguro con Docker:
@@ -107,6 +137,13 @@ docker compose exec minio mc mirror --overwrite local/opentournament ./backup-bu
 ```
 
 Restauración: detener servicios, restaurar el dump (`psql`), restaurar el bucket y levantar de nuevo.
+
+### Actualizar una instalación con imágenes
+
+1. Leer el changelog y respaldar PostgreSQL/MinIO.
+2. Cambiar `API_IMAGE` y `WEB_IMAGE` a la nueva versión exacta.
+3. Ejecutar `docker compose pull api web`.
+4. Ejecutar `docker compose up -d --no-build` y verificar `/healthz`.
 
 ## 6. Troubleshooting
 

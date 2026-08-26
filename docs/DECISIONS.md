@@ -384,6 +384,15 @@ Este documento registra las decisiones de producto, arquitectura y proceso de Op
 - **Consecuencias:** La ausencia de variables `DISCORD_*` deshabilita la integración sin degradar torneos, reportes ni arbitraje.
 - **Estado:** aprobada.
 
+## ADR-043 — Imágenes versionadas y verificables en GHCR
+
+- **Tema:** Distribución de la instalación autoalojable.
+- **Opciones:** Compilar siempre desde el checkout | Imágenes mutables `latest` | Imágenes semver multi-arquitectura con procedencia.
+- **Decisión:** Cada tag `vX.Y.Z` publica imágenes separadas de API y web para AMD64/ARM64 en GHCR, con tags semver, SBOM y atestación de procedencia. Compose conserva el build local por defecto y permite seleccionar imágenes exactas mediante `.env`.
+- **Motivo:** Un operador debe poder instalar sin toolchain de Node y actualizar o revertir de forma explícita, sin perder la capacidad de auditar y compilar el código fuente.
+- **Consecuencias:** El primer release requiere hacer públicos ambos paquetes en GHCR; producción debe fijar una versión `X.Y.Z` y no depender de `latest`.
+- **Estado:** aprobada.
+
 ## Supuestos por defecto (estado: propuesta)
 
 Estos valores se tomaron por defecto durante el descubrimiento y se confirman en la revisión de la especificación:

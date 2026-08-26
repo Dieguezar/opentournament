@@ -90,15 +90,15 @@ saludable antes de iniciar el siguiente.
 
 ## Estado del repositorio
 
-| Fase                           | Estado                                 |
-| ------------------------------ | -------------------------------------- |
-| 0 — Definición y documentación | Completada                             |
-| 1 — Base técnica               | Completada                             |
-| 2 — MVP de torneos             | Completada                             |
-| 3 — Resultados y arbitraje     | Completada                             |
-| 4 — Discord y tiempo real      | Parcial — SSE/PWA operativos           |
-| 5 — Preparación open source    | En progreso — hardening + smoke manual |
-| 6 — Expansión                  | Pendiente                              |
+| Fase                           | Estado                                  |
+| ------------------------------ | --------------------------------------- |
+| 0 — Definición y documentación | Completada                              |
+| 1 — Base técnica               | Completada                              |
+| 2 — MVP de torneos             | Completada                              |
+| 3 — Resultados y arbitraje     | Completada                              |
+| 4 — Discord y tiempo real      | Parcial — SSE/PWA operativos            |
+| 5 — Preparación open source    | En progreso — preparando primer release |
+| 6 — Expansión                  | Pendiente                               |
 
 ## Licencia
 

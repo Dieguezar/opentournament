@@ -83,9 +83,11 @@ Los workflows de GitHub Actions disponibles son:
 - **Compose clean-install smoke (manual):** genera una configuración efímera segura, construye y
   levanta web, API, PostgreSQL y MinIO desde cero, verifica las rutas saludables y destruye los
   volúmenes al finalizar.
+- **Publish container images (tags):** un tag `vX.Y.Z` construye API y web para AMD64/ARM64,
+  publica tags semver en GHCR y adjunta SBOM y procedencia verificable.
 
-La publicación por tag semver, las imágenes en GHCR y las notas automáticas de release siguen
-pendientes para el primer release.
+Antes del primer release se debe verificar que ambos paquetes de GHCR tengan visibilidad pública.
+La creación del release de GitHub y sus notas sigue pendiente hasta publicar el primer tag.
 
 ## 10. Dimensionamiento
 
