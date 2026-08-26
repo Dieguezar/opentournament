@@ -215,6 +215,11 @@ test('uses GitHub Actions backed by the supported Node 24 runtime', () => {
   assert.match(workflows, /github\/codeql-action\/analyze@v4/u);
 });
 
+test('allows maintainers to validate release candidates manually', () => {
+  assert.match(ciWorkflow, /workflow_dispatch:/u);
+  assert.match(codeqlWorkflow, /workflow_dispatch:/u);
+});
+
 test('audits production and development dependencies in CI', () => {
   assert.match(ciWorkflow, /run: pnpm audit(?:\s|$)/u);
   assert.doesNotMatch(ciWorkflow, /pnpm audit --prod/u);
