@@ -15,7 +15,7 @@ Clasificación: Impacto (A=alto, M=medio, B=bajo) × Probabilidad (A=alta, M=med
 | R-09 | Crecimiento rápido exige escalar antes de lo previsto | M | B | Evolución documentada (worker/bot extraíbles, Redis/BullMQ), diseño 512+ desde el inicio | Mitigado |
 | R-10 | Licencia MIT permite forks comerciales competidores | M | M | Competir por calidad/comunidad; gobernanza transparente | Aceptado |
 | R-11 | Documentación desactualizada tras cambios | M | M | Regla: doc en el mismo PR; checklist de PR; revisión en cada fase | Mitigado |
-| R-12 | Pruebas de accesibilidad insuficientes en bracket complejo | M | M | Alternativa textual, axe en E2E, revisión manual pre-release | Abierto |
+| R-12 | Pruebas de accesibilidad insuficientes en bracket complejo | M | M | Alternativa textual y axe E2E sobre brackets LoL/Smash; pendiente revisión manual pre-release | Abierto |
 | R-13 | Vulnerabilidades en dependencias | A | M | `pnpm audit` en CI, Dependabot, CodeQL, revisión de dependencias nuevas | Mitigado |
 | R-14 | Pérdida de datos por fallos de operación | A | B | Backups documentados, jobs persistentes (cola en PG), health checks | Mitigado |
 

@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 const databaseUrl =
   process.env.DATABASE_URL ?? 'postgres://opentournament:opentournament@localhost:5432/opentournament';
+const reuseExistingServer = process.env.PLAYWRIGHT_REUSE_EXISTING_SERVER === 'true';
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -16,7 +17,7 @@ export default defineConfig({
     {
       command: 'pnpm --filter @opentournament/api start',
       url: 'http://localhost:4000/healthz',
-      reuseExistingServer: false,
+      reuseExistingServer,
       timeout: 120_000,
       env: {
         DATABASE_URL: databaseUrl,
@@ -28,7 +29,7 @@ export default defineConfig({
     {
       command: 'pnpm --filter @opentournament/web dev',
       url: 'http://localhost:3000',
-      reuseExistingServer: false,
+      reuseExistingServer,
       timeout: 120_000,
       env: {
         API_URL: 'http://localhost:4000',
