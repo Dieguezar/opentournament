@@ -1,1 +1,4 @@
-10049	INFO	(Dynamic App Router responses are intentionally non-storable)
+# Dynamic App Router responses are intentionally non-storable.
+10049	IGNORE	(Dynamic App Router responses are intentionally non-storable)
+# Static Next.js CSP requires inline framework scripts and styles; keep the finding visible.
+10055	INFO	(Static Next.js CSP requires inline framework scripts and styles)

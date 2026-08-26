@@ -38,6 +38,8 @@ Clasificación: Impacto (A=alto, M=medio, B=bajo) × Probabilidad (A=alta, M=med
 - HTTPS obligatorio en producción (proxy inverso).
 - Next.js aplica globalmente `Content-Security-Policy`, `X-Content-Type-Options: nosniff`,
   `Referrer-Policy`, `X-Frame-Options`, `Permissions-Policy` y aislamiento cross-origin.
+- El baseline ZAP documenta en `.zap/rules.tsv` el contenido dinámico no almacenable y
+  mantiene como informativo el uso inline requerido por la CSP estática de Next.js.
 - HSTS en producción.
 
 ### 3.2 Autenticación

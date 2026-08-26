@@ -226,5 +226,6 @@ test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () =>
   assert.match(securityScanWorkflow, /docker compose logs --no-color/u);
   assert.match(securityScanWorkflow, /if: always\(\)/u);
   assert.match(securityScanWorkflow, /docker compose down --volumes --remove-orphans/u);
-  assert.match(zapRules, /^10049\tINFO\t/u);
+  assert.match(zapRules, /^10049\tIGNORE\t/mu);
+  assert.match(zapRules, /^10055\tINFO\t/mu);
 });

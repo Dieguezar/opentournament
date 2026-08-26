@@ -19,6 +19,8 @@ describe('Next.js security headers', () => {
     expect(headers['Cross-Origin-Embedder-Policy']).toBe('credentialless');
     expect(headers['Cross-Origin-Opener-Policy']).toBe('same-origin');
     expect(headers['Content-Security-Policy']).toContain("default-src 'self'");
+    expect(headers['Content-Security-Policy']).toContain("img-src 'self' blob: data:");
+    expect(headers['Content-Security-Policy']).not.toContain('https:');
     expect(headers['Content-Security-Policy']).toContain("object-src 'none'");
     expect(headers['Content-Security-Policy']).toContain("frame-ancestors 'none'");
   });
