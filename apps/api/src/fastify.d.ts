@@ -6,7 +6,11 @@ declare module 'fastify' {
     participantAccess?: {
       id: string;
       tournamentId: string;
+      tournamentSlug: string;
+      tournamentName: string;
       teamId: string;
+      teamName: string;
+      teamTag: string | null;
     };
     sessionToken?: string;
     rawBody?: string;

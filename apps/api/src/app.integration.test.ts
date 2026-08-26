@@ -48,7 +48,10 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
         headers: { cookie: cookieHeader },
       });
       expect(meRes.statusCode).toBe(200);
-      expect(meRes.json<{ user: { email: string } }>().user.email).toBe(email);
+      expect(meRes.json<{ user: { email: string }; participantAccess: null }>()).toMatchObject({
+        user: { email },
+        participantAccess: null,
+      });
 
       const orgRes = await app.inject({
         method: 'POST',
@@ -1802,6 +1805,21 @@ describe.skipIf(!hasDb)('integración de la API (requiere PostgreSQL)', () => {
         });
         const participantSession = exchangeRes.cookies.find((cookie) => cookie.name === 'session')!;
         const participantCookies = `session=${participantSession.value}; csrf=${participantCsrfCookie.value}`;
+
+        const participantMeRes = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/me',
+          headers: { cookie: participantCookies },
+        });
+        expect(participantMeRes.statusCode).toBe(200);
+        expect(participantMeRes.json()).toMatchObject({
+          participantAccess: {
+            tournamentId: demo.tournamentId,
+            tournamentSlug: 'copa-nexo-demo',
+            teamId: '00000000-0000-4000-8000-000000000201',
+            teamName: 'Aurora Gaming',
+          },
+        });
 
         const mineRes = await app.inject({
           method: 'GET',

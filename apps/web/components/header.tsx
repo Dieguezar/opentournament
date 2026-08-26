@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { ActiveNavLink } from '@/components/active-nav-link';
 import { LogoutButton } from '@/components/logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { getHeaderPresentation } from '@/lib/participant-experience';
 import { serverFetch } from '@/lib/server-api';
 
 interface HeaderNavLinkProps {
@@ -26,8 +27,17 @@ function HeaderNavLink({ children, href }: HeaderNavLinkProps) {
 }
 
 export async function Header() {
-  const { status, data } = await serverFetch<{ user: { displayName: string } | null }>('/auth/me');
+  const { status, data } = await serverFetch<{
+    user: { displayName: string } | null;
+    participantAccess: {
+      tournamentSlug: string;
+      teamName: string;
+    } | null;
+  }>('/auth/me');
   const user = status === 200 ? data.user : null;
+  const presentation = user
+    ? getHeaderPresentation({ user, participantAccess: data.participantAccess ?? null })
+    : null;
   const isApiUnavailable = status === 503;
 
   return (
@@ -40,15 +50,15 @@ export async function Header() {
             </span>
             OpenTournament
           </Link>
-          {user && <span className="workspace-chip">Workspace personal</span>}
+          {presentation && <span className="workspace-chip">{presentation.workspaceLabel}</span>}
         </div>
         <nav className="nav-links" aria-label="Principal">
-          {user ? (
-            <>
-              <HeaderNavLink href="/dashboard">Torneos</HeaderNavLink>
-              <HeaderNavLink href="/tournaments/new">Nuevo torneo</HeaderNavLink>
-              <HeaderNavLink href="/teams/new">Nuevo participante</HeaderNavLink>
-            </>
+          {presentation ? (
+            presentation.links.map((link) => (
+              <HeaderNavLink href={link.href} key={link.href}>
+                {link.label}
+              </HeaderNavLink>
+            ))
           ) : (
             <>
               <HeaderNavLink href="/login">Iniciar sesión</HeaderNavLink>
@@ -63,13 +73,13 @@ export async function Header() {
             </span>
           )}
           <ThemeToggle />
-          {user && (
+          {presentation && (
             <>
               <span className="nav-account">
                 <span className="nav-avatar" aria-hidden="true">
-                  {user.displayName.slice(0, 1).toUpperCase()}
+                  {presentation.accountLabel.slice(0, 1).toUpperCase()}
                 </span>
-                <span className="nav-user">{user.displayName}</span>
+                <span className="nav-user">{presentation.accountLabel}</span>
               </span>
               <LogoutButton />
             </>

@@ -223,7 +223,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
 
   app.get('/auth/me', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
-    return reply.send({ user: request.user });
+    return reply.send({ user: request.user, participantAccess: request.participantAccess ?? null });
   });
 
   app.get('/auth/csrf', async (request, reply) => {

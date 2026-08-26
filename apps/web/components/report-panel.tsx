@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { GameAdapterKey, TournamentSettings } from '@opentournament/shared-types';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { getReportOutcomeMessage, getReportPanelState } from '@/lib/participant-experience';
 import {
   buildSmashReportPayload,
   createSmashGames,
@@ -462,6 +463,7 @@ export function ReportPanel({
   const [messages, setMessages] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadState, setLoadState] = useState<'loading' | 'anonymous' | 'ready'>('loading');
   const [busyMatchId, setBusyMatchId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -475,9 +477,13 @@ export function ReportPanel({
         setTeams(teamsResponse.teams);
         setMatches(matchesResponse.matches);
         setLoadError(null);
+        setLoadState('ready');
       })
       .catch((loadRequestError: unknown) => {
-        if (loadRequestError instanceof ApiClientError && loadRequestError.status === 401) return;
+        if (loadRequestError instanceof ApiClientError && loadRequestError.status === 401) {
+          setLoadState('anonymous');
+          return;
+        }
         setLoadError('No pudimos cargar tus partidas. Intentá actualizar la página.');
       });
   }, [staffMode, tournamentId]);
@@ -500,7 +506,11 @@ export function ReportPanel({
     setErrors((current) => ({ ...current, [matchId]: '' }));
     setMessages((current) => ({ ...current, [matchId]: '' }));
     try {
-      await apiClient(`/matches/${matchId}/results`, {
+      const outcome = await apiClient<{
+        confirmed: boolean;
+        waiting?: boolean;
+        conflict?: boolean;
+      }>(`/matches/${matchId}/results`, {
         method: 'POST',
         body: JSON.stringify({
           ...(payload as Record<string, unknown>),
@@ -509,10 +519,7 @@ export function ReportPanel({
       });
       setMessages((current) => ({
         ...current,
-        [matchId]:
-          !staffMode && reportingMode === 'bilateral'
-            ? 'Reporte enviado. Esperando la confirmación del rival…'
-            : 'Resultado confirmado y bracket actualizado.',
+        [matchId]: getReportOutcomeMessage(outcome, { staffMode, reportingMode }),
       }));
       router.refresh();
     } catch (reportError) {
@@ -564,7 +571,26 @@ export function ReportPanel({
         {loadError}
       </p>
     );
-  if ((!staffMode && reportingMode === 'staff_only') || reportableMatches.length === 0) return null;
+  const panelState = getReportPanelState({
+    loadState,
+    staffMode,
+    reportingMode,
+    teamCount: teams.length,
+    reportableMatchCount: reportableMatches.length,
+  });
+  if (panelState.kind === 'hidden') return null;
+
+  if (panelState.kind === 'empty') {
+    return (
+      <section id="reportar" className={`card ${styles.panel}`} aria-labelledby="report-panel-title">
+        <div className={styles.emptyState}>
+          <p className={styles.eyebrow}>Todo al día</p>
+          <h2 id="report-panel-title">{panelState.title}</h2>
+          <p>Cuando tengas un cruce listo, vas a poder reportarlo desde acá.</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="reportar" className={`card ${styles.panel}`} aria-labelledby="report-panel-title">
