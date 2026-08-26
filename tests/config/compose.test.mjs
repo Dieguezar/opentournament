@@ -20,6 +20,10 @@ const releaseWorkflow = await readFile(
   new URL('../../.github/workflows/release-images.yml', import.meta.url),
   'utf8',
 ).catch(() => '');
+const releaseNotesConfig = await readFile(
+  new URL('../../.github/release.yml', import.meta.url),
+  'utf8',
+).catch(() => '');
 const securityScanWorkflow = await readFile(
   new URL('../../.github/workflows/security-scan.yml', import.meta.url),
   'utf8',
@@ -217,6 +221,16 @@ test('publishes signed multi-platform images only from semantic version tags', (
   assert.match(releaseWorkflow, /gh release create "\$\{GITHUB_REF_NAME\}"/u);
   assert.match(releaseWorkflow, /--verify-tag/u);
   assert.match(releaseWorkflow, /--generate-notes/u);
+});
+
+test('groups generated release notes into useful changelog categories', () => {
+  assert.match(releaseNotesConfig, /^changelog:/u);
+  assert.match(releaseNotesConfig, /breaking-change/u);
+  assert.match(releaseNotesConfig, /enhancement/u);
+  assert.match(releaseNotesConfig, /bug/u);
+  assert.match(releaseNotesConfig, /documentation/u);
+  assert.match(releaseNotesConfig, /dependencies/u);
+  assert.match(releaseNotesConfig, /- ['"]\*['"]/u);
 });
 
 test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () => {

@@ -21,6 +21,7 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el v
 - Workflow manual de OWASP ZAP validado para análisis pasivo de una instalación aislada.
 - Pipeline semver para publicar imágenes AMD64/ARM64 de API y web en GHCR con SBOM y procedencia.
 - Creación idempotente del GitHub Release con notas generadas después de publicar ambas imágenes.
+- Categorías de release notes para cambios incompatibles, funciones, correcciones, documentación y dependencias.
 - Workflow manual para validar una instalación limpia y completa con Docker Compose.
 - Plantilla competitiva `lol.standard_v1` con región, política de parche, Tournament/Fearless Draft, selección de lado, pausas y retraso de espectadores.
 - Reporte guiado de series de League of Legends con detalle por partida y validación bilateral.

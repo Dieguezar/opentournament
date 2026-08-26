@@ -95,7 +95,8 @@ El primer tag sigue pendiente; el workflow no crea releases ni paquetes antes de
 ### 9.1 Publicar una versión
 
 1. Confirmar que CI, CodeQL, el smoke de Compose y el baseline ZAP estén verdes en `main`.
-2. Actualizar la versión y mover las entradas relevantes de `CHANGELOG.md` a la nueva versión.
+2. Actualizar la versión, mover las entradas relevantes de `CHANGELOG.md` a la nueva versión y
+   comprobar que los PR tengan las etiquetas que alimentan `.github/release.yml`.
 3. Crear y subir un tag anotado: `git tag -a vX.Y.Z -m "OpenTournament vX.Y.Z"` y
    `git push origin vX.Y.Z`.
 4. Esperar a que **Publish container images** termine; el GitHub Release solo se crea si API y web
