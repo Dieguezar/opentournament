@@ -157,13 +157,30 @@ async function openParticipant(
   return { context, page };
 }
 
-async function expectParticipantShell(page: Page, teamName: string) {
-  await expect(page.getByText('Participante', { exact: true })).toBeVisible();
+async function expectParticipantShell(page: Page, teamName: string, locale: 'es' | 'en' = 'es') {
+  const copy =
+    locale === 'en'
+      ? {
+          participant: 'Participant',
+          myTournament: 'My tournament',
+          tournaments: 'Tournaments',
+          newTournament: 'New tournament',
+          newParticipant: 'New participant',
+        }
+      : {
+          participant: 'Participante',
+          myTournament: 'Mi torneo',
+          tournaments: 'Torneos',
+          newTournament: 'Nuevo torneo',
+          newParticipant: 'Nuevo participante',
+        };
+
+  await expect(page.getByText(copy.participant, { exact: true })).toBeVisible();
   await expect(page.getByText(teamName, { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Mi torneo' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Torneos', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Nuevo torneo' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Nuevo participante' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: copy.myTournament })).toBeVisible();
+  await expect(page.getByRole('link', { name: copy.tournaments, exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: copy.newTournament })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: copy.newParticipant })).toHaveCount(0);
 }
 
 async function reportResult(
@@ -242,6 +259,9 @@ test('isolated passes → participant navigation → bilateral agreement and con
     contexts.push(visibleHome.context, visibleAway.context);
     await expectParticipantShell(visibleHome.page, visibilityMatch.homeTeam);
     await expectParticipantShell(visibleAway.page, visibilityMatch.awayTeam);
+    await visibleAway.page.getByLabel('Idioma').selectOption('en');
+    await expect(visibleAway.page.getByLabel('Language')).toHaveValue('en');
+    await expectParticipantShell(visibleAway.page, visibilityMatch.awayTeam, 'en');
     await expect(visibleHome.page.locator('#reportar > ul > li')).toHaveCount(1);
     await expect(visibleAway.page.locator('#reportar > ul > li')).toHaveCount(1);
 

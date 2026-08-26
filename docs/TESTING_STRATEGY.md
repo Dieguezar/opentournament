@@ -50,7 +50,9 @@ When `TEST_DATABASE_URL` is already configured, the command uses that database. 
 5. Apply a walkover and reschedule a match as staff.
 6. Observe a public bracket update through SSE.
 7. Install the PWA and verify read caching.
-8. Exercise the Spanish and English interfaces for user-facing changes.
+8. Exercise Spanish and English across reload, authentication, organizer navigation, public tournaments, and accountless participant access.
+
+Playwright uses `es-GT` as its deterministic baseline locale. Tests that cover English must switch through the visible language selector so they also verify the persisted locale cookie and server-rendered refresh.
 
 Run `@axe-core/playwright` on key pages.
 

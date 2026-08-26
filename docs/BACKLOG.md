@@ -60,6 +60,17 @@ A “delivered” row does not guarantee every original product wish is complete
   - Failure output explains missing prerequisites.
   - Result/reporting and participant-pass flows are included.
 
+### I18N-E2E-01 — Cover critical bilingual journeys — Delivered
+
+- **Status:** Delivered
+- **Related:** NFR-I18N-04, TESTING_STRATEGY
+- **Problem:** catalog-level tests cannot prove that language selection survives real navigation and authentication boundaries.
+- **Acceptance criteria:**
+  - Playwright starts from an explicit Spanish locale instead of inheriting the host language.
+  - An E2E flow switches to English and verifies persistence through reload, login, dashboard, and public tournament navigation.
+  - Accountless participant navigation is exercised in Spanish and English.
+  - A source-language guard keeps non-localized runtime messages and canonical adapter metadata in English.
+
 ### A11Y-01 — Manual screen-reader verification
 
 - **Priority:** P1

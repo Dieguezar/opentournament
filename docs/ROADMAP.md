@@ -48,7 +48,7 @@ OpenTournament v1.0.0 is published. Phases 0–3 and the original release-readin
 ## Current hardening priorities
 
 1. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
-2. Expand E2E coverage for bilingual organizer and participant flows.
+2. Extend the delivered bilingual authentication, public-tournament, and participant-shell E2E coverage to remaining mutation-heavy organizer flows.
 3. Keep schema, API, and architecture documentation synchronized.
 4. Validate optional Discord behavior against a configured test application.
 5. Improve operational metrics without adding mandatory infrastructure.

@@ -10,11 +10,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 - Spanish and English application interfaces with persisted language selection.
 - English canonical contributor documentation and a documentation index.
+- Browser coverage for persisted English authentication, organizer, public tournament, and participant navigation.
+- A source-language guard for non-localized runtime code and canonical game-adapter metadata.
 
 ### Changed
 
 - Added `pnpm test:integration`, which runs the API integration suite against configured PostgreSQL or an automatically cleaned ephemeral Docker container.
 - API errors now use a shared stable-code catalog, English server fallbacks, and client-side English/Spanish localization.
+- Game adapters now expose English canonical metadata while the web interface localizes presentation copy.
 - Console mail previews and the verification-email subject now use English contributor-facing text.
 - Contributor-facing test titles and operational messages are now written in English.
 - Contributor, security, issue, and pull request guidance is now written in English.

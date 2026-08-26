@@ -62,6 +62,35 @@ test('seeded demo → tournament → bracket → resolved dispute', async ({ pag
   await expect(page.getByText('La evidencia del servidor confirma')).toBeVisible();
 });
 
+test('English selection persists across authentication and public tournaments', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Idioma').selectOption('en');
+
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.getByLabel('Language')).toHaveValue('en');
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel('Language')).toHaveValue('en');
+  await page.getByLabel('Email').fill('admin@opentournament.local');
+  await page.getByLabel('Password').fill('demo-password-123');
+  await page.getByRole('button', { name: 'Sign in' }).click();
+
+  await page.waitForURL('**/dashboard');
+  await expect(page.getByRole('heading', { name: 'Hello, Admin Demo' })).toBeVisible();
+  await expect(page.getByText('Demo included')).toBeVisible();
+  await page.goto('/t/copa-nexo-demo');
+  await expect(page.getByRole('heading', { name: 'Bracket and matches' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Registered teams (4)' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Rules' })).toBeVisible();
+
+  await page.goto('/t/smash-random-showdown');
+  await expect(page.getByRole('heading', { name: 'Registered players (8)' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Competitive Smash Ultimate rules' })).toBeVisible();
+  await expect(page.getByTestId('smash-character')).toHaveCount(30);
+  await expect(page.getByLabel('Language')).toHaveValue('en');
+});
+
 test('the authenticated home offers useful actions and its menu reflows on mobile', async ({
   page,
 }) => {
