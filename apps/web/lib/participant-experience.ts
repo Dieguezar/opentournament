@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, formatMessage, getDictionary, type Locale } from './i18n';
+
 interface ParticipantAccessSummary {
   tournamentSlug: string;
   teamName: string;
@@ -89,7 +91,10 @@ interface ReportPanelStateInput {
 export type ReportPanelState =
   { kind: 'hidden' } | { kind: 'empty'; title: string } | { kind: 'matches' };
 
-export function getReportPanelState(input: ReportPanelStateInput): ReportPanelState {
+export function getReportPanelState(
+  input: ReportPanelStateInput,
+  locale: Locale = DEFAULT_LOCALE,
+): ReportPanelState {
   if (
     input.loadState !== 'ready' ||
     (input.staffMode && input.reportableMatchCount === 0) ||
@@ -99,7 +104,7 @@ export function getReportPanelState(input: ReportPanelStateInput): ReportPanelSt
     return { kind: 'hidden' };
   }
   if (input.reportableMatchCount === 0) {
-    return { kind: 'empty', title: 'No tenés partidas pendientes' };
+    return { kind: 'empty', title: getDictionary(locale).reportPanel.noPendingMatches };
   }
   return { kind: 'matches' };
 }
@@ -115,13 +120,17 @@ interface ReportContext {
   reportingMode: 'bilateral' | 'winner_reports' | 'staff_only';
 }
 
-export function getReportOutcomeMessage(outcome: ReportOutcome, context: ReportContext): string {
+export function getReportOutcomeMessage(
+  outcome: ReportOutcome,
+  context: ReportContext,
+  locale: Locale = DEFAULT_LOCALE,
+): string {
+  const copy = getDictionary(locale).reportPanel;
   if (outcome.conflict) {
-    return 'Los reportes no coinciden. Se abrió una disputa para que la revise el staff.';
+    return copy.outcomeConflict;
   }
   if (outcome.confirmed || context.staffMode || context.reportingMode !== 'bilateral') {
-    return 'Resultado confirmado y bracket actualizado.';
+    return copy.outcomeConfirmed;
   }
-  return 'Reporte enviado. Esperando la confirmación del rival…';
+  return copy.outcomePending;
 }
-import { DEFAULT_LOCALE, formatMessage, getDictionary, type Locale } from './i18n';

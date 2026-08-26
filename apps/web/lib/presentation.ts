@@ -4,7 +4,6 @@ interface StatusPresentation {
 }
 
 const GAME_ADAPTER_LABELS: Record<string, string> = {
-  generic: 'Juego genérico',
   valorant: 'Valorant',
   cs2: 'Counter-Strike 2',
   lol: 'League of Legends',
@@ -69,42 +68,13 @@ export interface LeagueRulesetSummaryPresentation {
   operations: string;
 }
 
-const TOURNAMENT_STATUS_LABELS: Record<string, StatusPresentation> = {
-  draft: { label: 'Borrador', className: 'badge' },
-  open: { label: 'Inscripciones abiertas', className: 'badge badge-success' },
-  checkin_open: { label: 'Check-in abierto', className: 'badge badge-warn' },
-  in_progress: { label: 'En curso', className: 'badge badge-warn' },
-  finalized: { label: 'Finalizado', className: 'badge badge-success' },
-  cancelled: { label: 'Cancelado', className: 'badge badge-danger' },
-};
-
-const MATCH_STATUS_LABELS: Record<string, string> = {
-  scheduled: 'Programada',
-  in_progress: 'En juego',
-  disputed: 'En disputa',
-  finalized: 'Finalizada',
-  walkover: 'Walkover',
-  cancelled: 'Cancelada',
-};
-
-const REGISTRATION_STATUS_LABELS: Record<string, string> = {
-  pending: 'Pendiente',
-  approved: 'Aprobada',
-  waitlisted: 'En lista de espera',
-  rejected: 'Rechazada',
-  cancelled: 'Cancelada',
-};
-
-const DISPUTE_STATUS_LABELS: Record<string, string> = {
-  open: 'Abierta',
-  in_review: 'En revisión',
-  resolved: 'Resuelta',
-};
-
-const DISPUTE_REASON_LABELS: Record<string, string> = {
-  result_conflict: 'Resultados contradictorios',
-  captain_request: 'Solicitud del capitán',
-  system: 'Escalada por el sistema',
+const TOURNAMENT_STATUS_CLASSES: Record<string, string> = {
+  draft: 'badge',
+  open: 'badge badge-success',
+  checkin_open: 'badge badge-warn',
+  in_progress: 'badge badge-warn',
+  finalized: 'badge badge-success',
+  cancelled: 'badge badge-danger',
 };
 
 function humanize(value: string): string {
@@ -112,19 +82,22 @@ function humanize(value: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-function formatStageClause(value: string): string {
-  if (value === 'modified_dsr') return 'DSR modificado';
-  if (value === 'full_dsr') return 'DSR completo';
-  if (value === 'none') return 'Sin DSR';
+function formatStageClause(value: string, locale: Locale): string {
+  const ruleset = getDictionary(locale).ruleset;
+  if (value === 'modified_dsr') return ruleset.modifiedDsr;
+  if (value === 'full_dsr') return ruleset.fullDsr;
+  if (value === 'none') return ruleset.noDsr;
   return humanize(value);
 }
 
-function formatRulesSwitches(rules: SmashRulesetInput): string {
+function formatRulesSwitches(rules: SmashRulesetInput, locale: Locale): string {
+  const ruleset = getDictionary(locale).ruleset;
   if (!rules.itemsEnabled && !rules.finalSmashMeterEnabled && !rules.stageHazardsEnabled) {
-    return 'Items, FS Meter y hazards desactivados';
+    return ruleset.allSwitchesDisabled;
   }
 
-  const state = (isEnabled: boolean) => (isEnabled ? 'activados' : 'desactivados');
+  const state = (isEnabled: boolean) =>
+    isEnabled ? ruleset.enabledPlural : ruleset.disabledPlural;
   return [
     `Items ${state(rules.itemsEnabled)}`,
     `FS Meter ${state(rules.finalSmashMeterEnabled)}`,
@@ -178,34 +151,46 @@ function isLeagueRulesetInput(value: unknown): value is LeagueRulesetInput {
   );
 }
 
-function formatLeagueSideSelection(value: string): string {
+function formatLeagueSideSelection(value: string, locale: Locale): string {
+  const ruleset = getDictionary(locale).ruleset;
   if (value === 'higher_seed_game_1_then_loser') {
-    return 'Seed superior en Game 1; luego el perdedor elige';
+    return ruleset.higherSeedThenLoser;
   }
-  if (value === 'alternating') return 'Selección de lado alternada';
-  if (value === 'coin_toss') return 'Selección inicial por sorteo';
+  if (value === 'alternating') return ruleset.alternatingSides;
+  if (value === 'coin_toss') return ruleset.coinToss;
   return humanize(value);
 }
 
 export function buildRulesetSummary(
   input: RulesetSummaryInput,
+  locale: Locale = DEFAULT_LOCALE,
 ): RulesetSummaryPresentation | LeagueRulesetSummaryPresentation | null {
+  const dictionary = getDictionary(locale);
+  const { presentation, ruleset } = dictionary;
   if (input.gameAdapterKey === 'lol' && isLeagueRulesetInput(input.gameRules)) {
     const rules = input.gameRules;
     const format =
-      input.format === 'double_elimination' ? 'Doble eliminación' : 'Eliminación sencilla';
+      input.format === 'double_elimination'
+        ? presentation.doubleElimination
+        : presentation.singleElimination;
     return {
       kind: 'lol',
-      title: 'Reglas competitivas de League of Legends',
+      title: ruleset.leagueTitle,
       format: `5v5 · ${format}`,
       set: `BO${input.seriesBestOf} · Summoner’s Rift`,
-      draft: `Tournament Draft · Fearless ${rules.fearlessDraft ? 'activado' : 'desactivado'}`,
+      draft: `Tournament Draft · Fearless ${rules.fearlessDraft ? ruleset.enabled : ruleset.disabled}`,
       patch:
         rules.patchPolicy === 'fixed'
-          ? `Parche fijo ${rules.patchVersion} · Región ${rules.region.toUpperCase()}`
-          : `Parche live · Región ${rules.region.toUpperCase()}`,
-      sideSelection: formatLeagueSideSelection(rules.sideSelection),
-      operations: `${rules.pauseBudgetMinutes} min de pausa · ${rules.spectatorDelayMinutes} min de retraso para espectadores`,
+          ? formatMessage(ruleset.fixedPatch, {
+              patch: rules.patchVersion ?? '',
+              region: rules.region.toUpperCase(),
+            })
+          : formatMessage(ruleset.livePatch, { region: rules.region.toUpperCase() }),
+      sideSelection: formatLeagueSideSelection(rules.sideSelection, locale),
+      operations: formatMessage(ruleset.pauseOperations, {
+        pause: rules.pauseBudgetMinutes,
+        delay: rules.spectatorDelayMinutes,
+      }),
     };
   }
 
@@ -215,17 +200,23 @@ export function buildRulesetSummary(
 
   const rules = input.gameRules;
   const format =
-    input.format === 'double_elimination' ? 'Doble eliminación' : 'Eliminación sencilla';
-  const bans = `${rules.stageBans} ${rules.stageBans === 1 ? 'ban' : 'bans'}`;
+    input.format === 'double_elimination'
+      ? presentation.doubleElimination
+      : presentation.singleElimination;
+  const bans = formatMessage(rules.stageBans === 1 ? ruleset.stageBan : ruleset.stageBans, {
+    count: rules.stageBans,
+  });
 
   return {
     kind: 'smash_ultimate',
-    title: 'Reglas competitivas de Smash Ultimate',
+    title: ruleset.smashTitle,
     format: `Singles 1v1 · ${format}`,
     set: `BO${input.seriesBestOf} · ${rules.stocks} stocks · ${rules.timeLimitMinutes} min`,
-    grandFinal: input.grandFinalReset ? 'Gran final con reset' : 'Gran final sin reset',
-    stagePolicy: `${bans} · ${formatStageClause(rules.stageClause)}`,
-    switches: formatRulesSwitches(rules),
+    grandFinal: input.grandFinalReset
+      ? ruleset.grandFinalWithReset
+      : ruleset.grandFinalWithoutReset,
+    stagePolicy: `${bans} · ${formatStageClause(rules.stageClause, locale)}`,
+    switches: formatRulesSwitches(rules, locale),
     starters: rules.starters,
     counterpicks: rules.counterpicks,
   };
@@ -234,38 +225,51 @@ export function buildRulesetSummary(
 export function getPublicRegistrationMessage(
   tournamentStatus: string,
   isSmash: boolean,
+  locale: Locale = DEFAULT_LOCALE,
 ): string | null {
+  const presentation = getDictionary(locale).presentation;
   if (tournamentStatus === 'open' || tournamentStatus === 'checkin_open') return null;
-  if (tournamentStatus === 'draft') return 'Las inscripciones todavía no abrieron.';
+  if (tournamentStatus === 'draft') return presentation.registrationsNotOpen;
   if (tournamentStatus === 'cancelled') {
-    return 'El torneo fue cancelado y no admite nuevas inscripciones.';
+    return presentation.tournamentCancelled;
   }
 
-  const matchLabel = isSmash ? 'los sets' : 'las partidas';
   if (tournamentStatus === 'in_progress') {
-    return `El torneo ya está en curso. Las inscripciones y el check-in cerraron; seguí ${matchLabel} en el bracket.`;
+    return isSmash
+      ? presentation.tournamentInProgressSets
+      : presentation.tournamentInProgressMatches;
   }
   if (tournamentStatus === 'finalized') {
-    return `El torneo finalizó. Consultá ${matchLabel} y los resultados publicados en el bracket.`;
+    return isSmash ? presentation.tournamentFinalizedSets : presentation.tournamentFinalizedMatches;
   }
 
-  return 'Las inscripciones no están disponibles en este momento.';
+  return presentation.registrationsUnavailable;
 }
 
-export function formatGameAdapter(value: string): string {
+export function formatGameAdapter(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  if (value === 'generic') return getDictionary(locale).presentation.genericGame;
   return GAME_ADAPTER_LABELS[value] ?? humanize(value);
 }
 
-export function getTournamentStatus(value: string): StatusPresentation {
-  return TOURNAMENT_STATUS_LABELS[value] ?? { label: humanize(value), className: 'badge' };
+export function getTournamentStatus(
+  value: string,
+  locale: Locale = DEFAULT_LOCALE,
+): StatusPresentation {
+  const labels = getDictionary(locale).presentation.tournamentStatus as Record<string, string>;
+  return {
+    label: labels[value] ?? humanize(value),
+    className: TOURNAMENT_STATUS_CLASSES[value] ?? 'badge',
+  };
 }
 
-export function formatMatchStatus(value: string): string {
-  return MATCH_STATUS_LABELS[value] ?? humanize(value);
+export function formatMatchStatus(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = getDictionary(locale).presentation.matchStatus as Record<string, string>;
+  return labels[value] ?? humanize(value);
 }
 
-export function formatRegistrationStatus(value: string): string {
-  return REGISTRATION_STATUS_LABELS[value] ?? humanize(value);
+export function formatRegistrationStatus(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = getDictionary(locale).presentation.registrationStatus as Record<string, string>;
+  return labels[value] ?? humanize(value);
 }
 
 export function shouldShowRegistrationDecisionActions(status: string): boolean {
@@ -280,32 +284,28 @@ export function canDeclareWalkover(matchStatus: string): boolean {
   return matchStatus === 'scheduled' || matchStatus === 'in_progress';
 }
 
-export function formatDisputeStatus(value: string): string {
-  return DISPUTE_STATUS_LABELS[value] ?? humanize(value);
+export function formatDisputeStatus(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = getDictionary(locale).presentation.disputeStatus as Record<string, string>;
+  return labels[value] ?? humanize(value);
 }
 
-export function formatDisputeReason(value: string): string {
-  return DISPUTE_REASON_LABELS[value] ?? humanize(value);
+export function formatDisputeReason(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = getDictionary(locale).presentation.disputeReason as Record<string, string>;
+  return labels[value] ?? humanize(value);
 }
 
-export function formatBracketType(value: string): string {
-  if (value === 'winners') return 'Ganadores';
-  if (value === 'losers') return 'Perdedores';
-  if (value === 'final') return 'Gran final';
-  return humanize(value);
+export function formatBracketType(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = getDictionary(locale).presentation.bracketType as Record<string, string>;
+  return labels[value] ?? humanize(value);
 }
 
-export function formatOrganizationRole(value: string): string {
-  if (value === 'owner') return 'Propietario';
-  if (value === 'admin') return 'Administrador';
-  if (value === 'member') return 'Miembro';
-  return humanize(value);
+export function formatOrganizationRole(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = getDictionary(locale).presentation.organizationRole as Record<string, string>;
+  return labels[value] ?? humanize(value);
 }
 
-export function formatParticipantStatus(value: string): string {
-  if (value === 'active') return 'En competencia';
-  if (value === 'eliminated') return 'Eliminado';
-  if (value === 'winner') return 'Campeón';
-  if (value === 'disqualified') return 'Descalificado';
-  return humanize(value);
+export function formatParticipantStatus(value: string, locale: Locale = DEFAULT_LOCALE): string {
+  const labels = getDictionary(locale).presentation.participantStatus as Record<string, string>;
+  return labels[value] ?? humanize(value);
 }
+import { DEFAULT_LOCALE, formatMessage, getDictionary, type Locale } from './i18n';

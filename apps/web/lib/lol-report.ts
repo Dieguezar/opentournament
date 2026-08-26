@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, getDictionary, type Locale } from './i18n';
+
 export interface LeagueScorePreset {
   homeTeamId: string;
   awayTeamId: string;
@@ -93,7 +95,11 @@ export function updateLeagueGameWinner(
   return { ...game, winnerTeamId };
 }
 
-export function validateLeagueReport(input: LeagueReportDraft): LeagueReportValidation {
+export function validateLeagueReport(
+  input: LeagueReportDraft,
+  locale: Locale = DEFAULT_LOCALE,
+): LeagueReportValidation {
+  const copy = getDictionary(locale).reportPanel;
   const errors: Record<string, string> = {};
   const games = input.games.map((game) => ({ ...game, riotMatchId: game.riotMatchId.trim() }));
   const validTeamIds = new Set([input.preset.homeTeamId, input.preset.awayTeamId]);
@@ -105,13 +111,13 @@ export function validateLeagueReport(input: LeagueReportDraft): LeagueReportVali
       game.durationMinutes < 5 ||
       game.durationMinutes > 180
     ) {
-      errors[`${prefix}-duration`] = 'La duración debe estar entre 5 y 180 minutos.';
+      errors[`${prefix}-duration`] = copy.leagueDurationError;
     }
     if (game.riotMatchId && !/^[A-Za-z0-9_-]+$/.test(game.riotMatchId)) {
-      errors[`${prefix}-riot-id`] = 'El Riot Match ID sólo admite letras, números, guiones y _.';
+      errors[`${prefix}-riot-id`] = copy.riotIdFormatError;
     }
     if (!validTeamIds.has(game.blueTeamId)) {
-      errors[`${prefix}-blue-team`] = 'Elegí qué equipo jugó del lado azul.';
+      errors[`${prefix}-blue-team`] = copy.blueSideError;
     }
   }
 
@@ -124,14 +130,14 @@ export function validateLeagueReport(input: LeagueReportDraft): LeagueReportVali
     );
     if (duplicate) {
       errors[`${input.fieldIdPrefix ?? 'lol'}-game-${duplicate.number}-riot-id`] =
-        'Ese Riot Match ID ya se usó en otra partida.';
+        copy.duplicateRiotIdError;
     }
   }
 
   const homeWins = games.filter((game) => game.winnerTeamId === input.preset.homeTeamId).length;
   const awayWins = games.filter((game) => game.winnerTeamId === input.preset.awayTeamId).length;
   if (homeWins !== input.preset.homeScore || awayWins !== input.preset.awayScore) {
-    errors.score = 'Los ganadores por partida no coinciden con el marcador elegido.';
+    errors.score = copy.leagueWinnersError;
   }
 
   return { errors, firstInvalidFieldId: Object.keys(errors)[0] ?? null, games };
@@ -139,7 +145,9 @@ export function validateLeagueReport(input: LeagueReportDraft): LeagueReportVali
 
 export function buildLeagueReportPayload(input: LeagueReportDraft): LeagueReportPayload {
   const validation = validateLeagueReport(input);
-  if (validation.firstInvalidFieldId) throw new Error('El reporte de LoL está incompleto.');
+  if (validation.firstInvalidFieldId) {
+    throw new Error(getDictionary(DEFAULT_LOCALE).reportPanel.leagueIncompleteError);
+  }
 
   return {
     winnerTeamId: input.preset.winnerTeamId,

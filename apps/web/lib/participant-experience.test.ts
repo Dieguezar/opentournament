@@ -135,6 +135,19 @@ describe('participant experience', () => {
     ).toEqual({ kind: 'hidden' });
 
     expect(
+      getReportPanelState(
+        {
+          loadState: 'ready',
+          staffMode: false,
+          reportingMode: 'bilateral',
+          teamCount: 1,
+          reportableMatchCount: 0,
+        },
+        'en',
+      ),
+    ).toEqual({ kind: 'empty', title: 'You have no pending matches' });
+
+    expect(
       getReportPanelState({
         loadState: 'ready',
         staffMode: true,
@@ -186,5 +199,12 @@ describe('participant experience', () => {
         { staffMode: false, reportingMode: 'bilateral' },
       ),
     ).toBe('Los reportes no coinciden. Se abrió una disputa para que la revise el staff.');
+    expect(
+      getReportOutcomeMessage(
+        { confirmed: false, conflict: true },
+        { staffMode: false, reportingMode: 'bilateral' },
+        'en',
+      ),
+    ).toBe('The reports do not match. A dispute was opened for staff review.');
   });
 });

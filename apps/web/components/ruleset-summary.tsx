@@ -1,4 +1,5 @@
 import type { TournamentSettings } from '@opentournament/shared-types';
+import { DEFAULT_LOCALE, getDictionary, type Locale } from '@/lib/i18n';
 import { buildRulesetSummary } from '@/lib/presentation';
 import styles from './ruleset-summary.module.css';
 
@@ -7,6 +8,7 @@ interface RulesetSummaryProps {
   format: string;
   seriesBestOf: number;
   settings: TournamentSettings | null | undefined;
+  locale?: Locale;
 }
 
 export function RulesetSummary({
@@ -14,14 +16,20 @@ export function RulesetSummary({
   format,
   seriesBestOf,
   settings,
+  locale,
 }: RulesetSummaryProps) {
-  const summary = buildRulesetSummary({
-    gameAdapterKey,
-    format,
-    seriesBestOf,
-    grandFinalReset: settings?.grandFinalReset ?? false,
-    gameRules: settings?.gameRules,
-  });
+  const resolvedLocale = locale ?? DEFAULT_LOCALE;
+  const copy = getDictionary(resolvedLocale).publicTournament;
+  const summary = buildRulesetSummary(
+    {
+      gameAdapterKey,
+      format,
+      seriesBestOf,
+      grandFinalReset: settings?.grandFinalReset ?? false,
+      gameRules: settings?.gameRules,
+    },
+    resolvedLocale,
+  );
 
   if (!summary) return null;
 
@@ -30,7 +38,7 @@ export function RulesetSummary({
       <section className={styles.summary} data-game="lol" aria-label={summary.title}>
         <header className={styles.header}>
           <div>
-            <p className={styles.kicker}>Plantilla del juego</p>
+            <p className={styles.kicker}>{copy.gameTemplate}</p>
             <h2>{summary.title}</h2>
           </div>
           <p className={styles.switches}>{summary.draft}</p>
@@ -38,19 +46,19 @@ export function RulesetSummary({
 
         <dl className={styles.facts}>
           <div>
-            <dt>Formato</dt>
+            <dt>{copy.format}</dt>
             <dd>{summary.format}</dd>
           </div>
           <div>
-            <dt>Serie</dt>
+            <dt>{copy.series}</dt>
             <dd>{summary.set}</dd>
           </div>
           <div>
-            <dt>Parche y región</dt>
+            <dt>{copy.patchAndRegion}</dt>
             <dd>{summary.patch}</dd>
           </div>
           <div>
-            <dt>Selección de lado</dt>
+            <dt>{copy.sideSelection}</dt>
             <dd>{summary.sideSelection}</dd>
           </div>
         </dl>
@@ -64,7 +72,7 @@ export function RulesetSummary({
     <section className={styles.summary} data-game="smash_ultimate" aria-label={summary.title}>
       <header className={styles.header}>
         <div>
-          <p className={styles.kicker}>Plantilla del juego</p>
+          <p className={styles.kicker}>{copy.gameTemplate}</p>
           <h2>{summary.title}</h2>
         </div>
         <p className={styles.switches}>{summary.switches}</p>
@@ -72,26 +80,26 @@ export function RulesetSummary({
 
       <dl className={styles.facts}>
         <div>
-          <dt>Formato</dt>
+          <dt>{copy.format}</dt>
           <dd>{summary.format}</dd>
         </div>
         <div>
-          <dt>Set</dt>
+          <dt>{copy.set}</dt>
           <dd>{summary.set}</dd>
         </div>
         <div>
-          <dt>Gran final</dt>
+          <dt>{copy.grandFinal}</dt>
           <dd>{summary.grandFinal}</dd>
         </div>
         <div>
-          <dt>Selección de escenario</dt>
+          <dt>{copy.stageSelection}</dt>
           <dd>{summary.stagePolicy}</dd>
         </div>
       </dl>
 
       <div className={styles.stageGroups}>
         <div>
-          <h3>Escenarios iniciales</h3>
+          <h3>{copy.starterStages}</h3>
           <ul>
             {summary.starters.map((stage) => (
               <li key={stage}>{stage}</li>
@@ -99,7 +107,7 @@ export function RulesetSummary({
           </ul>
         </div>
         <div>
-          <h3>Counterpicks</h3>
+          <h3>{copy.counterpicks}</h3>
           <ul>
             {summary.counterpicks.map((stage) => (
               <li key={stage}>{stage}</li>

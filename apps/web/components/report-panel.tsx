@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { GameAdapterKey, TournamentSettings } from '@opentournament/shared-types';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { formatMessage } from '@/lib/i18n';
 import { getReportOutcomeMessage, getReportPanelState } from '@/lib/participant-experience';
 import {
   buildLeagueReportPayload,
@@ -100,6 +102,8 @@ function GenericReportForm({
   onReport,
   onDispute,
 }: GenericReportFormProps) {
+  const { dictionary } = useI18n();
+  const copy = dictionary.reportPanel;
   const [winnerTeamId, setWinnerTeamId] = useState(
     allowedWinnerTeamId ?? match.homeTeamId ?? match.awayTeamId ?? '',
   );
@@ -120,7 +124,7 @@ function GenericReportForm({
     >
       <div className={styles.genericFields}>
         <label>
-          Ganador
+          {copy.winner}
           <select value={winnerTeamId} onChange={(event) => setWinnerTeamId(event.target.value)}>
             {match.homeTeam &&
               (!allowedWinnerTeamId || allowedWinnerTeamId === match.homeTeamId) && (
@@ -133,7 +137,7 @@ function GenericReportForm({
           </select>
         </label>
         <label>
-          Puntos de {match.homeTeam ?? 'local'}
+          {formatMessage(copy.pointsFor, { team: match.homeTeam ?? copy.home })}
           <input
             inputMode="numeric"
             value={homeScore}
@@ -141,7 +145,7 @@ function GenericReportForm({
           />
         </label>
         <label>
-          Puntos de {match.awayTeam ?? 'visitante'}
+          {formatMessage(copy.pointsFor, { team: match.awayTeam ?? copy.away })}
           <input
             inputMode="numeric"
             value={awayScore}
@@ -165,6 +169,8 @@ function LeagueReportForm({
   onReport,
   onDispute,
 }: LeagueReportFormProps) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.reportPanel;
   const [preset, setPreset] = useState<LeagueScorePreset | null>(null);
   const [games, setGames] = useState<LeagueGameDraft[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -197,12 +203,12 @@ function LeagueReportForm({
 
   function submitLeagueReport() {
     if (!preset) {
-      setValidationErrors({ score: 'Elegí el marcador final de la serie.' });
+      setValidationErrors({ score: copy.chooseLeagueScore });
       focusInvalidField(`lol-score-${match.id}`);
       return;
     }
 
-    const validation = validateLeagueReport({ preset, games, fieldIdPrefix });
+    const validation = validateLeagueReport({ preset, games, fieldIdPrefix }, locale);
     setValidationErrors(validation.errors);
     if (validation.firstInvalidFieldId) {
       focusInvalidField(validation.firstInvalidFieldId);
@@ -226,7 +232,7 @@ function LeagueReportForm({
         tabIndex={-1}
         aria-describedby={validationErrors.score ? `lol-score-${match.id}-error` : undefined}
       >
-        <legend>1. ¿Cómo terminó la serie? · BO{bestOf}</legend>
+        <legend>{formatMessage(copy.leagueScoreLegend, { bestOf })}</legend>
         <div className={styles.scorePresets}>
           {scorePresets.map((scorePreset) => {
             const isSelected =
@@ -242,8 +248,12 @@ function LeagueReportForm({
               >
                 <span>{scorePreset.label}</span>
                 <small>
-                  Gana{' '}
-                  {scorePreset.winnerTeamId === match.homeTeamId ? match.homeTeam : match.awayTeam}
+                  {formatMessage(copy.winnerPrefix, {
+                    team:
+                      scorePreset.winnerTeamId === match.homeTeamId
+                        ? match.homeTeam
+                        : match.awayTeam,
+                  })}
                 </small>
               </button>
             );
@@ -254,11 +264,8 @@ function LeagueReportForm({
 
       {preset && (
         <fieldset className={styles.gamesFieldset} disabled={isBusy}>
-          <legend>2. Completá cada partida</legend>
-          <p className={styles.help}>
-            Indicá ganador, lado azul y duración. El Riot Match ID es opcional, pero mejora la
-            trazabilidad si luego se consulta el historial oficial.
-          </p>
+          <legend>{copy.completeLeagueGames}</legend>
+          <p className={styles.help}>{copy.leagueHelp}</p>
           <div className={styles.gameGrid}>
             {games.map((game) => {
               const prefix = `${fieldIdPrefix}-game-${game.number}`;
@@ -273,7 +280,7 @@ function LeagueReportForm({
 
                   <div className={styles.resultFields}>
                     <label>
-                      Ganador
+                      {copy.winner}
                       <select
                         value={game.winnerTeamId}
                         onChange={(event) => {
@@ -292,7 +299,7 @@ function LeagueReportForm({
                       </select>
                     </label>
                     <label htmlFor={`${prefix}-blue-team`}>
-                      Lado azul
+                      {copy.blueSide}
                       <select
                         id={`${prefix}-blue-team`}
                         value={game.blueTeamId}
@@ -318,7 +325,7 @@ function LeagueReportForm({
 
                   <div className={styles.resultFields}>
                     <label htmlFor={`${prefix}-duration`}>
-                      Duración (min)
+                      {copy.duration}
                       <input
                         id={`${prefix}-duration`}
                         type="number"
@@ -337,7 +344,7 @@ function LeagueReportForm({
                       />
                     </label>
                     <label htmlFor={`${prefix}-riot-id`}>
-                      Riot Match ID <small>(opcional)</small>
+                      Riot Match ID <small>({copy.optional})</small>
                       <input
                         id={`${prefix}-riot-id`}
                         placeholder="LA1_123456789"
@@ -387,6 +394,8 @@ function SmashReportForm({
   onReport,
   onDispute,
 }: SmashReportFormProps) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.reportPanel;
   const [preset, setPreset] = useState<SmashScorePreset | null>(null);
   const [games, setGames] = useState<SmashGameDraft[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -420,18 +429,21 @@ function SmashReportForm({
 
   function submitSmashReport() {
     if (!preset) {
-      setValidationErrors({ score: 'Elegí el marcador final del set.' });
+      setValidationErrors({ score: copy.chooseSmashScore });
       focusInvalidField(`smash-score-${match.id}`);
       return;
     }
 
-    const validation = validateSmashReport({
-      preset,
-      games,
-      allowedStages,
-      stockLimit,
-      fieldIdPrefix,
-    });
+    const validation = validateSmashReport(
+      {
+        preset,
+        games,
+        allowedStages,
+        stockLimit,
+        fieldIdPrefix,
+      },
+      locale,
+    );
     setValidationErrors(validation.errors);
     if (validation.firstInvalidFieldId) {
       focusInvalidField(validation.firstInvalidFieldId);
@@ -455,7 +467,7 @@ function SmashReportForm({
         tabIndex={-1}
         aria-describedby={validationErrors.score ? `smash-score-${match.id}-error` : undefined}
       >
-        <legend>1. ¿Cómo terminó el set? · BO{bestOf}</legend>
+        <legend>{formatMessage(copy.smashScoreLegend, { bestOf })}</legend>
         <div className={styles.scorePresets}>
           {scorePresets.map((scorePreset) => {
             const isSelected =
@@ -471,8 +483,12 @@ function SmashReportForm({
               >
                 <span>{scorePreset.label}</span>
                 <small>
-                  Gana{' '}
-                  {scorePreset.winnerTeamId === match.homeTeamId ? match.homeTeam : match.awayTeam}
+                  {formatMessage(copy.winnerPrefix, {
+                    team:
+                      scorePreset.winnerTeamId === match.homeTeamId
+                        ? match.homeTeam
+                        : match.awayTeam,
+                  })}
                 </small>
               </button>
             );
@@ -487,11 +503,8 @@ function SmashReportForm({
 
       {preset && (
         <fieldset className={styles.gamesFieldset} disabled={isBusy}>
-          <legend>2. Completá cada game</legend>
-          <p className={styles.help}>
-            El marcador crea la cantidad exacta de games. Podés corregir el ganador de cada uno;
-            comprobaremos que siga coincidiendo con el resultado final.
-          </p>
+          <legend>{copy.completeSmashGames}</legend>
+          <p className={styles.help}>{copy.smashHelp}</p>
           <div className={styles.gameGrid}>
             {games.map((game) => {
               const prefix = `${fieldIdPrefix}-game-${game.number}`;
@@ -505,7 +518,7 @@ function SmashReportForm({
                     <strong>{winnerName}</strong>
                   </div>
 
-                  <label htmlFor={`${prefix}-stage`}>Escenario</label>
+                  <label htmlFor={`${prefix}-stage`}>{copy.stage}</label>
                   <select
                     id={`${prefix}-stage`}
                     value={game.stage}
@@ -515,7 +528,7 @@ function SmashReportForm({
                     }
                     onChange={(event) => updateGame(game.number, { stage: event.target.value })}
                   >
-                    <option value="">Elegí un escenario</option>
+                    <option value="">{copy.chooseStage}</option>
                     {allowedStages.map((stage) => (
                       <option value={stage} key={stage}>
                         {stage}
@@ -533,7 +546,7 @@ function SmashReportForm({
                       <input
                         id={`${prefix}-home-character`}
                         list={characterListId}
-                        placeholder="Personaje"
+                        placeholder={copy.character}
                         value={game.homeCharacter}
                         aria-invalid={Boolean(validationErrors[`${prefix}-home-character`])}
                         aria-describedby={
@@ -555,7 +568,7 @@ function SmashReportForm({
                       <input
                         id={`${prefix}-away-character`}
                         list={characterListId}
-                        placeholder="Personaje"
+                        placeholder={copy.character}
                         value={game.awayCharacter}
                         aria-invalid={Boolean(validationErrors[`${prefix}-away-character`])}
                         aria-describedby={
@@ -576,7 +589,7 @@ function SmashReportForm({
 
                   <div className={styles.resultFields}>
                     <label>
-                      Ganador
+                      {copy.winner}
                       <select
                         value={game.winnerTeamId}
                         onChange={(event) => {
@@ -599,7 +612,7 @@ function SmashReportForm({
                       </select>
                     </label>
                     <label htmlFor={`${prefix}-stocks`}>
-                      Stocks restantes
+                      {copy.remainingStocks}
                       <select
                         id={`${prefix}-stocks`}
                         value={winnerStocks}
@@ -661,10 +674,12 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 }
 
 function ReportActions({ isBusy, onDispute }: { isBusy: boolean; onDispute: () => Promise<void> }) {
+  const { dictionary } = useI18n();
+  const copy = dictionary.reportPanel;
   return (
     <div className={styles.actions}>
       <button type="submit" disabled={isBusy}>
-        {isBusy ? 'Enviando…' : 'Reportar resultado'}
+        {isBusy ? copy.sending : copy.reportResult}
       </button>
       <button
         type="button"
@@ -672,7 +687,7 @@ function ReportActions({ isBusy, onDispute }: { isBusy: boolean; onDispute: () =
         disabled={isBusy}
         onClick={() => void onDispute()}
       >
-        Abrir disputa
+        {copy.openDispute}
       </button>
     </div>
   );
@@ -698,6 +713,8 @@ export function ReportPanel({
   settings,
   staffMode = false,
 }: ReportPanelProps) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.reportPanel;
   const router = useRouter();
   const [teams, setTeams] = useState<TeamView[]>([]);
   const [matches, setMatches] = useState<MatchView[]>([]);
@@ -725,9 +742,9 @@ export function ReportPanel({
           setLoadState('anonymous');
           return;
         }
-        setLoadError('No pudimos cargar tus partidas. Intentá actualizar la página.');
+        setLoadError(copy.loadError);
       });
-  }, [staffMode, tournamentId]);
+  }, [copy.loadError, staffMode, tournamentId]);
 
   const myTeamIds = new Set(teams.map((team) => team.id));
   const reportingMode = settings?.reportingMode ?? 'bilateral';
@@ -761,14 +778,16 @@ export function ReportPanel({
       });
       setMessages((current) => ({
         ...current,
-        [matchId]: getReportOutcomeMessage(outcome, { staffMode, reportingMode }),
+        [matchId]: getReportOutcomeMessage(outcome, { staffMode, reportingMode }, locale),
       }));
       router.refresh();
     } catch (reportError) {
       setErrors((current) => ({
         ...current,
         [matchId]:
-          reportError instanceof ApiClientError ? reportError.message : 'Error al reportar',
+          reportError instanceof ApiClientError && locale === 'es'
+            ? reportError.message
+            : copy.reportError,
       }));
     } finally {
       setBusyMatchId(null);
@@ -784,23 +803,21 @@ export function ReportPanel({
         body: JSON.stringify({
           matchId,
           reason: staffMode ? 'system' : 'captain_request',
-          message: staffMode
-            ? 'El staff solicita revisión administrativa de la partida.'
-            : 'Solicito revisión del resultado de la partida.',
+          message: staffMode ? copy.staffReviewMessage : copy.participantReviewMessage,
         }),
       });
       setMessages((current) => ({
         ...current,
-        [matchId]: 'Disputa abierta. El staff la revisará.',
+        [matchId]: copy.disputeOpened,
       }));
       router.refresh();
     } catch (disputeError) {
       setErrors((current) => ({
         ...current,
         [matchId]:
-          disputeError instanceof ApiClientError
+          disputeError instanceof ApiClientError && locale === 'es'
             ? disputeError.message
-            : 'Error al abrir la disputa',
+            : copy.disputeError,
       }));
     } finally {
       setBusyMatchId(null);
@@ -813,13 +830,16 @@ export function ReportPanel({
         {loadError}
       </p>
     );
-  const panelState = getReportPanelState({
-    loadState,
-    staffMode,
-    reportingMode,
-    teamCount: teams.length,
-    reportableMatchCount: reportableMatches.length,
-  });
+  const panelState = getReportPanelState(
+    {
+      loadState,
+      staffMode,
+      reportingMode,
+      teamCount: teams.length,
+      reportableMatchCount: reportableMatches.length,
+    },
+    locale,
+  );
   if (panelState.kind === 'hidden') return null;
 
   if (panelState.kind === 'empty') {
@@ -830,9 +850,9 @@ export function ReportPanel({
         aria-labelledby="report-panel-title"
       >
         <div className={styles.emptyState}>
-          <p className={styles.eyebrow}>Todo al día</p>
+          <p className={styles.eyebrow}>{copy.allCaughtUp}</p>
           <h2 id="report-panel-title">{panelState.title}</h2>
-          <p>Cuando tengas un cruce listo, vas a poder reportarlo desde acá.</p>
+          <p>{copy.emptyDescription}</p>
         </div>
       </section>
     );
@@ -842,17 +862,19 @@ export function ReportPanel({
     <section id="reportar" className={`card ${styles.panel}`} aria-labelledby="report-panel-title">
       <div className={styles.panelHeader}>
         <div>
-          <p className={styles.eyebrow}>{staffMode ? 'Operación de staff' : 'Competencia'}</p>
+          <p className={styles.eyebrow}>{staffMode ? copy.staffOperation : copy.competition}</p>
           <h2 id="report-panel-title">
-            {staffMode ? 'Control de' : 'Mis'}{' '}
-            {gameAdapterKey === 'smash_ultimate'
-              ? 'sets'
-              : isLeagueOfLegends
-                ? 'series'
-                : 'partidas'}
+            {formatMessage(staffMode ? copy.staffControl : copy.myMatches, {
+              matches:
+                gameAdapterKey === 'smash_ultimate'
+                  ? copy.sets
+                  : isLeagueOfLegends
+                    ? copy.series
+                    : copy.matches,
+            })}
           </h2>
         </div>
-        <span>{reportableMatches.length} por reportar</span>
+        <span>{formatMessage(copy.pendingCount, { count: reportableMatches.length })}</span>
       </div>
       <ul className={styles.matchList}>
         {reportableMatches.map((match) => {
@@ -872,10 +894,10 @@ export function ReportPanel({
               <div className={styles.matchTitle}>
                 <span>
                   {gameAdapterKey === 'smash_ultimate'
-                    ? 'Set listo para reportar'
+                    ? copy.setReady
                     : isLeagueOfLegends
-                      ? 'Serie lista para reportar'
-                      : 'Partida lista para reportar'}
+                      ? copy.seriesReady
+                      : copy.matchReady}
                 </span>
                 <h3>
                   {match.homeTeam} <small>vs.</small> {match.awayTeam}

@@ -55,6 +55,14 @@ describe('reporte guiado de League of Legends', () => {
     expect(validation.errors['lol-match-game-1-duration']).toBeDefined();
     expect(validation.errors['lol-match-game-1-riot-id']).toBeDefined();
     expect(validation.firstInvalidFieldId).toBe('lol-match-game-1-duration');
+
+    const englishValidation = validateLeagueReport(
+      { preset, games, fieldIdPrefix: 'lol-match' },
+      'en',
+    );
+    expect(englishValidation.errors['lol-match-game-1-duration']).toBe(
+      'Duration must be between 5 and 180 minutes.',
+    );
   });
 
   it('construye el contrato del API cuando el reporte está completo', () => {

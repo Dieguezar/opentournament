@@ -46,11 +46,7 @@ const teams = [
 
 describe('classifyTeamsForRegistration', () => {
   it('separa perfiles compatibles de perfiles legacy configurables por su capitán', () => {
-    const result = classifyTeamsForRegistration(
-      teams,
-      'smash_ultimate',
-      'captain',
-    );
+    const result = classifyTeamsForRegistration(teams, 'smash_ultimate', 'captain');
 
     expect(result.compatibleTeams.map((team) => team.id)).toEqual(['compatible']);
     expect(result.readOnlyTeams.map((team) => team.id)).toEqual(['compatible-member']);
@@ -80,6 +76,25 @@ describe('classifyTeamsForRegistration', () => {
 });
 
 describe('getRegistrationEntryPresentation', () => {
+  it('localizes the entry state without changing available actions', () => {
+    expect(getRegistrationEntryPresentation('open', null, 'en')).toEqual({
+      statusLabel: 'Not registered',
+      badgeClassName: 'badge',
+      action: 'register',
+    });
+    expect(
+      getRegistrationEntryPresentation(
+        'checkin_open',
+        { registrationStatus: 'approved', checkedIn: true },
+        'en',
+      ),
+    ).toEqual({
+      statusLabel: 'Check-in confirmed',
+      badgeClassName: 'badge badge-success',
+      action: null,
+    });
+  });
+
   it('ofrece inscripción solamente mientras el torneo está abierto', () => {
     expect(getRegistrationEntryPresentation('open', null)).toMatchObject({
       statusLabel: 'Sin inscripción',

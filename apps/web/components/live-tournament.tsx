@@ -2,16 +2,12 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 
 type ConnectionState = 'connecting' | 'live' | 'reconnecting';
 
-const connectionLabels: Record<ConnectionState, string> = {
-  connecting: 'Conectando actualizaciones',
-  live: 'Actualización en vivo',
-  reconnecting: 'Reconectando actualizaciones',
-};
-
 export function LiveTournament({ tournamentId }: { tournamentId: string }) {
+  const { dictionary } = useI18n();
   const router = useRouter();
   const refreshing = useRef(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>('connecting');
@@ -51,7 +47,11 @@ export function LiveTournament({ tournamentId }: { tournamentId: string }) {
 
   return (
     <span className="muted" role="status" aria-live="polite">
-      {connectionLabels[connectionState]}
+      {connectionState === 'connecting'
+        ? dictionary.publicTournament.connectingUpdates
+        : connectionState === 'live'
+          ? dictionary.publicTournament.liveUpdates
+          : dictionary.publicTournament.reconnectingUpdates}
     </span>
   );
 }

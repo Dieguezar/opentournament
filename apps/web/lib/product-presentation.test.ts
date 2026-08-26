@@ -34,6 +34,51 @@ describe('presentación del producto', () => {
     expect(formatParticipantStatus('active')).toBe('En competencia');
   });
 
+  it('renders product statuses and rulesets in English', () => {
+    expect(getTournamentStatus('in_progress', 'en')).toEqual({
+      label: 'In progress',
+      className: 'badge badge-warn',
+    });
+    expect(formatMatchStatus('finalized', 'en')).toBe('Finalized');
+    expect(formatRegistrationStatus('approved', 'en')).toBe('Approved');
+    expect(formatDisputeStatus('resolved', 'en')).toBe('Resolved');
+    expect(formatDisputeReason('result_conflict', 'en')).toBe('Conflicting results');
+    expect(formatBracketType('winners', 'en')).toBe('Winners');
+    expect(formatOrganizationRole('owner', 'en')).toBe('Owner');
+    expect(formatParticipantStatus('active', 'en')).toBe('Competing');
+
+    expect(
+      buildRulesetSummary(
+        {
+          gameAdapterKey: 'lol',
+          format: 'single_elimination',
+          seriesBestOf: 3,
+          grandFinalReset: false,
+          gameRules: {
+            game: 'lol',
+            map: 'summoners_rift',
+            region: 'lan',
+            draftMode: 'tournament_draft',
+            fearlessDraft: true,
+            patchPolicy: 'fixed',
+            patchVersion: '26.16',
+            sideSelection: 'higher_seed_game_1_then_loser',
+            pauseBudgetMinutes: 10,
+            spectatorDelayMinutes: 3,
+          },
+        },
+        'en',
+      ),
+    ).toMatchObject({
+      title: 'Competitive League of Legends rules',
+      format: '5v5 · Single elimination',
+      draft: 'Tournament Draft · Fearless enabled',
+      patch: 'Fixed patch 26.16 · LAN region',
+      sideSelection: 'Higher seed in Game 1; loser chooses afterward',
+      operations: '10 min pause allowance · 3 min spectator delay',
+    });
+  });
+
   it('presenta las reglas competitivas esenciales de Smash Ultimate', () => {
     expect(
       buildRulesetSummary({
@@ -166,6 +211,9 @@ describe('presentación del producto', () => {
     );
     expect(getPublicRegistrationMessage('open', true)).toBeNull();
     expect(getPublicRegistrationMessage('checkin_open', true)).toBeNull();
+    expect(getPublicRegistrationMessage('in_progress', true, 'en')).toBe(
+      'The tournament is already in progress. Registration and check-in are closed; follow the sets in the bracket.',
+    );
   });
 
   it('conserva un fallback legible para valores futuros', () => {

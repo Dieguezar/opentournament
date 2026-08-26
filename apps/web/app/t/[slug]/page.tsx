@@ -10,7 +10,10 @@ import { LiveTournament } from '@/components/live-tournament';
 import { RegisterPanel } from '@/components/register-panel';
 import { ReportPanel } from '@/components/report-panel';
 import { RulesetSummary } from '@/components/ruleset-summary';
+import { formatMessage, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
+import { getRequestLocale } from '@/lib/i18n-server';
 import {
+  formatBracketType,
   formatGameAdapter,
   formatMatchStatus,
   formatRegistrationStatus,
@@ -93,25 +96,21 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const locale = await getRequestLocale();
+  const copy = getDictionary(locale).publicTournament;
   const tournamentRes = await getPublicTournament(slug);
   const tournament = tournamentRes.data?.tournament;
 
-  if (!tournament) return { title: 'Torneo no disponible' };
+  if (!tournament) return { title: copy.unavailableMetadata };
   return {
     title: tournament.name,
     description:
-      tournament.description ?? `Seguí el bracket y los resultados de ${tournament.name}.`,
+      tournament.description ?? formatMessage(copy.followMetadata, { name: tournament.name }),
   };
 }
 
-function teamLabel(team: { name: string } | null): string {
-  return team?.name ?? 'Por definir';
-}
-
-function formatBracketName(type: string): string {
-  if (type === 'winners') return 'Ganadores';
-  if (type === 'losers') return 'Perdedores';
-  return 'Gran final';
+function teamLabel(team: { name: string } | null, copy: Dictionary['publicTournament']): string {
+  return team?.name ?? copy.toBeDecided;
 }
 
 function formatCharacterSummary(
@@ -128,19 +127,25 @@ function BracketSection({
   tournamentId,
   isSmash,
   isLeagueOfLegends,
+  locale,
+  copy,
 }: {
   brackets: BracketView[];
   tournamentId: string;
   isSmash: boolean;
   isLeagueOfLegends: boolean;
+  locale: Locale;
+  copy: Dictionary['publicTournament'];
 }) {
-  const matchLabel = isSmash ? 'sets' : isLeagueOfLegends ? 'series' : 'partidas';
+  const matchLabel = isSmash ? copy.sets : isLeagueOfLegends ? copy.seriesPlural : copy.matches;
   return (
     <section className={styles.bracketPanel} aria-labelledby="bracket-title">
       <div className={styles.bracketHeader}>
         <div>
-          <p className={styles.eyebrow}>Competencia</p>
-          <h2 id="bracket-title">Bracket y {matchLabel}</h2>
+          <p className={styles.eyebrow}>{copy.competition}</p>
+          <h2 id="bracket-title">
+            {formatMessage(copy.bracketAndMatches, { matches: matchLabel })}
+          </h2>
         </div>
         <span className={styles.liveRegion}>
           <LiveTournament tournamentId={tournamentId} />
@@ -149,24 +154,22 @@ function BracketSection({
 
       {brackets.length === 0 ? (
         <div className={styles.emptyState}>
-          <h3>El bracket todavía no está publicado</h3>
-          <p className={styles.emptyCopy}>
-            Aparecerá en este espacio cuando la organización cierre el check-in y genere los cruces.
-          </p>
+          <h3>{copy.bracketNotPublished}</h3>
+          <p className={styles.emptyCopy}>{copy.bracketWillAppear}</p>
         </div>
       ) : (
         <div
           className={styles.bracketViewport}
           role="region"
           tabIndex={0}
-          aria-label="Bracket desplazable"
+          aria-label={copy.scrollableBracket}
         >
           {brackets.map((bracket) => {
             const maxMatches = Math.max(1, ...bracket.rounds.map((round) => round.matches.length));
 
             return (
               <section className={styles.bracketGroup} key={bracket.type}>
-                <h3>{formatBracketName(bracket.type)}</h3>
+                <h3>{formatBracketType(bracket.type, locale)}</h3>
                 <ol
                   className={styles.bracketRounds}
                   style={
@@ -223,7 +226,7 @@ function BracketSection({
                                     className={`${styles.matchTeam} ${isHomeWinner ? styles.matchWinner : ''}`}
                                   >
                                     <span className={styles.matchCompetitor}>
-                                      <span>{teamLabel(match.home)}</span>
+                                      <span>{teamLabel(match.home, copy)}</span>
                                       {isSmash && homeCharacters && (
                                         <small data-testid="smash-character">
                                           {homeCharacters}
@@ -231,13 +234,13 @@ function BracketSection({
                                       )}
                                       {isLeagueOfLegends && leagueGames?.length && match.home && (
                                         <small data-testid="lol-blue-side">
-                                          Azul en{' '}
+                                          {copy.blueSideIn}{' '}
                                           {leagueGames
                                             .filter(
                                               (game) => game.blueTeamId === match.home?.teamId,
                                             )
                                             .map((game) => `G${game.number}`)
-                                            .join(' · ') || 'ninguna'}
+                                            .join(' · ') || copy.none}
                                         </small>
                                       )}
                                     </span>
@@ -249,7 +252,7 @@ function BracketSection({
                                     className={`${styles.matchTeam} ${isAwayWinner ? styles.matchWinner : ''}`}
                                   >
                                     <span className={styles.matchCompetitor}>
-                                      <span>{teamLabel(match.away)}</span>
+                                      <span>{teamLabel(match.away, copy)}</span>
                                       {isSmash && awayCharacters && (
                                         <small data-testid="smash-character">
                                           {awayCharacters}
@@ -257,13 +260,13 @@ function BracketSection({
                                       )}
                                       {isLeagueOfLegends && leagueGames?.length && match.away && (
                                         <small data-testid="lol-blue-side">
-                                          Azul en{' '}
+                                          {copy.blueSideIn}{' '}
                                           {leagueGames
                                             .filter(
                                               (game) => game.blueTeamId === match.away?.teamId,
                                             )
                                             .map((game) => `G${game.number}`)
-                                            .join(' · ') || 'ninguna'}
+                                            .join(' · ') || copy.none}
                                         </small>
                                       )}
                                     </span>
@@ -274,16 +277,19 @@ function BracketSection({
                                   <footer className={styles.matchFooter}>
                                     <span>
                                       {isSmash && games?.length
-                                        ? `${games.length} games`
+                                        ? formatMessage(copy.gamesPlayed, { count: games.length })
                                         : isSmash
-                                          ? 'Set'
+                                          ? copy.set
                                           : isLeagueOfLegends && leagueGames?.length
-                                            ? `${leagueGames.length} partidas · ${totalLeagueMinutes} min`
+                                            ? formatMessage(copy.leagueGamesPlayed, {
+                                                count: leagueGames.length,
+                                                minutes: totalLeagueMinutes ?? 0,
+                                              })
                                             : isLeagueOfLegends
-                                              ? 'Serie'
-                                              : 'Partida'}
+                                              ? copy.series
+                                              : copy.match}
                                     </span>
-                                    <span>{formatMatchStatus(match.status)}</span>
+                                    <span>{formatMatchStatus(match.status, locale)}</span>
                                   </footer>
                                 </article>
                                 {nextRound && (
@@ -314,37 +320,39 @@ function JourneySection({
   tournamentStatus,
   isTournamentRunning,
   isSmash,
+  copy,
 }: {
   tournamentStatus: TournamentStatus;
   isTournamentRunning: boolean;
   isSmash: boolean;
+  copy: Dictionary['publicTournament'];
 }) {
   return (
     <section className={styles.journeyPanel} aria-labelledby="journey-title">
       <div className={styles.sectionHeader}>
         <div>
-          <p className={styles.eyebrow}>Recorrido</p>
+          <p className={styles.eyebrow}>{copy.journey}</p>
           <h2 id="journey-title">
-            {isTournamentRunning ? 'Seguí la competencia' : 'Cómo participar'}
+            {isTournamentRunning ? copy.followCompetition : copy.howToParticipate}
           </h2>
         </div>
       </div>
       <ol className={styles.journeyList}>
         <li>
-          <strong>Paso 1</strong>
-          {isSmash ? 'Crear perfil de jugador' : 'Crear equipo'}
+          <strong>{formatMessage(copy.step, { number: 1 })}</strong>
+          {isSmash ? copy.createPlayerProfile : copy.createTeam}
         </li>
         <li className={tournamentStatus === 'open' ? styles.currentJourney : undefined}>
-          <strong>Paso 2</strong>
-          Inscribirse
+          <strong>{formatMessage(copy.step, { number: 2 })}</strong>
+          {copy.register}
         </li>
         <li className={tournamentStatus === 'checkin_open' ? styles.currentJourney : undefined}>
-          <strong>Paso 3</strong>
-          Completar check-in
+          <strong>{formatMessage(copy.step, { number: 3 })}</strong>
+          {copy.completeCheckIn}
         </li>
         <li className={isTournamentRunning ? styles.currentJourney : undefined}>
-          <strong>Paso 4</strong>
-          Seguir el bracket
+          <strong>{formatMessage(copy.step, { number: 4 })}</strong>
+          {copy.followBracket}
         </li>
       </ol>
     </section>
@@ -357,17 +365,17 @@ export default async function PublicTournamentPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const locale = await getRequestLocale();
+  const dictionary = getDictionary(locale);
+  const copy = dictionary.publicTournament;
   const tournamentRes = await getPublicTournament(slug);
   if (tournamentRes.status === 503) {
     return (
       <main className={`container narrow ${styles.formPage}`}>
         <div className={`${styles.notice} service-state`} role="status">
-          <p className={styles.eyebrow}>Servicio temporalmente no disponible</p>
-          <h1>No pudimos cargar este torneo</h1>
-          <p>
-            La interfaz sigue disponible, pero la API no está respondiendo. Intentá nuevamente en
-            unos instantes.
-          </p>
+          <p className={styles.eyebrow}>{copy.serviceUnavailable}</p>
+          <h1>{copy.unableToLoad}</h1>
+          <p>{copy.apiUnavailable}</p>
         </div>
       </main>
     );
@@ -382,14 +390,18 @@ export default async function PublicTournamentPage({
   ]);
   const teams = teamsRes.data?.teams ?? [];
   const brackets = bracketRes.data?.brackets ?? [];
-  const status = getTournamentStatus(tournament.status);
+  const status = getTournamentStatus(tournament.status, locale);
   const isSmash = tournament.gameAdapterKey === 'smash_ultimate';
   const isLeagueOfLegends = tournament.gameAdapterKey === 'lol';
   const seriesBestOf = tournament.seriesConfig?.bo ?? 1;
   const isRegistrationActive = tournament.status === 'open' || tournament.status === 'checkin_open';
   const isTournamentRunning =
     tournament.status === 'in_progress' || tournament.status === 'finalized';
-  const publicRegistrationMessage = getPublicRegistrationMessage(tournament.status, isSmash);
+  const publicRegistrationMessage = getPublicRegistrationMessage(
+    tournament.status,
+    isSmash,
+    locale,
+  );
   const roundCount = brackets.reduce((total, bracket) => total + bracket.rounds.length, 0);
   const matchCount = brackets.reduce(
     (total, bracket) =>
@@ -402,22 +414,26 @@ export default async function PublicTournamentPage({
       <header className={`${styles.pageHeader} ${styles.tournamentHeader}`}>
         <div>
           <p className={styles.eyebrow}>
-            {tournamentRes.data?.organization?.name ?? 'Torneo independiente'}
+            {tournamentRes.data?.organization?.name ?? copy.independentTournament}
           </p>
           <h1>{tournament.name}</h1>
           {tournament.description && <p className={styles.intro}>{tournament.description}</p>}
         </div>
         <div className={styles.tournamentHeaderMeta}>
           <span className={status.className}>{status.label}</span>
-          <span>{formatGameAdapter(tournament.gameAdapterKey)}</span>
+          <span>{formatGameAdapter(tournament.gameAdapterKey, locale)}</span>
           <span>
             {tournament.format === 'double_elimination'
-              ? 'Doble eliminación'
-              : 'Eliminación sencilla'}
+              ? dictionary.presentation.doubleElimination
+              : dictionary.presentation.singleElimination}
           </span>
-          <span>Cupo {tournament.capacity}</span>
+          <span>{formatMessage(copy.capacity, { capacity: tournament.capacity })}</span>
           {tournament.startsAt && (
-            <span>Inicia {new Date(tournament.startsAt).toLocaleString('es')}</span>
+            <span>
+              {formatMessage(copy.startsAt, {
+                date: new Date(tournament.startsAt).toLocaleString(locale),
+              })}
+            </span>
           )}
         </div>
       </header>
@@ -427,19 +443,20 @@ export default async function PublicTournamentPage({
         format={tournament.format}
         seriesBestOf={seriesBestOf}
         settings={tournament.settings}
+        locale={locale}
       />
 
-      <dl className={styles.metrics} aria-label="Resumen del torneo">
+      <dl className={styles.metrics} aria-label={copy.summary}>
         <div>
-          <dt>{isSmash ? 'Jugadores inscritos' : 'Equipos inscritos'}</dt>
+          <dt>{isSmash ? copy.registeredPlayers : copy.registeredTeams}</dt>
           <dd>{teams.length}</dd>
         </div>
         <div>
-          <dt>Rondas publicadas</dt>
+          <dt>{copy.publishedRounds}</dt>
           <dd>{roundCount}</dd>
         </div>
         <div>
-          <dt>{isSmash ? 'Sets' : isLeagueOfLegends ? 'Series' : 'Partidas'}</dt>
+          <dt>{isSmash ? copy.sets : isLeagueOfLegends ? copy.seriesPlural : copy.matches}</dt>
           <dd>{matchCount}</dd>
         </div>
       </dl>
@@ -450,6 +467,8 @@ export default async function PublicTournamentPage({
           tournamentId={tournament.id}
           isSmash={isSmash}
           isLeagueOfLegends={isLeagueOfLegends}
+          locale={locale}
+          copy={copy}
         />
       )}
 
@@ -457,6 +476,7 @@ export default async function PublicTournamentPage({
         tournamentStatus={tournament.status}
         isTournamentRunning={isTournamentRunning}
         isSmash={isSmash}
+        copy={copy}
       />
 
       {isRegistrationActive ? (
@@ -477,6 +497,8 @@ export default async function PublicTournamentPage({
           tournamentId={tournament.id}
           isSmash={isSmash}
           isLeagueOfLegends={isLeagueOfLegends}
+          locale={locale}
+          copy={copy}
         />
       )}
 
@@ -491,15 +513,17 @@ export default async function PublicTournamentPage({
         <section className={styles.panel} aria-labelledby="teams-title">
           <div className={styles.sectionHeader}>
             <div>
-              <p className={styles.eyebrow}>Participantes</p>
+              <p className={styles.eyebrow}>{copy.participants}</p>
               <h2 id="teams-title">
-                {isSmash ? 'Jugadores' : 'Equipos'} inscritos ({teams.length})
+                {formatMessage(isSmash ? copy.playersRegistered : copy.teamsRegistered, {
+                  count: teams.length,
+                })}
               </h2>
             </div>
           </div>
           {teams.length === 0 ? (
             <p className={styles.emptyCopy}>
-              Aún no hay {isSmash ? 'jugadores' : 'equipos'} inscritos.
+              {isSmash ? copy.noPlayersRegistered : copy.noTeamsRegistered}
             </p>
           ) : (
             <ul className={styles.teamList}>
@@ -508,16 +532,16 @@ export default async function PublicTournamentPage({
                   <span>
                     <strong>{team.teamName}</strong>
                     <small className={styles.teamMeta}>
-                      {team.teamTag ? `Etiqueta ${team.teamTag}` : 'Sin etiqueta'}
+                      {team.teamTag ? formatMessage(copy.tag, { tag: team.teamTag }) : copy.noTag}
                     </small>
                   </span>
                   {team.registrationStatus === 'approved' ? (
                     <span className={`badge ${team.checkedIn ? 'badge-success' : 'badge-warn'}`}>
-                      {team.checkedIn ? 'Check-in hecho' : 'Sin check-in'}
+                      {team.checkedIn ? copy.checkedIn : copy.notCheckedIn}
                     </span>
                   ) : (
                     <span className="badge">
-                      {formatRegistrationStatus(team.registrationStatus)}
+                      {formatRegistrationStatus(team.registrationStatus, locale)}
                     </span>
                   )}
                 </li>
@@ -530,8 +554,8 @@ export default async function PublicTournamentPage({
           <section className={styles.panel} aria-labelledby="rules-title">
             <div className={styles.sectionHeader}>
               <div>
-                <p className={styles.eyebrow}>Información</p>
-                <h2 id="rules-title">Reglas</h2>
+                <p className={styles.eyebrow}>{copy.information}</p>
+                <h2 id="rules-title">{copy.rules}</h2>
               </div>
             </div>
             <p className={styles.rules}>{tournament.rules}</p>

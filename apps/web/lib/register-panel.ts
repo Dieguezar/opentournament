@@ -1,4 +1,5 @@
 import type { GameAdapterKey, TournamentStatus } from '@opentournament/shared-types';
+import { DEFAULT_LOCALE, getDictionary, type Locale } from './i18n';
 
 export interface RegistrationTeam {
   id: string;
@@ -47,18 +48,20 @@ export function getRegisterPanelLoadState({
 export function getRegistrationEntryPresentation(
   tournamentStatus: TournamentStatus,
   entry: RegistrationEntry | null,
+  locale: Locale = DEFAULT_LOCALE,
 ): RegistrationEntryPresentation {
+  const status = getDictionary(locale).registrationPanel.entryStatus;
   if (!entry) {
     if (tournamentStatus === 'open') {
       return {
-        statusLabel: 'Sin inscripción',
+        statusLabel: status.notRegistered,
         badgeClassName: 'badge',
         action: 'register',
       };
     }
 
     return {
-      statusLabel: 'Inscripciones cerradas',
+      statusLabel: status.registrationClosed,
       badgeClassName: 'badge',
       action: null,
     };
@@ -66,7 +69,7 @@ export function getRegistrationEntryPresentation(
 
   if (entry.checkedIn) {
     return {
-      statusLabel: 'Check-in confirmado',
+      statusLabel: status.checkedIn,
       badgeClassName: 'badge badge-success',
       action: null,
     };
@@ -74,7 +77,7 @@ export function getRegistrationEntryPresentation(
 
   if (entry.registrationStatus === 'pending') {
     return {
-      statusLabel: 'Pendiente de aprobación',
+      statusLabel: status.pendingApproval,
       badgeClassName: 'badge badge-warn',
       action: null,
     };
@@ -82,7 +85,7 @@ export function getRegistrationEntryPresentation(
 
   if (entry.registrationStatus === 'waitlisted') {
     return {
-      statusLabel: 'En lista de espera',
+      statusLabel: status.waitlisted,
       badgeClassName: 'badge badge-warn',
       action: null,
     };
@@ -90,7 +93,7 @@ export function getRegistrationEntryPresentation(
 
   if (entry.registrationStatus === 'rejected') {
     return {
-      statusLabel: 'Inscripción rechazada',
+      statusLabel: status.rejected,
       badgeClassName: 'badge badge-danger',
       action: null,
     };
@@ -98,7 +101,7 @@ export function getRegistrationEntryPresentation(
 
   if (entry.registrationStatus === 'cancelled') {
     return {
-      statusLabel: 'Inscripción cancelada',
+      statusLabel: status.cancelled,
       badgeClassName: 'badge',
       action: null,
     };
@@ -106,7 +109,7 @@ export function getRegistrationEntryPresentation(
 
   if (entry.registrationStatus !== 'approved') {
     return {
-      statusLabel: 'Estado de inscripción no disponible',
+      statusLabel: status.unavailable,
       badgeClassName: 'badge',
       action: null,
     };
@@ -114,14 +117,14 @@ export function getRegistrationEntryPresentation(
 
   if (tournamentStatus === 'open' || tournamentStatus === 'checkin_open') {
     return {
-      statusLabel: 'Inscrito',
+      statusLabel: status.registered,
       badgeClassName: 'badge badge-success',
       action: 'checkin',
     };
   }
 
   return {
-    statusLabel: 'Inscrito',
+    statusLabel: status.registered,
     badgeClassName: 'badge badge-success',
     action: null,
   };
@@ -142,12 +145,10 @@ export function classifyTeamsForRegistration<T extends RegistrationTeam>(
   }
 
   const compatibleTeams = teams.filter(
-    (team) =>
-      team.gameAdapterKey === tournamentGameAdapterKey && team.captainId === currentUserId,
+    (team) => team.gameAdapterKey === tournamentGameAdapterKey && team.captainId === currentUserId,
   );
   const readOnlyTeams = teams.filter(
-    (team) =>
-      team.gameAdapterKey === tournamentGameAdapterKey && team.captainId !== currentUserId,
+    (team) => team.gameAdapterKey === tournamentGameAdapterKey && team.captainId !== currentUserId,
   );
   const configurableTeams = teams.filter(
     (team) =>

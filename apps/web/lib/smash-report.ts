@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, formatMessage, getDictionary, type Locale } from './i18n';
+
 export interface SmashScorePreset {
   homeTeamId: string;
   awayTeamId: string;
@@ -201,7 +203,11 @@ export function updateSmashGameWinner(
   };
 }
 
-export function validateSmashReport(input: SmashReportDraft): SmashReportValidation {
+export function validateSmashReport(
+  input: SmashReportDraft,
+  locale: Locale = DEFAULT_LOCALE,
+): SmashReportValidation {
+  const copy = getDictionary(locale).reportPanel;
   const errors: Record<string, string> = {};
   const games = input.games.map((game) => ({
     ...game,
@@ -213,15 +219,16 @@ export function validateSmashReport(input: SmashReportDraft): SmashReportValidat
 
   for (const game of games) {
     const prefix = `${input.fieldIdPrefix ?? 'smash'}-game-${game.number}`;
-    if (!game.stage) errors[`${prefix}-stage`] = `Elegí el escenario del game ${game.number}.`;
-    else if (!allowedStages.has(game.stage)) {
-      errors[`${prefix}-stage`] = 'Ese escenario no pertenece al ruleset.';
+    if (!game.stage) {
+      errors[`${prefix}-stage`] = formatMessage(copy.gameStageError, { number: game.number });
+    } else if (!allowedStages.has(game.stage)) {
+      errors[`${prefix}-stage`] = copy.invalidStageError;
     }
     if (!game.homeCharacter) {
-      errors[`${prefix}-home-character`] = 'Elegí el personaje del jugador local.';
+      errors[`${prefix}-home-character`] = copy.homeCharacterError;
     }
     if (!game.awayCharacter) {
-      errors[`${prefix}-away-character`] = 'Elegí el personaje del jugador visitante.';
+      errors[`${prefix}-away-character`] = copy.awayCharacterError;
     }
 
     const isHomeWinner = game.winnerTeamId === input.preset.homeTeamId;
@@ -230,10 +237,11 @@ export function validateSmashReport(input: SmashReportDraft): SmashReportValidat
     const loserStocks = isHomeWinner ? game.awayStocks : game.homeStocks;
     const hasOneSurvivor = game.homeStocks > 0 !== game.awayStocks > 0;
     if ((isHomeWinner || isAwayWinner) && (winnerStocks === 0 || loserStocks > 0)) {
-      errors[`${prefix}-stocks`] = 'Los stocks restantes deben pertenecer al ganador del game.';
+      errors[`${prefix}-stocks`] = copy.winnerStocksError;
     } else if (!hasOneSurvivor || winnerStocks < 1 || winnerStocks > input.stockLimit) {
-      errors[`${prefix}-stocks`] =
-        `Los stocks del ganador deben estar entre 1 y ${input.stockLimit}.`;
+      errors[`${prefix}-stocks`] = formatMessage(copy.stockRangeError, {
+        limit: input.stockLimit,
+      });
     }
   }
 
@@ -249,7 +257,7 @@ export function validateSmashReport(input: SmashReportDraft): SmashReportValidat
     homeWins !== input.preset.homeScore ||
     awayWins !== input.preset.awayScore
   ) {
-    errors.score = 'Los ganadores por game no coinciden con el marcador elegido.';
+    errors.score = copy.smashWinnersError;
   }
 
   return {
@@ -261,7 +269,9 @@ export function validateSmashReport(input: SmashReportDraft): SmashReportValidat
 
 export function buildSmashReportPayload(input: SmashReportDraft): SmashReportPayload {
   const validation = validateSmashReport(input);
-  if (validation.firstInvalidFieldId) throw new Error('El reporte de Smash está incompleto.');
+  if (validation.firstInvalidFieldId) {
+    throw new Error(getDictionary(DEFAULT_LOCALE).reportPanel.smashIncompleteError);
+  }
 
   return {
     winnerTeamId: input.preset.winnerTeamId,

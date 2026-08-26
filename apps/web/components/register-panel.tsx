@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import type { GameAdapterKey, TournamentStatus } from '@opentournament/shared-types';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
+import { formatMessage, type Dictionary, type Locale } from '@/lib/i18n';
 import { formatGameAdapter } from '@/lib/presentation';
 import {
   classifyTeamsForRegistration,
@@ -35,21 +37,23 @@ interface PanelData {
   isAuthenticated: boolean;
 }
 
-function getRequestErrorMessage(error: unknown): string {
-  if (error instanceof ApiClientError) return error.message;
-  return 'No se pudo completar la acción. Intentá de nuevo.';
+function getRequestErrorMessage(
+  error: unknown,
+  locale: Locale,
+  copy: Dictionary['registrationPanel'],
+): string {
+  if (error instanceof ApiClientError && locale === 'es') return error.message;
+  return copy.actionError;
 }
 
-function getLoadErrorMessage(error: unknown): string {
+function getLoadErrorMessage(error: unknown, copy: Dictionary['registrationPanel']): string {
   if (error instanceof ApiClientError && error.status >= 500) {
-    return 'No pudimos cargar tus perfiles porque el servicio no está disponible. Intentá de nuevo en unos minutos.';
+    return copy.loadServiceError;
   }
-  return 'No pudimos cargar tus perfiles. Recargá la página para intentar de nuevo.';
+  return copy.loadError;
 }
 
-function isUnauthorizedResult(
-  result: PromiseSettledResult<unknown>,
-): boolean {
+function isUnauthorizedResult(result: PromiseSettledResult<unknown>): boolean {
   return (
     result.status === 'rejected' &&
     result.reason instanceof ApiClientError &&
@@ -57,10 +61,7 @@ function isUnauthorizedResult(
   );
 }
 
-async function loadPanelData(
-  tournamentId: string,
-  signal?: AbortSignal,
-): Promise<PanelData> {
+async function loadPanelData(tournamentId: string, signal?: AbortSignal): Promise<PanelData> {
   const [entriesResult, teamsResult, meResult] = await Promise.allSettled([
     apiClient<{ teams: TeamEntry[] }>(`/tournaments/${tournamentId}/teams`, { signal }),
     apiClient<{ teams: MyTeam[] }>('/teams/mine', { signal }),
@@ -96,6 +97,8 @@ export function RegisterPanel({
   gameAdapterKey: GameAdapterKey;
   tournamentStatus: TournamentStatus;
 }) {
+  const { dictionary, locale } = useI18n();
+  const copy = dictionary.registrationPanel;
   const router = useRouter();
   const isPlayer = gameAdapterKey === 'smash_ultimate';
   const [entries, setEntries] = useState<TeamEntry[]>([]);
@@ -127,7 +130,7 @@ export function RegisterPanel({
       .catch((requestError: unknown) => {
         if (!isActive) return;
         if (requestError instanceof DOMException && requestError.name === 'AbortError') return;
-        setLoadError(getLoadErrorMessage(requestError));
+        setLoadError(getLoadErrorMessage(requestError, copy));
       })
       .finally(() => {
         if (isActive) setIsLoading(false);
@@ -137,7 +140,7 @@ export function RegisterPanel({
       isActive = false;
       controller.abort();
     };
-  }, [refreshPanelData]);
+  }, [copy, refreshPanelData]);
 
   const { compatibleTeams, configurableTeams, readOnlyTeams, hiddenTeamCount } =
     classifyTeamsForRegistration(myTeams, gameAdapterKey, currentUserId);
@@ -158,21 +161,17 @@ export function RegisterPanel({
     try {
       await apiClient(path, { method: 'POST', body: JSON.stringify({ teamId }) });
       await refreshPanelData();
-      setStatusMessage(
-        action === 'checkin'
-          ? 'Check-in confirmado. El estado ya está actualizado.'
-          : 'Inscripción enviada. El estado ya está actualizado.',
-      );
+      setStatusMessage(action === 'checkin' ? copy.checkInConfirmed : copy.registrationSent);
       router.refresh();
     } catch (err) {
-      setActionError(getRequestErrorMessage(err));
+      setActionError(getRequestErrorMessage(err, locale, copy));
     } finally {
       setBusyTeam(null);
     }
   }
 
   async function configureTeam(teamId: string) {
-    const gameName = formatGameAdapter(gameAdapterKey);
+    const gameName = formatGameAdapter(gameAdapterKey, locale);
     setBusyTeam(teamId);
     setActionError(null);
     setStatusMessage(null);
@@ -182,9 +181,9 @@ export function RegisterPanel({
         body: JSON.stringify({ gameAdapterKey }),
       });
       await refreshPanelData();
-      setStatusMessage(`Perfil configurado para ${gameName}. Ya podés inscribirte.`);
+      setStatusMessage(formatMessage(copy.profileConfigured, { game: gameName }));
     } catch (requestError) {
-      setActionError(getRequestErrorMessage(requestError));
+      setActionError(getRequestErrorMessage(requestError, locale, copy));
     } finally {
       setBusyTeam(null);
     }
@@ -193,8 +192,10 @@ export function RegisterPanel({
   if (panelLoadState === 'loading') {
     return (
       <div className="card">
-        <h2>Participar</h2>
-        <p className="muted" role="status">Cargando tus perfiles…</p>
+        <h2>{copy.participate}</h2>
+        <p className="muted" role="status">
+          {copy.loadingProfiles}
+        </p>
       </div>
     );
   }
@@ -202,7 +203,7 @@ export function RegisterPanel({
   if (panelLoadState === 'error') {
     return (
       <div className="card">
-        <h2>Participar</h2>
+        <h2>{copy.participate}</h2>
         <p className="error" role="alert" aria-live="assertive">
           {loadError}
         </p>
@@ -213,9 +214,9 @@ export function RegisterPanel({
   if (panelLoadState === 'anonymous') {
     return (
       <div className="card">
-        <h2>Participar</h2>
+        <h2>{copy.participate}</h2>
         <p className="muted">
-          <Link href="/login">Iniciá sesión</Link> para inscribirte o completar tu check-in.
+          <Link href="/login">{copy.signIn}</Link> {copy.signInSuffix}
         </p>
       </div>
     );
@@ -224,16 +225,13 @@ export function RegisterPanel({
   if (myTeams.length === 0) {
     return (
       <div className="card">
-        <h2>Participar</h2>
+        <h2>{copy.participate}</h2>
         {tournamentStatus === 'checkin_open' ? (
-          <p className="muted">
-            Las inscripciones están cerradas y no tenés perfiles inscritos habilitados para
-            completar el check-in.
-          </p>
+          <p className="muted">{copy.registrationClosedNoProfiles}</p>
         ) : (
           <p className="muted">
-            Para inscribirte necesitás {isPlayer ? 'un perfil de jugador' : 'un equipo'}.{' '}
-            <Link href="/teams/new">Creá {isPlayer ? 'tu perfil' : 'tu equipo'}</Link>
+            {isPlayer ? copy.needPlayerProfile : copy.needTeam}{' '}
+            <Link href="/teams/new">{isPlayer ? copy.createProfile : copy.createTeam}</Link>
           </p>
         )}
       </div>
@@ -247,16 +245,13 @@ export function RegisterPanel({
   ) {
     return (
       <div className="card">
-        <h2>Participar</h2>
+        <h2>{copy.participate}</h2>
         {tournamentStatus === 'checkin_open' ? (
-          <p className="muted">
-            Las inscripciones están cerradas y no tenés perfiles compatibles ya inscritos para
-            completar el check-in.
-          </p>
+          <p className="muted">{copy.registrationClosedNoCompatible}</p>
         ) : (
           <p className="muted">
-            No tenés {isPlayer ? 'un jugador' : 'un equipo'} compatible con este torneo.{' '}
-            <Link href="/teams/new">Crealo con el juego correcto</Link> para poder inscribirte.
+            {isPlayer ? copy.noCompatiblePlayer : copy.noCompatibleTeam}{' '}
+            <Link href="/teams/new">{copy.createCorrectGame}</Link> {copy.createCorrectGameSuffix}
           </p>
         )}
       </div>
@@ -265,22 +260,19 @@ export function RegisterPanel({
 
   return (
     <div className="card">
-      <h2>Participar</h2>
+      <h2>{copy.participate}</h2>
       {tournamentStatus === 'checkin_open' && (
-        <p className="muted">
-          Las inscripciones están cerradas. Sólo los perfiles ya inscritos pueden completar el
-          check-in.
-        </p>
+        <p className="muted">{copy.registrationClosedNotice}</p>
       )}
       {compatibleTeams.length > 0 && (
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {compatibleTeams.map((team) => {
             const entry = entries.find((candidate) => candidate.teamId === team.id) ?? null;
             const busy = busyTeam === team.id;
-            const presentation = getRegistrationEntryPresentation(tournamentStatus, entry);
+            const presentation = getRegistrationEntryPresentation(tournamentStatus, entry, locale);
             const statusLabel =
               entry?.registrationStatus === 'waitlisted' && entry.waitlistPosition
-                ? `En lista de espera #${entry.waitlistPosition}`
+                ? formatMessage(copy.waitlistPosition, { position: entry.waitlistPosition })
                 : presentation.statusLabel;
 
             return (
@@ -295,10 +287,14 @@ export function RegisterPanel({
                       onClick={() => run(team.id, presentation.action!)}
                     >
                       {busy
-                        ? 'Procesando…'
+                        ? copy.processing
                         : presentation.action === 'checkin'
-                          ? `Check-in del ${isPlayer ? 'jugador' : 'equipo'}`
-                          : `Inscribir ${isPlayer ? 'jugador' : 'equipo'}`}
+                          ? isPlayer
+                            ? copy.checkInPlayer
+                            : copy.checkInTeam
+                          : isPlayer
+                            ? copy.registerPlayer
+                            : copy.registerTeam}
                     </button>
                   </div>
                 )}
@@ -309,28 +305,21 @@ export function RegisterPanel({
       )}
       {tournamentStatus === 'open' && configurableTeams.length > 0 && (
         <section aria-labelledby="configure-game-title">
-          <h3 id="configure-game-title">
-            Configurá {isPlayer ? 'tu perfil' : 'tu equipo'}
-          </h3>
-          <p className="muted">
-            Estos perfiles todavía no tienen un juego definido. La configuración sólo cambia al
-            confirmarla.
-          </p>
+          <h3 id="configure-game-title">{isPlayer ? copy.configureProfile : copy.configureTeam}</h3>
+          <p className="muted">{copy.undefinedGameDescription}</p>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {configurableTeams.map((team) => {
               const busy = busyTeam === team.id;
               return (
                 <li key={team.id} style={{ marginBottom: '0.75rem' }}>
-                  <strong>{team.name}</strong> <span className="badge">Sin juego definido</span>
+                  <strong>{team.name}</strong> <span className="badge">{copy.noGame}</span>
                   <div className="actions">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => configureTeam(team.id)}
-                    >
+                    <button type="button" disabled={busy} onClick={() => configureTeam(team.id)}>
                       {busy
-                        ? 'Configurando…'
-                        : `Configurar para ${formatGameAdapter(gameAdapterKey)}`}
+                        ? copy.configuring
+                        : formatMessage(copy.configureFor, {
+                            game: formatGameAdapter(gameAdapterKey, locale),
+                          })}
                     </button>
                   </div>
                 </li>
@@ -341,26 +330,23 @@ export function RegisterPanel({
       )}
       {readOnlyTeams.length > 0 && (
         <section aria-labelledby="read-only-profiles-title">
-          <h3 id="read-only-profiles-title">Perfiles en modo lectura</h3>
-          <p className="muted">
-            Formás parte de estos perfiles, pero sólo su capitán puede inscribirlos o completar el
-            check-in.
-          </p>
+          <h3 id="read-only-profiles-title">{copy.readOnlyProfiles}</h3>
+          <p className="muted">{copy.readOnlyDescription}</p>
           <ul style={{ listStyle: 'none', padding: 0 }}>
             {readOnlyTeams.map((team) => (
               <li key={team.id} style={{ marginBottom: '0.75rem' }}>
-                <strong>{team.name}</strong> <span className="badge">Sin acciones disponibles</span>
+                <strong>{team.name}</strong> <span className="badge">{copy.noActions}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
-      {hiddenTeamCount > 0 && (
-        <p className="muted">
-          No mostramos tus perfiles de otros juegos porque no pueden participar en este torneo.
+      {hiddenTeamCount > 0 && <p className="muted">{copy.hiddenOtherGames}</p>}
+      {actionError && (
+        <p className="error" role="alert">
+          {actionError}
         </p>
       )}
-      {actionError && <p className="error" role="alert">{actionError}</p>}
       {statusMessage && (
         <p className="muted" role="status" aria-live="polite">
           {statusMessage}

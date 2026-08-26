@@ -71,6 +71,12 @@ describe('validación del reporte guiado de Smash Ultimate', () => {
 
     expect(result.firstInvalidFieldId).toBe('smash-game-1-stage');
     expect(result.errors['smash-game-1-stage']).toBe('Elegí el escenario del game 1.');
+
+    const englishResult = validateSmashReport(
+      { preset, games, allowedStages: STAGES, stockLimit: 3 },
+      'en',
+    );
+    expect(englishResult.errors['smash-game-1-stage']).toBe('Choose the stage for game 1.');
   });
 
   it('rechaza escenarios ajenos al ruleset y personajes vacíos', () => {
