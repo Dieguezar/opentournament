@@ -8,6 +8,18 @@ updates:
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
+    # Toolchain majors require a dedicated migration after the first release.
+    # Compatible updates and every security update remain enabled.
+    ignore:
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "eslint"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@eslint/js"
+        update-types:
+          - "version-update:semver-major"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

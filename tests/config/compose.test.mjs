@@ -16,6 +16,10 @@ const codeqlWorkflow = await readFile(
   new URL('../../.github/workflows/codeql.yml', import.meta.url),
   'utf8',
 );
+const dependabotConfig = await readFile(
+  new URL('../../.github/dependabot.yml', import.meta.url),
+  'utf8',
+);
 const releaseWorkflow = await readFile(
   new URL('../../.github/workflows/release-images.yml', import.meta.url),
   'utf8',
@@ -191,6 +195,20 @@ test('uses GitHub Actions backed by the supported Node 24 runtime', () => {
 test('audits production and development dependencies in CI', () => {
   assert.match(ciWorkflow, /run: pnpm audit(?:\s|$)/u);
   assert.doesNotMatch(ciWorkflow, /pnpm audit --prod/u);
+});
+
+test('defers toolchain majors without disabling compatible dependency updates', () => {
+  for (const dependency of ['typescript', 'eslint', '@eslint/js']) {
+    assert.match(
+      dependabotConfig,
+      new RegExp(
+        `dependency-name: "${dependency.replace('/', '\\/')}"\\s+update-types:\\s+- "version-update:semver-major"`,
+        'u',
+      ),
+    );
+  }
+  assert.match(dependabotConfig, /package-ecosystem: "npm"/u);
+  assert.match(dependabotConfig, /interval: "weekly"/u);
 });
 
 test('can select local builds or immutable release images in Compose', () => {
