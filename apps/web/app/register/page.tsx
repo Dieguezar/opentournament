@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 
 export default function RegisterPage() {
+  const { dictionary } = useI18n();
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -29,7 +31,7 @@ export default function RegisterPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Error al crear la cuenta');
+      setError(err instanceof ApiClientError ? err.message : dictionary.auth.registerError);
     } finally {
       setSubmitting(false);
     }
@@ -37,9 +39,9 @@ export default function RegisterPage() {
 
   return (
     <main className="container">
-      <h1>Crear cuenta</h1>
+      <h1>{dictionary.auth.registerTitle}</h1>
       <form className="card" onSubmit={onSubmit}>
-        <label htmlFor="displayName">Nombre</label>
+        <label htmlFor="displayName">{dictionary.auth.displayName}</label>
         <input
           id="displayName"
           required
@@ -47,7 +49,7 @@ export default function RegisterPage() {
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
         />
-        <label htmlFor="email">Correo</label>
+        <label htmlFor="email">{dictionary.auth.email}</label>
         <input
           id="email"
           type="email"
@@ -55,7 +57,7 @@ export default function RegisterPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <label htmlFor="password">Contraseña (mínimo 8 caracteres)</label>
+        <label htmlFor="password">{dictionary.auth.passwordRequirements}</label>
         <input
           id="password"
           type="password"
@@ -64,13 +66,17 @@ export default function RegisterPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={submitting}>
-          {submitting ? 'Creando…' : 'Crear cuenta'}
+          {submitting ? dictionary.auth.registerSubmitting : dictionary.auth.registerSubmit}
         </button>
       </form>
       <p className="muted">
-        ¿Ya tienes cuenta? <Link href="/login">Inicia sesión</Link>
+        {dictionary.auth.hasAccount} <Link href="/login">{dictionary.auth.loginLink}</Link>
       </p>
     </main>
   );

@@ -73,6 +73,46 @@ describe('participant experience', () => {
     });
   });
 
+  it('localizes organizer and participant navigation without changing route scope', () => {
+    expect(
+      getHeaderPresentation(
+        {
+          user: { displayName: 'Organizer' },
+          participantAccess: null,
+        },
+        'en',
+      ),
+    ).toEqual({
+      workspaceLabel: 'Personal workspace',
+      accountLabel: 'Organizer',
+      links: [
+        { href: '/dashboard', label: 'Tournaments' },
+        { href: '/tournaments/new', label: 'New tournament' },
+        { href: '/teams/new', label: 'New participant' },
+      ],
+    });
+
+    expect(
+      getHomePresentation(
+        {
+          user: { displayName: 'Player' },
+          participantAccess: {
+            tournamentSlug: 'open-cup',
+            teamName: 'Northern Lights',
+          },
+        },
+        'en',
+      ),
+    ).toEqual({
+      eyebrow: 'Your competition',
+      title: 'Northern Lights',
+      description:
+        'Return to the tournament to follow the bracket, review your matches, and report results.',
+      primaryAction: { href: '/t/open-cup', label: 'View my tournament' },
+      secondaryAction: { href: '/t/open-cup#reportar', label: 'Report result' },
+    });
+  });
+
   it('shows a useful empty state only for an authenticated participant', () => {
     expect(
       getReportPanelState({

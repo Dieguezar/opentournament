@@ -3,9 +3,11 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { type FormEvent, useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 
 export default function LoginPage() {
+  const { dictionary } = useI18n();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,7 +26,7 @@ export default function LoginPage() {
       router.push('/dashboard');
       router.refresh();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Error al iniciar sesión');
+      setError(err instanceof ApiClientError ? err.message : dictionary.auth.loginError);
     } finally {
       setSubmitting(false);
     }
@@ -32,9 +34,9 @@ export default function LoginPage() {
 
   return (
     <main className="container">
-      <h1>Iniciar sesión</h1>
+      <h1>{dictionary.auth.loginTitle}</h1>
       <form className="card" onSubmit={onSubmit}>
-        <label htmlFor="email">Correo</label>
+        <label htmlFor="email">{dictionary.auth.email}</label>
         <input
           id="email"
           type="email"
@@ -42,7 +44,7 @@ export default function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <label htmlFor="password">Contraseña</label>
+        <label htmlFor="password">{dictionary.auth.password}</label>
         <input
           id="password"
           type="password"
@@ -50,14 +52,18 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        {error && <p className="error" role="alert">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={submitting}>
-          {submitting ? 'Entrando…' : 'Entrar'}
+          {submitting ? dictionary.auth.loginSubmitting : dictionary.auth.loginSubmit}
         </button>
       </form>
       <p className="muted">
-        ¿No tienes cuenta? <Link href="/register">Regístrate</Link> ·{' '}
-        <Link href="/api/v1/auth/discord">Entrar con Discord</Link>
+        {dictionary.auth.noAccount} <Link href="/register">{dictionary.auth.registerLink}</Link> ·{' '}
+        <Link href="/api/v1/auth/discord">{dictionary.auth.discordLogin}</Link>
       </p>
     </main>
   );

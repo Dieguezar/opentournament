@@ -2,9 +2,11 @@ import { TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ActiveNavLink } from '@/components/active-nav-link';
+import { LanguageSelector } from '@/components/language-selector';
 import { LogoutButton } from '@/components/logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { getAuthSession } from '@/lib/auth-session';
+import { getDictionary, type Locale } from '@/lib/i18n';
 import { getHeaderPresentation } from '@/lib/participant-experience';
 
 interface HeaderNavLinkProps {
@@ -26,11 +28,12 @@ function HeaderNavLink({ children, href }: HeaderNavLinkProps) {
   );
 }
 
-export async function Header() {
+export async function Header({ locale }: { locale: Locale }) {
+  const dictionary = getDictionary(locale);
   const { status, data } = await getAuthSession();
   const user = status === 200 ? data.user : null;
   const presentation = user
-    ? getHeaderPresentation({ user, participantAccess: data.participantAccess ?? null })
+    ? getHeaderPresentation({ user, participantAccess: data.participantAccess ?? null }, locale)
     : null;
   const isApiUnavailable = status === 503;
 
@@ -46,7 +49,7 @@ export async function Header() {
           </Link>
           {presentation && <span className="workspace-chip">{presentation.workspaceLabel}</span>}
         </div>
-        <nav className="nav-links" aria-label="Principal">
+        <nav className="nav-links" aria-label={dictionary.navigation.primary}>
           {presentation ? (
             presentation.links.map((link) => (
               <HeaderNavLink href={link.href} key={link.href}>
@@ -55,17 +58,18 @@ export async function Header() {
             ))
           ) : (
             <>
-              <HeaderNavLink href="/login">Iniciar sesión</HeaderNavLink>
-              <HeaderNavLink href="/register">Registrarse</HeaderNavLink>
+              <HeaderNavLink href="/login">{dictionary.navigation.signIn}</HeaderNavLink>
+              <HeaderNavLink href="/register">{dictionary.navigation.register}</HeaderNavLink>
             </>
           )}
         </nav>
         <div className="nav-actions">
           {isApiUnavailable && (
             <span className="badge badge-danger" role="status">
-              API sin conexión
+              {dictionary.navigation.apiUnavailable}
             </span>
           )}
+          <LanguageSelector />
           <ThemeToggle />
           {presentation && (
             <>

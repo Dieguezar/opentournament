@@ -241,6 +241,15 @@ button:focus-visible {
   flex: 0 0 auto;
 }
 
+.language-selector {
+  min-height: 1.9rem;
+  width: auto;
+  margin: 0;
+  padding: 0.2rem 1.65rem 0.2rem 0.5rem;
+  border-radius: 5px;
+  font-size: 0.75rem;
+}
+
 .nav-account {
   gap: 0.45rem;
   padding-left: 0.15rem;

@@ -4,6 +4,7 @@ import { DesktopIcon } from '@phosphor-icons/react/Desktop';
 import { MoonIcon } from '@phosphor-icons/react/Moon';
 import { SunIcon } from '@phosphor-icons/react/Sun';
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/components/i18n-provider';
 import {
   getThemeState,
   persistThemePreference,
@@ -13,15 +14,15 @@ import {
 } from '@/lib/theme-preference';
 
 interface ThemeOption {
-  label: string;
+  labelKey: 'system' | 'light' | 'dark';
   value: ThemePreference;
   icon: typeof DesktopIcon;
 }
 
 const themeOptions: ThemeOption[] = [
-  { label: 'Usar tema del sistema', value: 'system', icon: DesktopIcon },
-  { label: 'Usar tema claro', value: 'light', icon: SunIcon },
-  { label: 'Usar tema oscuro', value: 'dark', icon: MoonIcon },
+  { labelKey: 'system', value: 'system', icon: DesktopIcon },
+  { labelKey: 'light', value: 'light', icon: SunIcon },
+  { labelKey: 'dark', value: 'dark', icon: MoonIcon },
 ];
 
 function applyResolvedTheme(resolvedTheme: ResolvedTheme) {
@@ -38,11 +39,15 @@ function getBrowserThemeStorage(): Storage | null {
 }
 
 export function ThemeToggle() {
+  const { dictionary } = useI18n();
   const [preference, setPreference] = useState<ThemePreference>('system');
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const state = getThemeState(readStoredThemePreference(getBrowserThemeStorage()), mediaQuery.matches);
+    const state = getThemeState(
+      readStoredThemePreference(getBrowserThemeStorage()),
+      mediaQuery.matches,
+    );
 
     setPreference(state.preference);
     applyResolvedTheme(state.resolvedTheme);
@@ -71,20 +76,23 @@ export function ThemeToggle() {
   }
 
   return (
-    <div className="theme-toggle" role="group" aria-label="Tema visual">
-      {themeOptions.map(({ icon: Icon, label, value }) => (
-        <button
-          type="button"
-          className="theme-toggle-button"
-          key={value}
-          aria-label={label}
-          aria-pressed={preference === value}
-          title={label}
-          onClick={() => chooseTheme(value)}
-        >
-          <Icon aria-hidden="true" size={15} weight={preference === value ? 'fill' : 'regular'} />
-        </button>
-      ))}
+    <div className="theme-toggle" role="group" aria-label={dictionary.theme.label}>
+      {themeOptions.map(({ icon: Icon, labelKey, value }) => {
+        const label = dictionary.theme[labelKey];
+        return (
+          <button
+            type="button"
+            className="theme-toggle-button"
+            key={value}
+            aria-label={label}
+            aria-pressed={preference === value}
+            title={label}
+            onClick={() => chooseTheme(value)}
+          >
+            <Icon aria-hidden="true" size={15} weight={preference === value ? 'fill' : 'regular'} />
+          </button>
+        );
+      })}
     </div>
   );
 }

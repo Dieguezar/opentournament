@@ -27,46 +27,54 @@ interface HomePresentation {
   secondaryAction: HeaderLink;
 }
 
-export function getHeaderPresentation(auth: AuthSummary): HeaderPresentation {
+export function getHeaderPresentation(
+  auth: AuthSummary,
+  locale: Locale = DEFAULT_LOCALE,
+): HeaderPresentation {
+  const { navigation } = getDictionary(locale);
   if (auth.participantAccess) {
     return {
-      workspaceLabel: 'Participante',
+      workspaceLabel: navigation.participantWorkspace,
       accountLabel: auth.participantAccess.teamName,
-      links: [{ href: `/t/${auth.participantAccess.tournamentSlug}`, label: 'Mi torneo' }],
+      links: [
+        { href: `/t/${auth.participantAccess.tournamentSlug}`, label: navigation.myTournament },
+      ],
     };
   }
 
   return {
-    workspaceLabel: 'Workspace personal',
+    workspaceLabel: navigation.personalWorkspace,
     accountLabel: auth.user.displayName,
     links: [
-      { href: '/dashboard', label: 'Torneos' },
-      { href: '/tournaments/new', label: 'Nuevo torneo' },
-      { href: '/teams/new', label: 'Nuevo participante' },
+      { href: '/dashboard', label: navigation.tournaments },
+      { href: '/tournaments/new', label: navigation.newTournament },
+      { href: '/teams/new', label: navigation.newParticipant },
     ],
   };
 }
 
-export function getHomePresentation(auth: AuthSummary): HomePresentation {
+export function getHomePresentation(
+  auth: AuthSummary,
+  locale: Locale = DEFAULT_LOCALE,
+): HomePresentation {
+  const { home } = getDictionary(locale);
   if (auth.participantAccess) {
     const tournamentHref = `/t/${auth.participantAccess.tournamentSlug}`;
     return {
-      eyebrow: 'Tu competencia',
+      eyebrow: home.participantEyebrow,
       title: auth.participantAccess.teamName,
-      description:
-        'Volvé al torneo para seguir el bracket, revisar tus partidas y reportar resultados.',
-      primaryAction: { href: tournamentHref, label: 'Ver mi torneo' },
-      secondaryAction: { href: `${tournamentHref}#reportar`, label: 'Reportar resultado' },
+      description: home.participantDescription,
+      primaryAction: { href: tournamentHref, label: home.viewMyTournament },
+      secondaryAction: { href: `${tournamentHref}#reportar`, label: home.reportResult },
     };
   }
 
   return {
-    eyebrow: 'Tu espacio',
-    title: `Hola, ${auth.user.displayName}`,
-    description:
-      'Retomá la organización desde el panel o creá un torneo con las plantillas de Smash Ultimate y League of Legends.',
-    primaryAction: { href: '/dashboard', label: 'Abrir panel' },
-    secondaryAction: { href: '/tournaments/new', label: 'Crear torneo' },
+    eyebrow: home.organizerEyebrow,
+    title: formatMessage(home.organizerGreeting, { name: auth.user.displayName }),
+    description: home.organizerDescription,
+    primaryAction: { href: '/dashboard', label: home.openDashboard },
+    secondaryAction: { href: '/tournaments/new', label: home.createTournament },
   };
 }
 
@@ -79,9 +87,7 @@ interface ReportPanelStateInput {
 }
 
 export type ReportPanelState =
-  | { kind: 'hidden' }
-  | { kind: 'empty'; title: string }
-  | { kind: 'matches' };
+  { kind: 'hidden' } | { kind: 'empty'; title: string } | { kind: 'matches' };
 
 export function getReportPanelState(input: ReportPanelStateInput): ReportPanelState {
   if (
@@ -109,10 +115,7 @@ interface ReportContext {
   reportingMode: 'bilateral' | 'winner_reports' | 'staff_only';
 }
 
-export function getReportOutcomeMessage(
-  outcome: ReportOutcome,
-  context: ReportContext,
-): string {
+export function getReportOutcomeMessage(outcome: ReportOutcome, context: ReportContext): string {
   if (outcome.conflict) {
     return 'Los reportes no coinciden. Se abrió una disputa para que la revise el staff.';
   }
@@ -121,3 +124,4 @@ export function getReportOutcomeMessage(
   }
   return 'Reporte enviado. Esperando la confirmación del rival…';
 }
+import { DEFAULT_LOCALE, formatMessage, getDictionary, type Locale } from './i18n';
