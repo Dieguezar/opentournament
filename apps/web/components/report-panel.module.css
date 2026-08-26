@@ -20,6 +20,21 @@
   border-bottom: 1px solid var(--border);
 }
 
+.emptyState {
+  padding: 1.1rem;
+}
+
+.emptyState h2,
+.emptyState p:last-child {
+  margin: 0;
+}
+
+.emptyState p:last-child {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
 .panelHeader h2,
 .matchTitle h3,
 .gameHeader,

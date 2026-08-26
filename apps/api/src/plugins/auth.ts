@@ -6,6 +6,8 @@ import {
   organizationMembers,
   organizations,
   participantAccessPasses,
+  teams,
+  tournaments,
   users,
   type Db,
 } from '@opentournament/database';
@@ -31,9 +33,15 @@ export async function registerAuthPlugins(app: FastifyInstance, db: Db): Promise
         .select({
           id: participantAccessPasses.id,
           tournamentId: participantAccessPasses.tournamentId,
+          tournamentSlug: tournaments.slug,
+          tournamentName: tournaments.name,
           teamId: participantAccessPasses.teamId,
+          teamName: teams.name,
+          teamTag: teams.tag,
         })
         .from(participantAccessPasses)
+        .innerJoin(tournaments, eq(tournaments.id, participantAccessPasses.tournamentId))
+        .innerJoin(teams, eq(teams.id, participantAccessPasses.teamId))
         .where(
           and(
             eq(participantAccessPasses.id, session.participantAccessPassId),
