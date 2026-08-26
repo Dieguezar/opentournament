@@ -51,7 +51,7 @@ ya tiene SSE/PWA operativos. La fase 5 está en progreso; la fase 6 es expansió
 ## Fase 5 — Preparación open source (en progreso)
 
 - **Objetivo:** primer release y comunidad.
-- **Entregables:** documentación final verificada; instalación probada desde cero; datos demo; plantillas y política de seguridad; escaneo de seguridad (ZAP); release 1.0.0 (semver) con imágenes en GHCR; observabilidad (Grafana opcional).
+- **Entregables:** documentación final verificada; workflow manual de instalación limpia (implementado, pendiente de primera ejecución); datos demo; plantillas y política de seguridad; escaneo de seguridad (ZAP); release 1.0.0 (semver) con imágenes en GHCR; observabilidad (Grafana opcional).
 - **Dependencias:** Fases 1–4.
 - **Riesgos:** bugs de integración; documentación desactualizada.
 - **Pruebas:** smoke completo en entorno limpio; pentest básico; E2E completo en CI.

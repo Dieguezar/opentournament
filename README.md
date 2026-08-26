@@ -97,7 +97,7 @@ saludable antes de iniciar el siguiente.
 | 2 — MVP de torneos             | Completada                             |
 | 3 — Resultados y arbitraje     | Completada                             |
 | 4 — Discord y tiempo real      | Parcial — SSE/PWA operativos           |
-| 5 — Preparación open source    | En progreso — hardening de instalación |
+| 5 — Preparación open source    | En progreso — hardening + smoke manual |
 | 6 — Expansión                  | Pendiente                              |
 
 ## Licencia

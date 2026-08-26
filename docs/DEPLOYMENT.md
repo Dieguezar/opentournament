@@ -41,7 +41,7 @@ flowchart LR
 Ver [.env.example](../.env.example). Variables críticas:
 
 - `DATABASE_URL` — conexión a PostgreSQL.
-- `SESSION_SECRET`, `JWT_SECRET`, `CSRF_SECRET` — generadas con `openssl rand -hex 32`.
+- `SESSION_SECRET` — secreto único generado con `openssl rand -hex 32`.
 - `S3_*` — endpoint, bucket y credenciales.
 - `DISCORD_*` — opcionales; sin ellas, auth por correo y sin bot.
 - `SMTP_*` — opcionales.
@@ -54,8 +54,8 @@ Ver [.env.example](../.env.example). Variables críticas:
 
 ## 6. Health checks
 
-- `GET /healthz` en API (DB + MinIO + scheduler).
-- `GET /` o `GET /api/health` en web (verifica upstream).
+- `GET /healthz` en API (conectividad con PostgreSQL).
+- `GET /` en web.
 - Compose healthchecks para postgres, MinIO, API y web; cada servicio espera a que sus dependencias
   estén saludables.
 
@@ -75,11 +75,17 @@ Ver [.env.example](../.env.example). Variables críticas:
 
 ## 9. CI/CD
 
-El pipeline de GitHub Actions ejecuta:
+Los workflows de GitHub Actions disponibles son:
 
-- **CI (PR):** lint, typecheck, tests unitarios + integración, build, `pnpm audit`, CodeQL.
-- **E2E:** Playwright contra compose de test (web + api + postgres + minio).
-- **Release:** tag semver → build de imágenes → publicación en GHCR + notas de release.
+- **CI (push/PR):** lint, typecheck, tests unitarios e integración, build, `pnpm audit` y
+  Playwright con PostgreSQL.
+- **CodeQL:** análisis estático de JavaScript/TypeScript.
+- **Compose clean-install smoke (manual):** genera una configuración efímera segura, construye y
+  levanta web, API, PostgreSQL y MinIO desde cero, verifica las rutas saludables y destruye los
+  volúmenes al finalizar.
+
+La publicación por tag semver, las imágenes en GHCR y las notas automáticas de release siguen
+pendientes para el primer release.
 
 ## 10. Dimensionamiento
 

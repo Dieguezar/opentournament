@@ -4,6 +4,10 @@ import test from 'node:test';
 
 const compose = await readFile(new URL('../../docker-compose.yml', import.meta.url), 'utf8');
 const envExample = await readFile(new URL('../../.env.example', import.meta.url), 'utf8');
+const composeSmoke = await readFile(
+  new URL('../../.github/workflows/compose-smoke.yml', import.meta.url),
+  'utf8',
+).catch(() => '');
 const envExampleEntries = Object.fromEntries(
   envExample
     .split(/\r?\n/u)
@@ -121,4 +125,17 @@ test('does not advertise environment variables ignored by the runtime', () => {
       `${variable} is not consumed by the runtime`,
     );
   }
+});
+
+test('provides a safe manual smoke test for a clean Compose installation', () => {
+  assert.match(composeSmoke, /workflow_dispatch:/u);
+  assert.match(composeSmoke, /openssl rand -hex 32/u);
+  assert.match(composeSmoke, /docker compose up -d --build/u);
+  assert.match(composeSmoke, /http:\/\/127\.0\.0\.1:4000\/healthz/u);
+  assert.match(composeSmoke, /http:\/\/127\.0\.0\.1:3000/u);
+  assert.match(composeSmoke, /if: failure\(\)/u);
+  assert.match(composeSmoke, /docker compose logs --no-color/u);
+  assert.match(composeSmoke, /if: always\(\)/u);
+  assert.match(composeSmoke, /docker compose down --volumes --remove-orphans/u);
+  assert.doesNotMatch(composeSmoke, /SEED_DEMO_DATA=true/u);
 });

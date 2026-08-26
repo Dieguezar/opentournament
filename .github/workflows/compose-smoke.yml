@@ -1,0 +1,50 @@
+name: Compose clean-install smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: compose-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clean-install:
+    name: Fresh self-hosted installation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare isolated production configuration
+        shell: bash
+        run: |
+          cp .env.example .env
+          session_secret="$(openssl rand -hex 32)"
+          sed -i "s/^SESSION_SECRET=.*/SESSION_SECRET=${session_secret}/" .env
+
+      - name: Start a clean installation
+        run: docker compose up -d --build
+
+      - name: Wait for API and web
+        shell: bash
+        run: |
+          timeout 240 bash -c 'until curl --fail --silent http://127.0.0.1:4000/healthz >/dev/null; do sleep 3; done'
+          timeout 240 bash -c 'until curl --fail --silent http://127.0.0.1:3000 >/dev/null; do sleep 3; done'
+
+      - name: Verify healthy services
+        shell: bash
+        run: |
+          docker compose ps
+          curl --fail --silent --show-error http://127.0.0.1:4000/healthz
+          curl --fail --silent --show-error http://127.0.0.1:3000 >/dev/null
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Remove the isolated installation
+        if: always()
+        run: docker compose down --volumes --remove-orphans
