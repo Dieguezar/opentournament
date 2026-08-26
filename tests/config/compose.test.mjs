@@ -34,6 +34,29 @@ const securityScanWorkflow = await readFile(
   'utf8',
 ).catch(() => '');
 const zapRules = await readFile(new URL('../../.zap/rules.tsv', import.meta.url), 'utf8');
+const apiCore = await readFile(
+  new URL('../../apps/api/src/plugins/core.ts', import.meta.url),
+  'utf8',
+);
+const workspacePackagePaths = [
+  '../../package.json',
+  '../../apps/api/package.json',
+  '../../apps/web/package.json',
+  '../../packages/auth/package.json',
+  '../../packages/bracket-ui/package.json',
+  '../../packages/config/package.json',
+  '../../packages/database/package.json',
+  '../../packages/game-adapters/package.json',
+  '../../packages/shared-types/package.json',
+  '../../packages/tournament-engine/package.json',
+  '../../packages/validation/package.json',
+];
+const workspacePackages = await Promise.all(
+  workspacePackagePaths.map(async (path) => ({
+    path,
+    manifest: JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8')),
+  })),
+);
 const envExampleEntries = Object.fromEntries(
   envExample
     .split(/\r?\n/u)
@@ -281,4 +304,13 @@ test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () =>
   assert.match(securityScanWorkflow, /docker compose down --volumes --remove-orphans/u);
   assert.match(zapRules, /^10049\tIGNORE\t/mu);
   assert.match(zapRules, /^10055\tINFO\t/mu);
+});
+
+test('keeps every workspace and the OpenAPI document on release version 1.0.0', () => {
+  for (const { path, manifest } of workspacePackages) {
+    assert.equal(manifest.version, '1.0.0', `${path} must declare the release version`);
+  }
+  assert.match(apiCore, /import apiPackage from '..\/..\/package\.json'/u);
+  assert.match(apiCore, /version: apiPackage\.version/u);
+  assert.doesNotMatch(apiCore, /version: '0\.1\.0'/u);
 });

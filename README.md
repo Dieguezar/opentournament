@@ -4,7 +4,7 @@ Plataforma open source para crear, administrar y publicar torneos de esports.
 
 OpenTournament permite a comunidades, cibercafés, universidades, streamers y organizadores independientes gestionar el ciclo completo de un torneo: creación, publicación de reglas, inscripción de participantes, formación de equipos, check-in, generación de brackets, coordinación de partidas, reporte de resultados, evidencias, disputas, arbitraje y publicación de resultados finales.
 
-> **Estado actual:** las fases de base técnica, torneos, resultados y arbitraje están operativas. El trabajo actual se concentra en integración comunitaria opcional y preparación del primer release autoalojable. Ver el [roadmap](docs/ROADMAP.md) y las [decisiones registradas](docs/DECISIONS.md).
+> **Estado actual:** candidato `v1.0.0` en validación final. Las fases de base técnica, torneos, resultados y arbitraje están operativas; Discord permanece opcional. Ver el [checklist del release](docs/RELEASE_CHECKLIST.md), el [roadmap](docs/ROADMAP.md) y las [decisiones registradas](docs/DECISIONS.md).
 
 ## Demo funcional
 
@@ -37,7 +37,7 @@ Después abre `http://localhost:3000`, inicia sesión con:
 
 La API aplica las migraciones y crea la demo automáticamente al arrancar con `SEED_DEMO_DATA=true`. También se puede ejecutar explícitamente con `pnpm db:seed`.
 
-## Características planificadas (MVP)
+## Características del MVP
 
 - Torneos de eliminación sencilla y doble eliminación, de 8 a 128 participantes (arquitectura preparada para 512+ sin rediseño).
 - Inscripción abierta con lista de espera y aprobación manual opcional.
@@ -87,18 +87,19 @@ saludable antes de iniciar el siguiente.
 - [Backlog](docs/BACKLOG.md)
 - [Decisiones](docs/DECISIONS.md)
 - [Riesgos](docs/RISKS.md)
+- [Checklist del release](docs/RELEASE_CHECKLIST.md)
 
 ## Estado del repositorio
 
-| Fase                           | Estado                                  |
-| ------------------------------ | --------------------------------------- |
-| 0 — Definición y documentación | Completada                              |
-| 1 — Base técnica               | Completada                              |
-| 2 — MVP de torneos             | Completada                              |
-| 3 — Resultados y arbitraje     | Completada                              |
-| 4 — Discord y tiempo real      | Parcial — SSE/PWA operativos            |
-| 5 — Preparación open source    | En progreso — preparando primer release |
-| 6 — Expansión                  | Pendiente                               |
+| Fase                           | Estado                         |
+| ------------------------------ | ------------------------------ |
+| 0 — Definición y documentación | Completada                     |
+| 1 — Base técnica               | Completada                     |
+| 2 — MVP de torneos             | Completada                     |
+| 3 — Resultados y arbitraje     | Completada                     |
+| 4 — Discord y tiempo real      | Parcial — SSE/PWA operativos   |
+| 5 — Preparación open source    | En progreso — candidato v1.0.0 |
+| 6 — Expansión                  | Pendiente                      |
 
 ## Licencia
 

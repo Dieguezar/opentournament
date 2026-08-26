@@ -5,6 +5,7 @@ import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import type { FastifyError, FastifyInstance } from 'fastify';
 import { ZodError } from 'zod';
+import apiPackage from '../../package.json' with { type: 'json' };
 import { env } from '../config.js';
 
 export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
@@ -45,7 +46,7 @@ export async function registerCorePlugins(app: FastifyInstance): Promise<void> {
       info: {
         title: 'OpenTournament API',
         description: 'API de la plataforma open source de torneos de esports.',
-        version: '0.1.0',
+        version: apiPackage.version,
       },
       servers: [{ url: env.API_URL }],
     },

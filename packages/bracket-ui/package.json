@@ -1,6 +1,6 @@
 {
   "name": "@opentournament/bracket-ui",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Tipos y (fase 2) componentes de bracket reutilizables para OpenTournament.",
   "license": "MIT",

@@ -6,26 +6,33 @@ El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el v
 
 ## [Sin publicar]
 
+## [1.0.0] - 2026-08-26
+
+Primera versión estable y autoalojable de OpenTournament.
+
+### Agregado
+
+- Gestión completa de organizaciones, participantes y torneos de eliminación sencilla o doble.
+- Inscripciones, check-in, seeds, BYEs, brackets, programación y avance automático de partidas.
+- Reporte bilateral mediante pases privados revocables, evidencias, disputas y resolución auditada.
+- Lectura pública sin cuenta, paneles para organización y participantes, actualizaciones SSE y PWA.
+- Adaptadores genérico, Valorant, Counter-Strike 2, League of Legends y Super Smash Bros. Ultimate.
+- Plantillas y reportes guiados específicos para LoL y Smash Ultimate, con demos completas de ocho participantes.
+- Temas claro, oscuro y del sistema, navegación adaptable y soporte WCAG A/AA automatizado.
+- Docker Compose para PostgreSQL, MinIO, API y web con datos demo opcionales.
+- CI, CodeQL, Dependabot, instalación limpia, baseline OWASP ZAP y publicación semver en GHCR.
+- Documentación de arquitectura, operación, contribución, seguridad y gobierno comunitario.
+
 ### Corregido
 
 - Cabeceras globales de navegador para CSP, clickjacking, MIME sniffing, permisos y aislamiento cross-origin.
 - Health checks de API y web fijados al loopback IPv4 para evitar falsos negativos en Alpine.
+- Conectores visibles del bracket público y presentación consistente de estados de torneo.
+- Aislamiento serial de los E2E que comparten servidor y base de datos.
 
 ### Cambiado
 
 - Seguridad del repositorio reforzada con reportes privados, grafo de dependencias y alertas y actualizaciones de Dependabot.
 - Autoalojamiento endurecido con secreto de sesión obligatorio, demo opt-in, verificación segura y health checks encadenados.
 - Compose conecta SMTP, límites de evidencia, rate limiting y credenciales compartidas de MinIO con la configuración real de la API.
-
-### Agregado
-
-- Workflow manual de OWASP ZAP validado para análisis pasivo de una instalación aislada.
-- Pipeline semver para publicar imágenes AMD64/ARM64 de API y web en GHCR con SBOM y procedencia.
-- Creación idempotente del GitHub Release con notas generadas después de publicar ambas imágenes.
-- Categorías de release notes para cambios incompatibles, funciones, correcciones, documentación y dependencias.
-- Workflow manual para validar una instalación limpia y completa con Docker Compose.
-- Plantilla competitiva `lol.standard_v1` con región, política de parche, Tournament/Fearless Draft, selección de lado, pausas y retraso de espectadores.
-- Reporte guiado de series de League of Legends con detalle por partida y validación bilateral.
-- Demo pública `Liga Nexo LoL` con ocho equipos y bracket completo.
-- Fase 0 completada: visión de producto, PRD, alcance del MVP, arquitectura, modelo de datos, diseño de API, modelo de autorización, motor de torneos, adaptadores de juegos, integración con Discord, estrategia de almacenamiento, modelo de seguridad, despliegue, self-hosting, estrategia de pruebas, observabilidad, accesibilidad, roadmap, backlog, riesgos, decisiones y glosario.
-- Documentación de contribución, código de conducta, política de seguridad y plantillas de issues/PR.
+- La portada autenticada reemplaza los accesos de registro por acciones contextuales del organizador o participante.
