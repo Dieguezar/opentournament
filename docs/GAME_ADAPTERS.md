@@ -13,6 +13,7 @@ flowchart LR
   Adapter --> LoL[lol]
   Adapter --> Smash[smash_ultimate]
   Smash --> Template[smash_ultimate.standard_v1]
+  LoL --> LoLTemplate[lol.standard_v1]
 ```
 
 ## 2. Interfaz del adaptador
@@ -82,7 +83,7 @@ Una **plantilla de torneo** es opcional y vive dentro de un adaptador. A diferen
 | -------------------------- | ------------- | --------- | ---------------------- | ------------------------------------------------------------------------------------------------ | ------ | -------------------------------------- |
 | Valorant                   | 5             | 1         | Riot ID (`Nombre#TAG`) | Abyss, Ascent, Bind, Breeze, Haven, Icebox, Lotus, Pearl, Split, Sunset                          | No     | BO1/BO3/BO5                            |
 | CS2                        | 5             | 1         | SteamID64              | Ancient, Anubis, Dust2, Inferno, Mirage, Nuke, Overpass, Train, Vertigo                          | No     | BO1/BO3/BO5                            |
-| LoL                        | 5             | 1         | Invocador + región     | Summoner's Rift (mapa único)                                                                     | No     | BO1/BO3/BO5                            |
+| LoL                        | 5             | 1         | Riot ID (`Nombre#TAG`) | Summoner's Rift (mapa único)                                                                     | No     | BO1/BO3/BO5                            |
 | Super Smash Bros. Ultimate | 1             | 0         | Tag de bracket         | Battlefield, Small Battlefield, Pokémon Stadium 2, Final Destination, Town & City + counterpicks | No     | BO3/BO5; doble eliminación por defecto |
 
 Notas:
@@ -91,6 +92,15 @@ Notas:
 - El empate se declara por adaptador (`drawAllowed: false` en los cuatro adaptadores oficiales).
 - Los campos de ID se validan en inscripción y en el perfil público.
 - La plantilla `smash_ultimate.standard_v1` parte de 3 stocks, 7 minutos, objetos y hazards desactivados, 3 bans, gran final con reset y capacidad 32. El organizador puede editarla o restaurar sus valores estándar.
+- La plantilla `lol.standard_v1` parte de 16 equipos, eliminación sencilla, BO3, región LAN, Summoner's Rift y Tournament Draft. No fija un parche por defecto para no quedar obsoleta; el organizador puede usar el parche live o registrar una versión fija, activar Fearless Draft, elegir la política de lados y ajustar pausas y retraso de espectadores.
+
+### Reporte estructurado de series de League of Legends
+
+El endpoint `POST /matches/:matchId/results` admite un campo opcional `lolGames` para League of Legends. Cada entrada registra número de partida, ganador, equipo en lado azul, duración y Riot Match ID opcional. El servidor valida el orden, el BO, los participantes, los identificadores repetidos y la coherencia con el marcador global.
+
+La web ofrece marcadores definitivos para BO1, BO3 y BO5 y genera la cantidad exacta de partidas a completar. El formulario hace visibles las decisiones de lado y conserva el reporte bilateral: ambos equipos deben enviar el mismo detalle para confirmar automáticamente. Los reportes antiguos sin `lolGames` siguen siendo válidos.
+
+El Riot Match ID mejora la trazabilidad, pero no es obligatorio. La plantilla no depende de una clave de Riot ni de conectividad externa. Una integración futura con Tournament Codes puede automatizar lobbies y resultados sin cambiar este contrato manual. Referencias: [Tournament API de Riot](https://developer.riotgames.com/docs/lol) y [biblioteca oficial de operaciones competitivas](https://competitiveops.riotgames.com/en-US/library?game=lol).
 
 ### Reporte estructurado de sets de Smash
 
@@ -113,7 +123,7 @@ Esta capacidad registra lo ocurrido; todavía no implementa el veto interactivo 
 - Tests de ejemplo: un torneo de ejemplo por juego genera brackets y acepta resultados correctos.
 - Tests negativos: rosters inválidos, IDs mal formados, empates en juegos sin empates.
 - Tests de plantilla: los defaults, el merge en servidor y las reglas específicas mantienen sus invariantes.
-- Tests de resultados: el detalle por game respeta participantes, BO, stocks, escenarios y marcador global.
+- Tests de resultados: el detalle por game o partida respeta participantes, BO, reglas específicas y marcador global.
 
 ## 7. Futuro
 

@@ -238,19 +238,56 @@ export interface TournamentSettingsDocument {
   reportingMode?: 'bilateral' | 'winner_reports' | 'staff_only';
   templateKey?: string;
   templateVersion?: number;
-  gameRules?: {
-    game: 'smash_ultimate';
-    stocks: number;
-    timeLimitMinutes: number;
-    itemsEnabled: boolean;
-    finalSmashMeterEnabled: boolean;
-    stageHazardsEnabled: boolean;
-    launchRate: number;
-    starters: readonly string[];
-    counterpicks: readonly string[];
-    stageBans: number;
-    stageClause: 'none' | 'modified_dsr' | 'full_dsr';
-  };
+  gameRules?:
+    | {
+        game: 'smash_ultimate';
+        stocks: number;
+        timeLimitMinutes: number;
+        itemsEnabled: boolean;
+        finalSmashMeterEnabled: boolean;
+        stageHazardsEnabled: boolean;
+        launchRate: number;
+        starters: readonly string[];
+        counterpicks: readonly string[];
+        stageBans: number;
+        stageClause: 'none' | 'modified_dsr' | 'full_dsr';
+      }
+    | {
+        game: 'lol';
+        map: 'summoners_rift';
+        region:
+          | 'lan'
+          | 'las'
+          | 'br'
+          | 'na'
+          | 'euw'
+          | 'eune'
+          | 'kr'
+          | 'jp'
+          | 'oce'
+          | 'tr'
+          | 'ru'
+          | 'ph'
+          | 'sg'
+          | 'th'
+          | 'tw'
+          | 'vn';
+        draftMode: 'tournament_draft';
+        fearlessDraft: boolean;
+        patchPolicy: 'live' | 'fixed';
+        patchVersion: string | null;
+        sideSelection: 'higher_seed_game_1_then_loser' | 'alternating' | 'coin_toss';
+        pauseBudgetMinutes: number;
+        spectatorDelayMinutes: number;
+      };
+}
+
+interface LeagueGameResultDocument {
+  number: number;
+  winnerTeamId: string;
+  blueTeamId: string;
+  durationMinutes: number;
+  riotMatchId?: string;
 }
 
 export const tournaments = pgTable(
@@ -518,6 +555,7 @@ export const matches = pgTable(
         homeStocks: number;
         awayStocks: number;
       }>;
+      lolGames?: LeagueGameResultDocument[];
     }>(),
     rescheduleCount: integer('reschedule_count').notNull().default(0),
     version: integer('version').notNull().default(1),
@@ -625,6 +663,7 @@ export const resultSubmissions = pgTable(
           homeStocks: number;
           awayStocks: number;
         }>;
+        lolGames?: LeagueGameResultDocument[];
       }>()
       .notNull(),
     status: text('status').notNull().default('pending'),

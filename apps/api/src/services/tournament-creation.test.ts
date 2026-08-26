@@ -32,6 +32,68 @@ describe('resolveTournamentCreationRequest', () => {
     });
   });
 
+  it('aplica la plantilla competitiva de League of Legends del lado del servidor', () => {
+    const tournament = resolveTournamentCreationRequest({
+      ...baseRequest,
+      slug: 'liga-nexo',
+      name: 'Liga Nexo',
+      gameAdapterKey: 'lol',
+    });
+
+    expect(tournament).toMatchObject({
+      gameAdapterKey: 'lol',
+      format: 'single_elimination',
+      capacity: 16,
+      seriesConfig: { bo: 3, drawsAllowed: false },
+      settings: {
+        grandFinalReset: false,
+        templateKey: 'lol.standard_v1',
+        templateVersion: 1,
+        gameRules: {
+          game: 'lol',
+          map: 'summoners_rift',
+          region: 'lan',
+          draftMode: 'tournament_draft',
+          fearlessDraft: false,
+          patchPolicy: 'live',
+          patchVersion: null,
+          sideSelection: 'higher_seed_game_1_then_loser',
+          pauseBudgetMinutes: 10,
+          spectatorDelayMinutes: 3,
+        },
+      },
+    });
+  });
+
+  it('preserva invariantes y acepta overrides editables de la plantilla de LoL', () => {
+    const tournament = resolveTournamentCreationRequest({
+      ...baseRequest,
+      gameAdapterKey: 'lol',
+      settings: {
+        templateKey: 'falsa',
+        templateVersion: 99,
+        gameRules: {
+          game: 'smash_ultimate',
+          region: 'las',
+          fearlessDraft: true,
+          patchPolicy: 'fixed',
+          patchVersion: '26.16',
+        },
+      },
+    });
+
+    expect(tournament.settings.templateKey).toBe('lol.standard_v1');
+    expect(tournament.settings.templateVersion).toBe(1);
+    expect(tournament.settings.gameRules).toMatchObject({
+      game: 'lol',
+      map: 'summoners_rift',
+      region: 'las',
+      fearlessDraft: true,
+      patchPolicy: 'fixed',
+      patchVersion: '26.16',
+    });
+  });
+
   it('deep-mergea overrides editables sin perder defaults anidados', () => {
     const tournament = resolveTournamentCreationRequest({
       ...baseRequest,
@@ -114,7 +176,7 @@ describe('resolveTournamentCreationRequest', () => {
     });
   });
 
-  it.each(['generic', 'valorant', 'cs2', 'lol'] as const)(
+  it.each(['generic', 'valorant', 'cs2'] as const)(
     'rechaza la identidad de una plantilla en el adaptador sin plantilla %s',
     (gameAdapterKey) => {
       expect(() =>

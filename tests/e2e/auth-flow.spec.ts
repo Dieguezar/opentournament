@@ -71,3 +71,18 @@ test('demo Smash → 8 participantes → personajes y games visibles', async ({ 
   await expect(page.getByTestId('smash-character')).toHaveCount(30);
   await expect(page.getByText(/^[2-5] games$/)).toHaveCount(15);
 });
+
+test('demo LoL → 8 equipos → reglas y partidas de cada serie visibles', async ({ page }) => {
+  await page.goto('/t/liga-nexo-lol');
+
+  await expect(page.getByRole('heading', { name: 'Liga Nexo LoL' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Equipos inscritos (8)' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Reglas competitivas de League of Legends' }),
+  ).toBeVisible();
+  await expect(page.getByText('Tournament Draft · Fearless activado')).toBeVisible();
+  await expect(page.getByText('Parche fijo 26.16 · Región LAN')).toBeVisible();
+  await expect(page.getByText('Finalizada')).toHaveCount(7);
+  await expect(page.getByTestId('lol-blue-side')).toHaveCount(14);
+  await expect(page.getByText(/^[23] partidas · \d+ min$/)).toHaveCount(7);
+});

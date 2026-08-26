@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { smashUltimateStandardTemplate } from '@opentournament/game-adapters';
+import {
+  leagueOfLegendsStandardTemplate,
+  smashUltimateStandardTemplate,
+} from '@opentournament/game-adapters';
 import {
   applyGameTemplateSelection,
   getSeriesBestOfOptions,
   parseStageList,
   restoreGameTemplateDefaults,
   validateSmashUltimateRules,
+  validateLeagueOfLegendsRules,
   type TournamentTemplateFormState,
 } from './tournament-template';
 
@@ -63,6 +67,30 @@ describe('selección explícita de una plantilla de juego', () => {
     expect(result.bo).toBe('3');
   });
 
+  it('aplica y clona los defaults editables de League of Legends', () => {
+    const result = applyGameTemplateSelection('lol', editedForm, leagueOfLegendsStandardTemplate);
+
+    expect(result).toMatchObject({
+      gameAdapterKey: 'lol',
+      format: 'single_elimination',
+      capacity: '16',
+      bo: '3',
+      grandFinalReset: false,
+      templateKey: 'lol.standard_v1',
+      templateVersion: 1,
+      gameRules: {
+        game: 'lol',
+        map: 'summoners_rift',
+        region: 'lan',
+        draftMode: 'tournament_draft',
+        fearlessDraft: false,
+        patchPolicy: 'live',
+        patchVersion: null,
+        sideSelection: 'higher_seed_game_1_then_loser',
+      },
+    });
+  });
+
   it('ofrece sólo BO3 y BO5 para Smash y conserva BO1 en otros juegos', () => {
     expect(getSeriesBestOfOptions('smash_ultimate')).toEqual(['3', '5']);
     expect(getSeriesBestOfOptions('generic')).toEqual(['1', '3', '5']);
@@ -97,7 +125,10 @@ describe('selección explícita de una plantilla de juego', () => {
       editedForm,
       smashUltimateStandardTemplate,
     );
-    first.gameRules?.starters.splice(0, 1);
+    if (first.gameRules?.game !== 'smash_ultimate') {
+      throw new Error('La plantilla de Smash debe incluir reglas');
+    }
+    first.gameRules.starters.splice(0, 1);
 
     const second = applyGameTemplateSelection(
       'smash_ultimate',
@@ -105,7 +136,10 @@ describe('selección explícita de una plantilla de juego', () => {
       smashUltimateStandardTemplate,
     );
 
-    expect(second.gameRules?.starters).toContain('Battlefield');
+    expect(second.gameRules?.game).toBe('smash_ultimate');
+    if (second.gameRules?.game === 'smash_ultimate') {
+      expect(second.gameRules.starters).toContain('Battlefield');
+    }
   });
 
   it('restaura todos los defaults competitivos sin reemplazar el resto del estado', () => {
@@ -114,6 +148,9 @@ describe('selección explícita de una plantilla de juego', () => {
       editedForm,
       smashUltimateStandardTemplate,
     );
+    if (customized.gameRules?.game !== 'smash_ultimate') {
+      throw new Error('La plantilla de Smash debe incluir reglas');
+    }
     const result = restoreGameTemplateDefaults(
       {
         ...customized,
@@ -121,14 +158,12 @@ describe('selección explícita de una plantilla de juego', () => {
         capacity: '128',
         bo: '5',
         grandFinalReset: false,
-        gameRules: customized.gameRules
-          ? {
-              ...customized.gameRules,
-              stocks: 4,
-              itemsEnabled: true,
-              starters: ['Mi escenario'],
-            }
-          : null,
+        gameRules: {
+          ...customized.gameRules,
+          stocks: 4,
+          itemsEnabled: true,
+          starters: ['Mi escenario'],
+        },
       },
       smashUltimateStandardTemplate,
     );
@@ -146,7 +181,54 @@ describe('selección explícita de una plantilla de juego', () => {
         itemsEnabled: false,
       },
     });
-    expect(result.gameRules?.starters).toContain('Battlefield');
+    if (result.gameRules?.game === 'smash_ultimate') {
+      expect(result.gameRules.starters).toContain('Battlefield');
+    }
+  });
+});
+
+describe('validación local de reglas de League of Legends', () => {
+  function getRules() {
+    const result = applyGameTemplateSelection('lol', editedForm, leagueOfLegendsStandardTemplate);
+    if (result.gameRules?.game !== 'lol')
+      throw new Error('La plantilla de LoL debe incluir reglas');
+    return result.gameRules;
+  }
+
+  it('acepta parche live sin versión y normaliza una versión fija', () => {
+    expect(validateLeagueOfLegendsRules(getRules())).toMatchObject({
+      errors: {},
+      firstInvalidField: null,
+      rules: { patchPolicy: 'live', patchVersion: null },
+    });
+    expect(
+      validateLeagueOfLegendsRules({
+        ...getRules(),
+        patchPolicy: 'fixed',
+        patchVersion: ' 26.16 ',
+      }),
+    ).toMatchObject({
+      errors: {},
+      firstInvalidField: null,
+      rules: { patchPolicy: 'fixed', patchVersion: '26.16' },
+    });
+  });
+
+  it('señala parche y límites operativos inválidos', () => {
+    const result = validateLeagueOfLegendsRules({
+      ...getRules(),
+      patchPolicy: 'fixed',
+      patchVersion: '',
+      pauseBudgetMinutes: 121,
+      spectatorDelayMinutes: -1,
+    });
+
+    expect(result.errors.patchVersion).toBe('Indicá una versión de parche, por ejemplo 26.16.');
+    expect(result.errors.pauseBudgetMinutes).toBe(
+      'La pausa total debe estar entre 0 y 120 minutos.',
+    );
+    expect(result.errors.spectatorDelayMinutes).toBe('El retraso debe estar entre 0 y 30 minutos.');
+    expect(result.firstInvalidField).toBe('patchVersion');
   });
 });
 
@@ -158,7 +240,9 @@ describe('validación local de reglas de Smash Ultimate', () => {
       smashUltimateStandardTemplate,
     );
 
-    if (!result.gameRules) throw new Error('La plantilla de Smash debe incluir reglas');
+    if (result.gameRules?.game !== 'smash_ultimate') {
+      throw new Error('La plantilla de Smash debe incluir reglas');
+    }
     return result.gameRules;
   }
 
@@ -208,9 +292,7 @@ describe('validación local de reglas de Smash Ultimate', () => {
       stageBans: 1,
     });
 
-    expect(result.errors.counterpicks).toBe(
-      'Los escenarios de counterpick no pueden repetirse.',
-    );
+    expect(result.errors.counterpicks).toBe('Los escenarios de counterpick no pueden repetirse.');
     expect(result.firstInvalidField).toBe('counterpicks');
   });
 

@@ -13,6 +13,7 @@ import {
 
 const organizationId = '550e8400-e29b-41d4-a716-446655440000';
 const homeTeamId = '11111111-1111-4111-8111-111111111111';
+const awayTeamId = '22222222-2222-4222-8222-222222222222';
 
 const smashRules = {
   game: 'smash_ultimate' as const,
@@ -32,6 +33,19 @@ const smashRules = {
   counterpicks: ['Kalos Pokémon League', 'Smashville', 'Hollow Bastion'],
   stageBans: 3,
   stageClause: 'none' as const,
+};
+
+const lolRules = {
+  game: 'lol' as const,
+  map: 'summoners_rift' as const,
+  region: 'lan' as const,
+  draftMode: 'tournament_draft' as const,
+  fearlessDraft: false,
+  patchPolicy: 'live' as const,
+  patchVersion: null,
+  sideSelection: 'higher_seed_game_1_then_loser' as const,
+  pauseBudgetMinutes: 10,
+  spectatorDelayMinutes: 3,
 };
 
 function createTournament(overrides: Record<string, unknown> = {}) {
@@ -80,6 +94,82 @@ describe('validación de plantillas por juego', () => {
     );
 
     expect(result.success).toBe(false);
+  });
+
+  it('acepta una plantilla competitiva de League of Legends coherente', () => {
+    const result = createTournamentSchema.safeParse(
+      createTournament({
+        gameAdapterKey: 'lol',
+        slug: 'liga-nexo',
+        name: 'Liga Nexo',
+        format: 'single_elimination',
+        capacity: 16,
+        settings: {
+          grandFinalReset: false,
+          presencial: false,
+          templateKey: 'lol.standard_v1',
+          templateVersion: 1,
+          gameRules: lolRules,
+        },
+      }),
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.settings.gameRules).toEqual(lolRules);
+  });
+
+  it('exige versión cuando la política de parche de LoL es fija', () => {
+    const baseSettings = {
+      grandFinalReset: false,
+      presencial: false,
+      templateKey: 'lol.standard_v1',
+      templateVersion: 1,
+    };
+    const invalid = createTournamentSchema.safeParse(
+      createTournament({
+        gameAdapterKey: 'lol',
+        settings: {
+          ...baseSettings,
+          gameRules: { ...lolRules, patchPolicy: 'fixed', patchVersion: null },
+        },
+      }),
+    );
+    const valid = createTournamentSchema.safeParse(
+      createTournament({
+        gameAdapterKey: 'lol',
+        settings: {
+          ...baseSettings,
+          gameRules: { ...lolRules, patchPolicy: 'fixed', patchVersion: '26.16' },
+        },
+      }),
+    );
+
+    expect(invalid.success).toBe(false);
+    expect(valid.success).toBe(true);
+  });
+
+  it('rechaza reglas de LoL con mapa, región o pausas inválidas', () => {
+    for (const gameRules of [
+      { ...lolRules, map: 'howling_abyss' },
+      { ...lolRules, region: 'desconocida' },
+      { ...lolRules, pauseBudgetMinutes: 121 },
+      { ...lolRules, spectatorDelayMinutes: -1 },
+    ]) {
+      expect(
+        createTournamentSchema.safeParse(
+          createTournament({
+            gameAdapterKey: 'lol',
+            settings: {
+              grandFinalReset: false,
+              presencial: false,
+              templateKey: 'lol.standard_v1',
+              templateVersion: 1,
+              gameRules,
+            },
+          }),
+        ).success,
+      ).toBe(false);
+    }
   });
 
   it.each([3, 5])('acepta BO%s en torneos de Smash Ultimate', (bestOf) => {
@@ -206,7 +296,7 @@ describe('validación de plantillas por juego', () => {
     }
   });
 
-  it.each(['generic', 'valorant', 'cs2', 'lol'] as const)(
+  it.each(['generic', 'valorant', 'cs2'] as const)(
     'rechaza metadatos de plantilla para el adaptador %s, que no tiene plantilla',
     (gameAdapterKey) => {
       const invalidMetadata = [
@@ -359,6 +449,53 @@ describe('detalle de games en reportes de Smash Ultimate', () => {
           ...validGame,
           number: index + 1,
         })),
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('detalle de partidas en reportes de League of Legends', () => {
+  const validGame = {
+    number: 1,
+    winnerTeamId: homeTeamId,
+    blueTeamId: awayTeamId,
+    durationMinutes: 31,
+    riotMatchId: ' LA1_123456789 ',
+  };
+
+  it('normaliza una partida estructurada válida', () => {
+    const result = reportResultSchema.parse({
+      winnerTeamId: homeTeamId,
+      homeScore: 2,
+      awayScore: 0,
+      lolGames: [validGame],
+    });
+
+    expect(result.lolGames).toEqual([{ ...validGame, riotMatchId: 'LA1_123456789' }]);
+  });
+
+  it('rechaza duración, identificador o combinación de detalles inválidos', () => {
+    expect(
+      reportResultSchema.safeParse({ lolGames: [{ ...validGame, durationMinutes: 4 }] }).success,
+    ).toBe(false);
+    expect(
+      reportResultSchema.safeParse({ lolGames: [{ ...validGame, riotMatchId: 'id con espacios' }] })
+        .success,
+    ).toBe(false);
+    expect(
+      reportResultSchema.safeParse({
+        games: [
+          {
+            number: 1,
+            stage: 'Battlefield',
+            homeCharacter: 'Mario',
+            awayCharacter: 'Link',
+            winnerTeamId: homeTeamId,
+            homeStocks: 1,
+            awayStocks: 0,
+          },
+        ],
+        lolGames: [validGame],
       }).success,
     ).toBe(false);
   });

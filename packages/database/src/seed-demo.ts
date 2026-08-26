@@ -7,6 +7,7 @@ import {
 } from '@opentournament/tournament-engine';
 import type { Db, DbExecutor } from './client.js';
 import { seedSmashDemoData } from './seed-smash-demo.js';
+import { seedLeagueDemoData } from './seed-lol-demo.js';
 import {
   auditLogs,
   brackets,
@@ -99,6 +100,7 @@ export interface DemoSeedResult {
   organizationId: string;
   tournamentId: string;
   smashTournamentId: string;
+  lolTournamentId: string;
   disputeId: string;
 }
 
@@ -147,11 +149,15 @@ export async function seedDemoData(db: Db): Promise<DemoSeedResult> {
     const smashTournamentId = await db.transaction((transaction) =>
       seedSmashDemoData(transaction, adminUserId, tournament.organizationId),
     );
+    const lolTournamentId = await db.transaction((transaction) =>
+      seedLeagueDemoData(transaction, adminUserId, tournament.organizationId),
+    );
     return {
       adminUserId,
       organizationId: tournament.organizationId,
       tournamentId: IDS.tournament,
       smashTournamentId,
+      lolTournamentId,
       disputeId: IDS.dispute,
     };
   }
@@ -467,12 +473,14 @@ export async function seedDemoData(db: Db): Promise<DemoSeedResult> {
       .values({ key: DEMO_FLAG, value: true })
       .onConflictDoUpdate({ target: demoFlags.key, set: { value: true } });
     const smashTournamentId = await seedSmashDemoData(transaction, adminUserId, organizationId);
+    const lolTournamentId = await seedLeagueDemoData(transaction, adminUserId, organizationId);
 
     return {
       adminUserId,
       organizationId,
       tournamentId: IDS.tournament,
       smashTournamentId,
+      lolTournamentId,
       disputeId: IDS.dispute,
     };
   });

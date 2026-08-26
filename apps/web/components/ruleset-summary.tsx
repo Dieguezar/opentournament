@@ -25,6 +25,41 @@ export function RulesetSummary({
 
   if (!summary) return null;
 
+  if (summary.kind === 'lol') {
+    return (
+      <section className={styles.summary} data-game="lol" aria-label={summary.title}>
+        <header className={styles.header}>
+          <div>
+            <p className={styles.kicker}>Plantilla del juego</p>
+            <h2>{summary.title}</h2>
+          </div>
+          <p className={styles.switches}>{summary.draft}</p>
+        </header>
+
+        <dl className={styles.facts}>
+          <div>
+            <dt>Formato</dt>
+            <dd>{summary.format}</dd>
+          </div>
+          <div>
+            <dt>Serie</dt>
+            <dd>{summary.set}</dd>
+          </div>
+          <div>
+            <dt>Parche y región</dt>
+            <dd>{summary.patch}</dd>
+          </div>
+          <div>
+            <dt>Selección de lado</dt>
+            <dd>{summary.sideSelection}</dd>
+          </div>
+        </dl>
+
+        <p className={styles.switches}>{summary.operations}</p>
+      </section>
+    );
+  }
+
   return (
     <section className={styles.summary} data-game="smash_ultimate" aria-label={summary.title}>
       <header className={styles.header}>

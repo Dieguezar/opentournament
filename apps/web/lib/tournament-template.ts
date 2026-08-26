@@ -1,7 +1,9 @@
 import type {
   GameAdapterKey,
+  LeagueOfLegendsRules,
   SmashUltimateRules,
   SmashUltimateStageClause,
+  TournamentGameRules,
 } from '@opentournament/shared-types';
 
 export interface TournamentTemplateFormState {
@@ -12,13 +14,20 @@ export interface TournamentTemplateFormState {
   grandFinalReset: boolean;
   templateKey: string | null;
   templateVersion: number | null;
-  gameRules: EditableSmashUltimateRules | null;
+  gameRules: EditableTournamentGameRules | null;
 }
 
-export interface EditableSmashUltimateRules extends Omit<SmashUltimateRules, 'starters' | 'counterpicks'> {
+export interface EditableSmashUltimateRules extends Omit<
+  SmashUltimateRules,
+  'starters' | 'counterpicks'
+> {
   starters: string[];
   counterpicks: string[];
 }
+
+export type EditableLeagueOfLegendsRules = LeagueOfLegendsRules;
+
+export type EditableTournamentGameRules = EditableSmashUltimateRules | EditableLeagueOfLegendsRules;
 
 interface TournamentTemplateSelection {
   key: string;
@@ -29,18 +38,13 @@ interface TournamentTemplateSelection {
     seriesConfig: { bo: number };
     settings: {
       grandFinalReset?: boolean;
-      gameRules?: SmashUltimateRules;
+      gameRules?: TournamentGameRules;
     };
   };
 }
 
 export type SmashUltimateRuleField =
-  | 'stocks'
-  | 'timeLimitMinutes'
-  | 'stageBans'
-  | 'starters'
-  | 'counterpicks'
-  | 'launchRate';
+  'stocks' | 'timeLimitMinutes' | 'stageBans' | 'starters' | 'counterpicks' | 'launchRate';
 
 export type SmashUltimateRuleErrors = Partial<Record<SmashUltimateRuleField, string>>;
 
@@ -48,6 +52,17 @@ export interface SmashUltimateRulesValidation {
   rules: EditableSmashUltimateRules;
   errors: SmashUltimateRuleErrors;
   firstInvalidField: SmashUltimateRuleField | null;
+}
+
+export type LeagueOfLegendsRuleField =
+  'patchVersion' | 'pauseBudgetMinutes' | 'spectatorDelayMinutes';
+
+export type LeagueOfLegendsRuleErrors = Partial<Record<LeagueOfLegendsRuleField, string>>;
+
+export interface LeagueOfLegendsRulesValidation {
+  rules: EditableLeagueOfLegendsRules;
+  errors: LeagueOfLegendsRuleErrors;
+  firstInvalidField: LeagueOfLegendsRuleField | null;
 }
 
 const smashRuleFieldOrder: readonly SmashUltimateRuleField[] = [
@@ -63,9 +78,7 @@ const GENERAL_BEST_OF_OPTIONS = ['1', '3', '5'] as const;
 const SMASH_BEST_OF_OPTIONS = ['3', '5'] as const;
 
 export function getSeriesBestOfOptions(gameAdapterKey: GameAdapterKey): readonly string[] {
-  return gameAdapterKey === 'smash_ultimate'
-    ? SMASH_BEST_OF_OPTIONS
-    : GENERAL_BEST_OF_OPTIONS;
+  return gameAdapterKey === 'smash_ultimate' ? SMASH_BEST_OF_OPTIONS : GENERAL_BEST_OF_OPTIONS;
 }
 
 function sanitizeSeriesBestOf(gameAdapterKey: GameAdapterKey, value: string): string {
@@ -81,11 +94,7 @@ export function parseStageList(value: string): string[] {
 }
 
 function normalizeStageName(stageName: string): string {
-  return stageName
-    .normalize('NFKC')
-    .trim()
-    .replace(/\s+/gu, ' ')
-    .toLocaleLowerCase('en-US');
+  return stageName.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase('en-US');
 }
 
 function hasRepeatedStage(stageNames: readonly string[]): boolean {
@@ -122,7 +131,11 @@ export function validateSmashUltimateRules(
   };
   const errors: SmashUltimateRuleErrors = {};
 
-  if (!Number.isInteger(normalizedRules.stocks) || normalizedRules.stocks < 1 || normalizedRules.stocks > 10) {
+  if (
+    !Number.isInteger(normalizedRules.stocks) ||
+    normalizedRules.stocks < 1 ||
+    normalizedRules.stocks > 10
+  ) {
     errors.stocks = 'Los stocks deben ser un número entero entre 1 y 10.';
   }
   if (
@@ -157,7 +170,11 @@ export function validateSmashUltimateRules(
     ...normalizedRules.starters.map(normalizeStageName),
     ...normalizedRules.counterpicks.map(normalizeStageName),
   ]).size;
-  if (!errors.stageBans && totalUniqueStages > 0 && normalizedRules.stageBans >= totalUniqueStages) {
+  if (
+    !errors.stageBans &&
+    totalUniqueStages > 0 &&
+    normalizedRules.stageBans >= totalUniqueStages
+  ) {
     errors.stageBans = 'Los vetos deben dejar al menos un escenario disponible.';
   }
 
@@ -178,6 +195,48 @@ export function validateSmashUltimateRules(
   return { rules: normalizedRules, errors, firstInvalidField: null };
 }
 
+export function validateLeagueOfLegendsRules(
+  rules: EditableLeagueOfLegendsRules,
+): LeagueOfLegendsRulesValidation {
+  const normalizedRules: EditableLeagueOfLegendsRules = {
+    ...rules,
+    patchVersion: rules.patchVersion?.trim() || null,
+  };
+  const errors: LeagueOfLegendsRuleErrors = {};
+
+  if (
+    normalizedRules.patchPolicy === 'fixed' &&
+    (!normalizedRules.patchVersion || !/^\d{1,2}\.\d{1,2}$/.test(normalizedRules.patchVersion))
+  ) {
+    errors.patchVersion = 'Indicá una versión de parche, por ejemplo 26.16.';
+  }
+  if (
+    !Number.isInteger(normalizedRules.pauseBudgetMinutes) ||
+    normalizedRules.pauseBudgetMinutes < 0 ||
+    normalizedRules.pauseBudgetMinutes > 120
+  ) {
+    errors.pauseBudgetMinutes = 'La pausa total debe estar entre 0 y 120 minutos.';
+  }
+  if (
+    !Number.isInteger(normalizedRules.spectatorDelayMinutes) ||
+    normalizedRules.spectatorDelayMinutes < 0 ||
+    normalizedRules.spectatorDelayMinutes > 30
+  ) {
+    errors.spectatorDelayMinutes = 'El retraso debe estar entre 0 y 30 minutos.';
+  }
+
+  const fieldOrder: readonly LeagueOfLegendsRuleField[] = [
+    'patchVersion',
+    'pauseBudgetMinutes',
+    'spectatorDelayMinutes',
+  ];
+  return {
+    rules: normalizedRules,
+    errors,
+    firstInvalidField: fieldOrder.find((field) => errors[field]) ?? null,
+  };
+}
+
 export function applyGameTemplateSelection(
   gameAdapterKey: GameAdapterKey,
   current: TournamentTemplateFormState,
@@ -185,7 +244,7 @@ export function applyGameTemplateSelection(
 ): TournamentTemplateFormState {
   const gameRules = template?.defaults.settings.gameRules;
 
-  if (!template || gameAdapterKey !== 'smash_ultimate' || gameRules?.game !== 'smash_ultimate') {
+  if (!template || gameRules?.game !== gameAdapterKey) {
     return {
       ...current,
       gameAdapterKey,
@@ -196,6 +255,16 @@ export function applyGameTemplateSelection(
     };
   }
 
+  const editableGameRules: EditableTournamentGameRules =
+    gameRules.game === 'smash_ultimate'
+      ? {
+          ...gameRules,
+          stageClause: gameRules.stageClause as SmashUltimateStageClause,
+          starters: [...gameRules.starters],
+          counterpicks: [...gameRules.counterpicks],
+        }
+      : { ...gameRules };
+
   return {
     ...current,
     gameAdapterKey,
@@ -205,12 +274,7 @@ export function applyGameTemplateSelection(
     grandFinalReset: template.defaults.settings.grandFinalReset ?? false,
     templateKey: template.key,
     templateVersion: template.version,
-    gameRules: {
-      ...gameRules,
-      stageClause: gameRules.stageClause as SmashUltimateStageClause,
-      starters: [...gameRules.starters],
-      counterpicks: [...gameRules.counterpicks],
-    },
+    gameRules: editableGameRules,
   };
 }
 

@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   adapters,
   getAdapter,
+  leagueOfLegendsAdapter,
+  leagueOfLegendsStandardTemplate,
   smashUltimateAdapter,
   smashUltimateStandardTemplate,
 } from './index.js';
@@ -30,6 +32,60 @@ describe('adaptadores de juegos', () => {
     expect(adapters.valorant.playerId.format.test('Diego#LAN1')).toBe(true);
     expect(adapters.valorant.playerId.format.test('sin-tag')).toBe(false);
     expect(adapters.cs2.playerId.format.test('76561198000000000')).toBe(true);
+    expect(adapters.lol.playerId.format.test('Faker#KR1')).toBe(true);
+    expect(adapters.lol.playerId.format.test('sin-tag')).toBe(false);
+  });
+
+  it('modela League of Legends como competencia 5v5 con terminología propia', () => {
+    expect(leagueOfLegendsAdapter).toMatchObject({
+      key: 'lol',
+      name: 'League of Legends',
+      platforms: ['pc'],
+      team: { minPlayers: 5, maxPlayers: 5, substitutes: 1 },
+      playerId: { label: 'Riot ID' },
+      maps: ["Summoner's Rift"],
+      modes: ['Tournament Draft'],
+      scoring: { type: 'series', drawAllowed: false, defaultSeries: [1, 3, 5] },
+      terminology: {
+        participantSingular: 'equipo',
+        participantPlural: 'equipos',
+        teamSingular: 'equipo',
+        teamPlural: 'equipos',
+      },
+    });
+  });
+
+  it('expone una plantilla estándar v1 de LoL sin fijar un parche que quede obsoleto', () => {
+    expect(leagueOfLegendsStandardTemplate).toEqual({
+      key: 'lol.standard_v1',
+      version: 1,
+      editable: true,
+      defaults: {
+        format: 'single_elimination',
+        capacity: 16,
+        seriesConfig: { bo: 3, drawsAllowed: false },
+        checkinConfig: { delayToleranceMinutes: 10 },
+        settings: {
+          grandFinalReset: false,
+          presencial: false,
+          templateKey: 'lol.standard_v1',
+          templateVersion: 1,
+          gameRules: {
+            game: 'lol',
+            map: 'summoners_rift',
+            region: 'lan',
+            draftMode: 'tournament_draft',
+            fearlessDraft: false,
+            patchPolicy: 'live',
+            patchVersion: null,
+            sideSelection: 'higher_seed_game_1_then_loser',
+            pauseBudgetMinutes: 10,
+            spectatorDelayMinutes: 3,
+          },
+        },
+      },
+    });
+    expect(leagueOfLegendsAdapter.tournamentTemplate).toBe(leagueOfLegendsStandardTemplate);
   });
 
   it('modela Smash Ultimate como singles competitivo sin empates', () => {

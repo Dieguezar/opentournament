@@ -135,7 +135,66 @@ export const smashUltimateRulesSchema = z
     }
   });
 
-export const tournamentGameRulesSchema = z.discriminatedUnion('game', [smashUltimateRulesSchema]);
+const leaguePatchVersionSchema = z
+  .string()
+  .trim()
+  .regex(/^\d{1,2}\.\d{1,2}$/, 'Usá una versión de parche como 26.16')
+  .nullable();
+
+export const leagueOfLegendsRulesSchema = z
+  .object({
+    game: z.literal('lol'),
+    map: z.literal('summoners_rift'),
+    region: z.enum([
+      'lan',
+      'las',
+      'br',
+      'na',
+      'euw',
+      'eune',
+      'kr',
+      'jp',
+      'oce',
+      'tr',
+      'ru',
+      'ph',
+      'sg',
+      'th',
+      'tw',
+      'vn',
+    ]),
+    draftMode: z.literal('tournament_draft'),
+    fearlessDraft: z.boolean(),
+    patchPolicy: z.enum(['live', 'fixed']),
+    patchVersion: leaguePatchVersionSchema,
+    sideSelection: z.enum(['higher_seed_game_1_then_loser', 'alternating', 'coin_toss']),
+    pauseBudgetMinutes: z.preprocess(normalizeSmashNumericInput, z.number().int().min(0).max(120)),
+    spectatorDelayMinutes: z.preprocess(
+      normalizeSmashNumericInput,
+      z.number().int().min(0).max(30),
+    ),
+  })
+  .superRefine((rules, ctx) => {
+    if (rules.patchPolicy === 'fixed' && !rules.patchVersion) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Indicá la versión fija del parche',
+        path: ['patchVersion'],
+      });
+    }
+    if (rules.patchPolicy === 'live' && rules.patchVersion !== null) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'El parche live no debe fijar una versión',
+        path: ['patchVersion'],
+      });
+    }
+  });
+
+export const tournamentGameRulesSchema = z.discriminatedUnion('game', [
+  smashUltimateRulesSchema,
+  leagueOfLegendsRulesSchema,
+]);
 
 export const resultReportingModeSchema = z.enum(['bilateral', 'winner_reports', 'staff_only']);
 
@@ -242,10 +301,13 @@ export const createTournamentSchema = z
       });
     }
 
-    if (tournament.gameAdapterKey === 'smash_ultimate' && tournament.seriesConfig.drawsAllowed) {
+    if (
+      (tournament.gameAdapterKey === 'smash_ultimate' || tournament.gameAdapterKey === 'lol') &&
+      tournament.seriesConfig.drawsAllowed
+    ) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Smash Ultimate no admite empates',
+        message: 'El juego seleccionado no admite empates',
         path: ['seriesConfig', 'drawsAllowed'],
       });
     }
@@ -265,7 +327,11 @@ export const createTournamentSchema = z
     const hasTemplateMetadata =
       tournament.settings.templateKey !== undefined ||
       tournament.settings.templateVersion !== undefined;
-    if (tournament.gameAdapterKey !== 'smash_ultimate' && hasTemplateMetadata) {
+    if (
+      tournament.gameAdapterKey !== 'smash_ultimate' &&
+      tournament.gameAdapterKey !== 'lol' &&
+      hasTemplateMetadata
+    ) {
       ctx.addIssue({
         code: 'custom',
         message: 'El adaptador seleccionado no admite metadatos de plantilla',
@@ -354,14 +420,40 @@ export const smashGameResultSchema = z.object({
 });
 export type SmashGameResultInput = z.infer<typeof smashGameResultSchema>;
 
-export const reportResultSchema = z.object({
-  winnerTeamId: z.string().uuid().nullable().optional(),
-  draw: z.boolean().default(false),
-  staffOverride: z.boolean().optional(),
-  homeScore: z.coerce.number().int().min(0).max(99).optional(),
-  awayScore: z.coerce.number().int().min(0).max(99).optional(),
-  games: z.array(smashGameResultSchema).min(1).max(5).optional(),
+export const leagueGameResultSchema = z.object({
+  number: z.preprocess(normalizeSmashNumericInput, z.number().int().min(1).max(5)),
+  winnerTeamId: z.string().uuid(),
+  blueTeamId: z.string().uuid(),
+  durationMinutes: z.preprocess(normalizeSmashNumericInput, z.number().int().min(5).max(180)),
+  riotMatchId: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[A-Za-z0-9_-]+$/, 'Riot Match ID inválido')
+    .optional(),
 });
+export type LeagueGameResultInput = z.infer<typeof leagueGameResultSchema>;
+
+export const reportResultSchema = z
+  .object({
+    winnerTeamId: z.string().uuid().nullable().optional(),
+    draw: z.boolean().default(false),
+    staffOverride: z.boolean().optional(),
+    homeScore: z.coerce.number().int().min(0).max(99).optional(),
+    awayScore: z.coerce.number().int().min(0).max(99).optional(),
+    games: z.array(smashGameResultSchema).min(1).max(5).optional(),
+    lolGames: z.array(leagueGameResultSchema).min(1).max(5).optional(),
+  })
+  .superRefine((report, ctx) => {
+    if (report.games && report.lolGames) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Un reporte no puede mezclar detalles de juegos distintos',
+        path: ['lolGames'],
+      });
+    }
+  });
 export type ReportResultInput = z.infer<typeof reportResultSchema>;
 
 export const presignSchema = z.object({

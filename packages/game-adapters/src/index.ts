@@ -1,5 +1,6 @@
 import type {
   GameAdapterKey,
+  LeagueOfLegendsRules,
   SmashUltimateRules,
   TournamentSettings,
 } from '@opentournament/shared-types';
@@ -73,7 +74,11 @@ export const genericAdapter: GameAdapterConfig = {
   name: 'Genérico',
   platforms: ['cualquiera'],
   team: { minPlayers: 1, maxPlayers: 10, substitutes: 2 },
-  playerId: { label: 'Nombre de jugador', format: /^.{2,64}$/, hint: 'Cualquier identificador de jugador' },
+  playerId: {
+    label: 'Nombre de jugador',
+    format: /^.{2,64}$/,
+    hint: 'Cualquier identificador de jugador',
+  },
   scoring: { type: 'series', drawAllowed: true, defaultSeries: [1, 3, 5] },
   matchFormats: { series: true, timed: false },
   veto: { mode: 'external', mapsRequired: false },
@@ -87,7 +92,18 @@ export const valorantAdapter: GameAdapterConfig = {
   team: { minPlayers: 5, maxPlayers: 5, substitutes: 1 },
   playerId: { label: 'Riot ID', format: /^[^#]{3,16}#(?:[A-Z0-9]{3,5})$/i, hint: 'Nombre#TAG' },
   regions: ['latam', 'br', 'na', 'eu', 'apac'],
-  maps: ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'],
+  maps: [
+    'Abyss',
+    'Ascent',
+    'Bind',
+    'Breeze',
+    'Haven',
+    'Icebox',
+    'Lotus',
+    'Pearl',
+    'Split',
+    'Sunset',
+  ],
   scoring: { type: 'series', drawAllowed: false, defaultSeries: [1, 3, 5] },
   matchFormats: { series: true, timed: false },
   veto: { mode: 'external', mapsRequired: true },
@@ -108,23 +124,82 @@ export const cs2Adapter: GameAdapterConfig = {
   integrations: [],
 };
 
-export const lolAdapter: GameAdapterConfig = {
+export const leagueOfLegendsStandardRules = {
+  game: 'lol',
+  map: 'summoners_rift',
+  region: 'lan',
+  draftMode: 'tournament_draft',
+  fearlessDraft: false,
+  patchPolicy: 'live',
+  patchVersion: null,
+  sideSelection: 'higher_seed_game_1_then_loser',
+  pauseBudgetMinutes: 10,
+  spectatorDelayMinutes: 3,
+} as const satisfies LeagueOfLegendsRules;
+
+export const leagueOfLegendsStandardTemplate = {
+  key: 'lol.standard_v1',
+  version: 1,
+  editable: true,
+  defaults: {
+    format: 'single_elimination',
+    capacity: 16,
+    seriesConfig: { bo: 3, drawsAllowed: false },
+    checkinConfig: { delayToleranceMinutes: 10 },
+    settings: {
+      grandFinalReset: false,
+      presencial: false,
+      templateKey: 'lol.standard_v1',
+      templateVersion: 1,
+      gameRules: leagueOfLegendsStandardRules,
+    },
+  },
+} as const satisfies GameTournamentTemplate;
+
+export const leagueOfLegendsAdapter: GameAdapterConfig = {
   key: 'lol',
   name: 'League of Legends',
   platforms: ['pc'],
   team: { minPlayers: 5, maxPlayers: 5, substitutes: 1 },
   playerId: {
-    label: 'Nombre de invocador',
-    format: /^.{2,16}$/,
-    hint: 'Nombre de invocador + región',
+    label: 'Riot ID',
+    format: /^[^#]{3,16}#(?:[A-Z0-9]{3,5})$/i,
+    hint: 'Nombre#TAG',
   },
-  regions: ['lan', 'las', 'br', 'na', 'eu'],
+  regions: [
+    'lan',
+    'las',
+    'br',
+    'na',
+    'euw',
+    'eune',
+    'kr',
+    'jp',
+    'oce',
+    'tr',
+    'ru',
+    'ph',
+    'sg',
+    'th',
+    'tw',
+    'vn',
+  ],
+  modes: ['Tournament Draft'],
   maps: ["Summoner's Rift"],
   scoring: { type: 'series', drawAllowed: false, defaultSeries: [1, 3, 5] },
   matchFormats: { series: true, timed: false },
   veto: { mode: 'external', mapsRequired: true },
+  terminology: {
+    participantSingular: 'equipo',
+    participantPlural: 'equipos',
+    teamSingular: 'equipo',
+    teamPlural: 'equipos',
+  },
+  tournamentTemplate: leagueOfLegendsStandardTemplate,
   integrations: [],
 };
+
+export const lolAdapter = leagueOfLegendsAdapter;
 
 export const smashUltimateStandardRules = {
   game: 'smash_ultimate',
@@ -194,7 +269,7 @@ export const adapters: Record<GameAdapterKey, GameAdapterConfig> = {
   generic: genericAdapter,
   valorant: valorantAdapter,
   cs2: cs2Adapter,
-  lol: lolAdapter,
+  lol: leagueOfLegendsAdapter,
   smash_ultimate: smashUltimateAdapter,
 };
 

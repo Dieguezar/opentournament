@@ -11,6 +11,8 @@ OpenTournament permite a comunidades, cibercafés, universidades, streamers y or
 La semilla de demostración crea de forma idempotente una experiencia lista para recorrer:
 
 - **Copa Nexo 2026**, torneo público de Valorant en curso.
+- **Liga Nexo LoL**, torneo 5v5 finalizado con ocho equipos, Tournament Draft, Fearless Draft y detalle por partida.
+- **Smash Random Showdown**, doble eliminación finalizada con ocho jugadores y detalle por game.
 - Cuatro equipos inscritos y con check-in confirmado.
 - Dos semifinales finalizadas y una gran final programada.
 - Reportes de resultados y una disputa resuelta con conversación y decisión arbitral.
@@ -30,6 +32,8 @@ Después abre `http://localhost:3000`, inicia sesión con:
 - Correo: `admin@opentournament.local`
 - Contraseña: `demo-password-123`
 - Torneo público: `http://localhost:3000/t/copa-nexo-demo`
+- Demo LoL: `http://localhost:3000/t/liga-nexo-lol`
+- Demo Smash: `http://localhost:3000/t/smash-random-showdown`
 
 La API aplica las migraciones y crea la demo automáticamente al arrancar con `SEED_DEMO_DATA=true`. También se puede ejecutar explícitamente con `pnpm db:seed`.
 
@@ -47,21 +51,21 @@ La API aplica las migraciones y crea la demo automáticamente al arrancar con `S
 - PWA instalable con caché de lectura (sin acciones offline).
 - Identidad progresiva: lectura pública sin cuenta, pases privados revocables para participantes y cuentas permanentes opcionales con correo/Discord.
 - Bot de Discord con notificaciones y comandos slash.
-- Adaptador genérico + adaptadores oficiales de Valorant, CS2, League of Legends y Super Smash Bros. Ultimate; Smash incluye una plantilla competitiva versionada.
+- Adaptador genérico + adaptadores oficiales de Valorant, CS2, League of Legends y Super Smash Bros. Ultimate; LoL y Smash incluyen plantillas competitivas versionadas y reportes guiados propios.
 - Instalación autoalojable con `docker compose up -d`.
 
 ## Stack previsto
 
-| Capa | Tecnología |
-| --- | --- |
-| Frontend | Next.js (TypeScript) |
-| Backend / API | Fastify (TypeScript) |
-| Base de datos | PostgreSQL + Drizzle ORM |
+| Capa           | Tecnología                                               |
+| -------------- | -------------------------------------------------------- |
+| Frontend       | Next.js (TypeScript)                                     |
+| Backend / API  | Fastify (TypeScript)                                     |
+| Base de datos  | PostgreSQL + Drizzle ORM                                 |
 | Almacenamiento | S3-compatible (MinIO en desarrollo; R2/S3 en producción) |
-| Tiempo real | Server-Sent Events (SSE) |
-| Monorepo | pnpm + Turborepo |
-| Pruebas | Vitest + Playwright |
-| Licencia | MIT |
+| Tiempo real    | Server-Sent Events (SSE)                                 |
+| Monorepo       | pnpm + Turborepo                                         |
+| Pruebas        | Vitest + Playwright                                      |
+| Licencia       | MIT                                                      |
 
 ## Documentación
 
@@ -82,15 +86,15 @@ La API aplica las migraciones y crea la demo automáticamente al arrancar con `S
 
 ## Estado del repositorio
 
-| Fase | Estado |
-| --- | --- |
-| 0 — Definición y documentación | Completada |
-| 1 — Base técnica | Completada |
-| 2 — MVP de torneos | En progreso — recorrido demo utilizable |
-| 3 — Resultados y arbitraje | En progreso — flujo base demostrable |
-| 4 — Discord y tiempo real | Pendiente |
-| 5 — Preparación open source | Pendiente |
-| 6 — Expansión | Pendiente |
+| Fase                           | Estado                                  |
+| ------------------------------ | --------------------------------------- |
+| 0 — Definición y documentación | Completada                              |
+| 1 — Base técnica               | Completada                              |
+| 2 — MVP de torneos             | En progreso — recorrido demo utilizable |
+| 3 — Resultados y arbitraje     | En progreso — flujo base demostrable    |
+| 4 — Discord y tiempo real      | Pendiente                               |
+| 5 — Preparación open source    | Pendiente                               |
+| 6 — Expansión                  | Pendiente                               |
 
 ## Licencia
 

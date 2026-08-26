@@ -15,8 +15,12 @@ import {
   getSeriesBestOfOptions,
   parseStageList,
   restoreGameTemplateDefaults,
+  validateLeagueOfLegendsRules,
   validateSmashUltimateRules,
+  type EditableLeagueOfLegendsRules,
   type EditableSmashUltimateRules,
+  type LeagueOfLegendsRuleErrors,
+  type LeagueOfLegendsRuleField,
   type SmashUltimateRuleErrors,
   type SmashUltimateRuleField,
   type TournamentTemplateFormState,
@@ -37,6 +41,12 @@ const SMASH_RULE_FIELD_IDS: Record<SmashUltimateRuleField, string> = {
   launchRate: 'smash-launch-rate',
 };
 
+const LOL_RULE_FIELD_IDS: Record<LeagueOfLegendsRuleField, string> = {
+  patchVersion: 'lol-patch-version',
+  pauseBudgetMinutes: 'lol-pause-budget',
+  spectatorDelayMinutes: 'lol-spectator-delay',
+};
+
 export default function NewTournamentPage() {
   const router = useRouter();
   const [organizations, setOrganizations] = useState<OrganizationSummary[]>([]);
@@ -53,8 +63,9 @@ export default function NewTournamentPage() {
   const [grandFinalReset, setGrandFinalReset] = useState(false);
   const [templateKey, setTemplateKey] = useState<string | null>(null);
   const [templateVersion, setTemplateVersion] = useState<number | null>(null);
-  const [gameRules, setGameRules] = useState<EditableSmashUltimateRules | null>(null);
+  const [gameRules, setGameRules] = useState<TournamentTemplateFormState['gameRules']>(null);
   const [ruleErrors, setRuleErrors] = useState<SmashUltimateRuleErrors>({});
+  const [leagueRuleErrors, setLeagueRuleErrors] = useState<LeagueOfLegendsRuleErrors>({});
   const [startsAt, setStartsAt] = useState('');
   const [description, setDescription] = useState('');
   const [rules, setRules] = useState('');
@@ -113,6 +124,7 @@ export default function NewTournamentPage() {
 
     updateTemplateFormState(nextState);
     setRuleErrors({});
+    setLeagueRuleErrors({});
   }
 
   function restoreStandardTemplate() {
@@ -121,6 +133,7 @@ export default function NewTournamentPage() {
 
     updateTemplateFormState(restoreGameTemplateDefaults(getTemplateFormState(), selectedTemplate));
     setRuleErrors({});
+    setLeagueRuleErrors({});
     setError(null);
   }
 
@@ -144,16 +157,42 @@ export default function NewTournamentPage() {
     });
   }
 
+  function clearLeagueRuleErrors(...fields: LeagueOfLegendsRuleField[]) {
+    setLeagueRuleErrors((currentErrors) =>
+      fields.reduce((nextErrors, field) => ({ ...nextErrors, [field]: undefined }), currentErrors),
+    );
+  }
+
+  function focusInvalidLeagueRule(field: LeagueOfLegendsRuleField) {
+    requestAnimationFrame(() => {
+      const input = document.getElementById(LOL_RULE_FIELD_IDS[field]);
+      if (!(input instanceof HTMLElement)) return;
+      input.focus({ preventScroll: true });
+      input.scrollIntoView({ block: 'center' });
+    });
+  }
+
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
 
-    const validation = gameRules ? validateSmashUltimateRules(gameRules) : null;
-    if (validation) {
-      setGameRules(validation.rules);
-      setRuleErrors(validation.errors);
-      if (validation.firstInvalidField) {
-        focusInvalidRule(validation.firstInvalidField);
+    const smashValidation =
+      gameRules?.game === 'smash_ultimate' ? validateSmashUltimateRules(gameRules) : null;
+    if (smashValidation) {
+      setGameRules(smashValidation.rules);
+      setRuleErrors(smashValidation.errors);
+      if (smashValidation.firstInvalidField) {
+        focusInvalidRule(smashValidation.firstInvalidField);
+        return;
+      }
+    }
+    const leagueValidation =
+      gameRules?.game === 'lol' ? validateLeagueOfLegendsRules(gameRules) : null;
+    if (leagueValidation) {
+      setGameRules(leagueValidation.rules);
+      setLeagueRuleErrors(leagueValidation.errors);
+      if (leagueValidation.firstInvalidField) {
+        focusInvalidLeagueRule(leagueValidation.firstInvalidField);
         return;
       }
     }
@@ -161,7 +200,7 @@ export default function NewTournamentPage() {
     setSubmitting(true);
     try {
       const selectedTemplate = getAdapter(gameAdapterKey).tournamentTemplate;
-      const normalizedGameRules = validation?.rules ?? null;
+      const normalizedGameRules = smashValidation?.rules ?? leagueValidation?.rules ?? null;
       const result = await apiClient<{ tournament: { id: string } }>('/tournaments', {
         method: 'POST',
         body: JSON.stringify({
@@ -320,7 +359,7 @@ export default function NewTournamentPage() {
           </div>
         </fieldset>
 
-        {gameRules && (
+        {gameRules?.game === 'smash_ultimate' && (
           <fieldset className={`${styles.formSection} ${styles.smashTemplate}`}>
             <legend>
               <h2>Plantilla competitiva de Smash Ultimate</h2>
@@ -612,6 +651,201 @@ export default function NewTournamentPage() {
                 </div>
               </div>
             </details>
+          </fieldset>
+        )}
+
+        {gameRules?.game === 'lol' && (
+          <fieldset className={`${styles.formSection} ${styles.smashTemplate}`}>
+            <legend>
+              <h2>Plantilla competitiva de League of Legends</h2>
+            </legend>
+            <p className={styles.sectionDescription}>
+              Configurá la región, el parche y las reglas operativas de cada serie 5v5.
+            </p>
+
+            <div className={styles.templateLead}>
+              <p>
+                Usa Summoner’s Rift y Tournament Draft. Fearless queda disponible sin obligarlo en
+                torneos comunitarios.
+              </p>
+              <button className="button-secondary" type="button" onClick={restoreStandardTemplate}>
+                Restaurar plantilla estándar
+              </button>
+            </div>
+
+            <div className={styles.formGrid}>
+              <div className={styles.field}>
+                <label htmlFor="lol-region">Región</label>
+                <select
+                  id="lol-region"
+                  value={gameRules.region}
+                  onChange={(event) =>
+                    setGameRules({
+                      ...gameRules,
+                      region: event.target.value as EditableLeagueOfLegendsRules['region'],
+                    })
+                  }
+                >
+                  {getAdapter('lol').regions?.map((region) => (
+                    <option key={region} value={region}>
+                      {region.toUpperCase()}
+                    </option>
+                  ))}
+                </select>
+                <p className={styles.help}>Shard donde se crearán las partidas personalizadas.</p>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="lol-map">Mapa</label>
+                <input id="lol-map" value="Summoner’s Rift" readOnly />
+                <p className={styles.help}>Mapa competitivo fijado por la plantilla.</p>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="lol-patch-policy">Política de parche</label>
+                <select
+                  id="lol-patch-policy"
+                  value={gameRules.patchPolicy}
+                  onChange={(event) => {
+                    const patchPolicy = event.target
+                      .value as EditableLeagueOfLegendsRules['patchPolicy'];
+                    setGameRules({
+                      ...gameRules,
+                      patchPolicy,
+                      patchVersion: patchPolicy === 'live' ? null : gameRules.patchVersion,
+                    });
+                    clearLeagueRuleErrors('patchVersion');
+                  }}
+                >
+                  <option value="live">Parche live al iniciar</option>
+                  <option value="fixed">Parche fijo</option>
+                </select>
+                <p className={styles.help}>
+                  Live evita que una plantilla vieja fije un parche obsoleto.
+                </p>
+              </div>
+
+              {gameRules.patchPolicy === 'fixed' && (
+                <div className={styles.field}>
+                  <label htmlFor="lol-patch-version">Versión del parche</label>
+                  <input
+                    id="lol-patch-version"
+                    required
+                    placeholder="26.16"
+                    pattern="[0-9]{1,2}\.[0-9]{1,2}"
+                    aria-invalid={Boolean(leagueRuleErrors.patchVersion)}
+                    aria-describedby={
+                      leagueRuleErrors.patchVersion ? 'lol-patch-version-error' : undefined
+                    }
+                    value={gameRules.patchVersion ?? ''}
+                    onChange={(event) => {
+                      setGameRules({ ...gameRules, patchVersion: event.target.value });
+                      clearLeagueRuleErrors('patchVersion');
+                    }}
+                  />
+                  {leagueRuleErrors.patchVersion && (
+                    <p className={styles.fieldError} id="lol-patch-version-error" role="alert">
+                      {leagueRuleErrors.patchVersion}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className={styles.field}>
+                <label htmlFor="lol-side-selection">Selección de lado</label>
+                <select
+                  id="lol-side-selection"
+                  value={gameRules.sideSelection}
+                  onChange={(event) =>
+                    setGameRules({
+                      ...gameRules,
+                      sideSelection: event.target
+                        .value as EditableLeagueOfLegendsRules['sideSelection'],
+                    })
+                  }
+                >
+                  <option value="higher_seed_game_1_then_loser">
+                    Seed superior en Game 1; luego el perdedor
+                  </option>
+                  <option value="alternating">Alternada por partida</option>
+                  <option value="coin_toss">Sorteo inicial</option>
+                </select>
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="lol-pause-budget">Pausa total por equipo</label>
+                <input
+                  id="lol-pause-budget"
+                  type="number"
+                  min={0}
+                  max={120}
+                  required
+                  aria-invalid={Boolean(leagueRuleErrors.pauseBudgetMinutes)}
+                  aria-describedby={
+                    leagueRuleErrors.pauseBudgetMinutes ? 'lol-pause-budget-error' : undefined
+                  }
+                  value={gameRules.pauseBudgetMinutes}
+                  onChange={(event) => {
+                    setGameRules({ ...gameRules, pauseBudgetMinutes: Number(event.target.value) });
+                    clearLeagueRuleErrors('pauseBudgetMinutes');
+                  }}
+                />
+                <p className={styles.help}>Minutos acumulados disponibles durante cada partida.</p>
+                {leagueRuleErrors.pauseBudgetMinutes && (
+                  <p className={styles.fieldError} id="lol-pause-budget-error" role="alert">
+                    {leagueRuleErrors.pauseBudgetMinutes}
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.field}>
+                <label htmlFor="lol-spectator-delay">Retraso para espectadores</label>
+                <input
+                  id="lol-spectator-delay"
+                  type="number"
+                  min={0}
+                  max={30}
+                  required
+                  aria-invalid={Boolean(leagueRuleErrors.spectatorDelayMinutes)}
+                  aria-describedby={
+                    leagueRuleErrors.spectatorDelayMinutes ? 'lol-spectator-delay-error' : undefined
+                  }
+                  value={gameRules.spectatorDelayMinutes}
+                  onChange={(event) => {
+                    setGameRules({
+                      ...gameRules,
+                      spectatorDelayMinutes: Number(event.target.value),
+                    });
+                    clearLeagueRuleErrors('spectatorDelayMinutes');
+                  }}
+                />
+                <p className={styles.help}>
+                  Reduce el riesgo de información externa en transmisiones.
+                </p>
+                {leagueRuleErrors.spectatorDelayMinutes && (
+                  <p className={styles.fieldError} id="lol-spectator-delay-error" role="alert">
+                    {leagueRuleErrors.spectatorDelayMinutes}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <label className={styles.checkboxRow} htmlFor="lol-fearless-draft">
+              <input
+                id="lol-fearless-draft"
+                type="checkbox"
+                checked={gameRules.fearlessDraft}
+                onChange={(event) =>
+                  setGameRules({ ...gameRules, fearlessDraft: event.target.checked })
+                }
+              />
+              <span>
+                Fearless Draft
+                <small>
+                  Los campeones elegidos anteriormente en la serie no pueden volver a seleccionarse.
+                </small>
+              </span>
+            </label>
           </fieldset>
         )}
 

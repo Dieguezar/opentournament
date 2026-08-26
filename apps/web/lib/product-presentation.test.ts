@@ -56,6 +56,7 @@ describe('presentación del producto', () => {
         },
       }),
     ).toEqual({
+      kind: 'smash_ultimate',
       title: 'Reglas competitivas de Smash Ultimate',
       format: 'Singles 1v1 · Doble eliminación',
       set: 'BO3 · 3 stocks · 7 min',
@@ -67,7 +68,39 @@ describe('presentación del producto', () => {
     });
   });
 
-  it('no inventa un resumen especializado para otros juegos', () => {
+  it('presenta las reglas operativas esenciales de League of Legends', () => {
+    expect(
+      buildRulesetSummary({
+        gameAdapterKey: 'lol',
+        format: 'single_elimination',
+        seriesBestOf: 3,
+        grandFinalReset: false,
+        gameRules: {
+          game: 'lol',
+          map: 'summoners_rift',
+          region: 'lan',
+          draftMode: 'tournament_draft',
+          fearlessDraft: true,
+          patchPolicy: 'fixed',
+          patchVersion: '26.16',
+          sideSelection: 'higher_seed_game_1_then_loser',
+          pauseBudgetMinutes: 10,
+          spectatorDelayMinutes: 3,
+        },
+      }),
+    ).toEqual({
+      kind: 'lol',
+      title: 'Reglas competitivas de League of Legends',
+      format: '5v5 · Eliminación sencilla',
+      set: 'BO3 · Summoner’s Rift',
+      draft: 'Tournament Draft · Fearless activado',
+      patch: 'Parche fijo 26.16 · Región LAN',
+      sideSelection: 'Seed superior en Game 1; luego el perdedor elige',
+      operations: '10 min de pausa · 3 min de retraso para espectadores',
+    });
+  });
+
+  it('no inventa un resumen especializado para juegos sin plantilla', () => {
     expect(
       buildRulesetSummary({
         gameAdapterKey: 'valorant',

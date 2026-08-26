@@ -25,15 +25,29 @@ interface SmashRulesetInput {
   stageClause: string;
 }
 
+interface LeagueRulesetInput {
+  game: 'lol';
+  map: 'summoners_rift';
+  region: string;
+  draftMode: 'tournament_draft';
+  fearlessDraft: boolean;
+  patchPolicy: 'live' | 'fixed';
+  patchVersion: string | null;
+  sideSelection: string;
+  pauseBudgetMinutes: number;
+  spectatorDelayMinutes: number;
+}
+
 interface RulesetSummaryInput {
   gameAdapterKey: string;
   format: string;
   seriesBestOf: number;
   grandFinalReset: boolean;
-  gameRules: SmashRulesetInput | null | undefined;
+  gameRules: SmashRulesetInput | LeagueRulesetInput | null | undefined;
 }
 
 export interface RulesetSummaryPresentation {
+  kind: 'smash_ultimate';
   title: string;
   format: string;
   set: string;
@@ -42,6 +56,17 @@ export interface RulesetSummaryPresentation {
   switches: string;
   starters: readonly string[];
   counterpicks: readonly string[];
+}
+
+export interface LeagueRulesetSummaryPresentation {
+  kind: 'lol';
+  title: string;
+  format: string;
+  set: string;
+  draft: string;
+  patch: string;
+  sideSelection: string;
+  operations: string;
 }
 
 const TOURNAMENT_STATUS_LABELS: Record<string, StatusPresentation> = {
@@ -133,7 +158,57 @@ function isSmashRulesetInput(value: unknown): value is SmashRulesetInput {
   );
 }
 
-export function buildRulesetSummary(input: RulesetSummaryInput): RulesetSummaryPresentation | null {
+function isLeagueRulesetInput(value: unknown): value is LeagueRulesetInput {
+  if (!value || typeof value !== 'object') return false;
+  const rules = value as Record<string, unknown>;
+
+  return (
+    rules.game === 'lol' &&
+    rules.map === 'summoners_rift' &&
+    typeof rules.region === 'string' &&
+    rules.draftMode === 'tournament_draft' &&
+    typeof rules.fearlessDraft === 'boolean' &&
+    (rules.patchPolicy === 'live' || rules.patchPolicy === 'fixed') &&
+    (rules.patchVersion === null || typeof rules.patchVersion === 'string') &&
+    typeof rules.sideSelection === 'string' &&
+    typeof rules.pauseBudgetMinutes === 'number' &&
+    Number.isInteger(rules.pauseBudgetMinutes) &&
+    typeof rules.spectatorDelayMinutes === 'number' &&
+    Number.isInteger(rules.spectatorDelayMinutes)
+  );
+}
+
+function formatLeagueSideSelection(value: string): string {
+  if (value === 'higher_seed_game_1_then_loser') {
+    return 'Seed superior en Game 1; luego el perdedor elige';
+  }
+  if (value === 'alternating') return 'Selección de lado alternada';
+  if (value === 'coin_toss') return 'Selección inicial por sorteo';
+  return humanize(value);
+}
+
+export function buildRulesetSummary(
+  input: RulesetSummaryInput,
+): RulesetSummaryPresentation | LeagueRulesetSummaryPresentation | null {
+  if (input.gameAdapterKey === 'lol' && isLeagueRulesetInput(input.gameRules)) {
+    const rules = input.gameRules;
+    const format =
+      input.format === 'double_elimination' ? 'Doble eliminación' : 'Eliminación sencilla';
+    return {
+      kind: 'lol',
+      title: 'Reglas competitivas de League of Legends',
+      format: `5v5 · ${format}`,
+      set: `BO${input.seriesBestOf} · Summoner’s Rift`,
+      draft: `Tournament Draft · Fearless ${rules.fearlessDraft ? 'activado' : 'desactivado'}`,
+      patch:
+        rules.patchPolicy === 'fixed'
+          ? `Parche fijo ${rules.patchVersion} · Región ${rules.region.toUpperCase()}`
+          : `Parche live · Región ${rules.region.toUpperCase()}`,
+      sideSelection: formatLeagueSideSelection(rules.sideSelection),
+      operations: `${rules.pauseBudgetMinutes} min de pausa · ${rules.spectatorDelayMinutes} min de retraso para espectadores`,
+    };
+  }
+
   if (input.gameAdapterKey !== 'smash_ultimate' || !isSmashRulesetInput(input.gameRules)) {
     return null;
   }
@@ -144,6 +219,7 @@ export function buildRulesetSummary(input: RulesetSummaryInput): RulesetSummaryP
   const bans = `${rules.stageBans} ${rules.stageBans === 1 ? 'ban' : 'bans'}`;
 
   return {
+    kind: 'smash_ultimate',
     title: 'Reglas competitivas de Smash Ultimate',
     format: `Singles 1v1 · ${format}`,
     set: `BO${input.seriesBestOf} · ${rules.stocks} stocks · ${rules.timeLimitMinutes} min`,

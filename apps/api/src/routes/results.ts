@@ -10,7 +10,11 @@ import {
   tournamentParticipants,
   tournaments,
 } from '@opentournament/database';
-import { reportResultSchema, type SmashGameResultInput } from '@opentournament/validation';
+import {
+  reportResultSchema,
+  type LeagueGameResultInput,
+  type SmashGameResultInput,
+} from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { isTeamCaptain, isTournamentAdmin } from '../services/permissions.js';
@@ -26,6 +30,7 @@ import { tournamentAdminIds } from '../services/checkin.js';
 import { emitTournamentEvent } from '../services/realtime.js';
 import { sendDiscordWebhook } from '../services/discord.js';
 import { validateGameReport } from '../services/smash-game-report.js';
+import { validateLeagueGameReport } from '../services/lol-game-report.js';
 import { authorizeResultReport } from '../services/result-reporting-policy.js';
 
 interface SubmissionResult {
@@ -34,6 +39,7 @@ interface SubmissionResult {
   awayScore?: number;
   draw?: boolean;
   games?: SmashGameResultInput[];
+  lolGames?: LeagueGameResultInput[];
 }
 
 function submissionsMatch(
@@ -45,7 +51,8 @@ function submissionsMatch(
     (a.result.homeScore ?? null) === (b.result.homeScore ?? null) &&
     (a.result.awayScore ?? null) === (b.result.awayScore ?? null) &&
     Boolean(a.result.draw) === Boolean(b.result.draw) &&
-    JSON.stringify(a.result.games ?? null) === JSON.stringify(b.result.games ?? null)
+    JSON.stringify(a.result.games ?? null) === JSON.stringify(b.result.games ?? null) &&
+    JSON.stringify(a.result.lolGames ?? null) === JSON.stringify(b.result.lolGames ?? null)
   );
 }
 
@@ -112,7 +119,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
     }
 
     const gameRules = ctx.tournament.settings?.gameRules;
-    const gameValidation = validateGameReport(
+    const smashGameValidation = validateGameReport(
       {
         gameAdapterKey: ctx.tournament.gameAdapterKey,
         bestOf: ctx.tournament.seriesConfig?.bo ?? 1,
@@ -126,9 +133,23 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
       },
       body,
     );
-    if (!gameValidation.ok) {
+    if (!smashGameValidation.ok) {
       return reply.status(409).send({
-        error: { code: gameValidation.code, message: gameValidation.message },
+        error: { code: smashGameValidation.code, message: smashGameValidation.message },
+      });
+    }
+    const leagueGameValidation = validateLeagueGameReport(
+      {
+        gameAdapterKey: ctx.tournament.gameAdapterKey,
+        bestOf: ctx.tournament.seriesConfig?.bo ?? 1,
+        homeTeamId: ctx.home.teamId,
+        awayTeamId: ctx.away.teamId,
+      },
+      body,
+    );
+    if (!leagueGameValidation.ok) {
+      return reply.status(409).send({
+        error: { code: leagueGameValidation.code, message: leagueGameValidation.message },
       });
     }
 
@@ -202,7 +223,8 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
             homeScore: body.homeScore,
             awayScore: body.awayScore,
             draw: body.draw || undefined,
-            games: gameValidation.games,
+            games: smashGameValidation.games,
+            lolGames: leagueGameValidation.games,
           },
           status: authorization.strategy === 'authoritative' ? 'confirmed' : 'pending',
         })
@@ -227,7 +249,8 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
                 winnerId,
                 homeScore: body.homeScore,
                 awayScore: body.awayScore,
-                games: gameValidation.games,
+                games: smashGameValidation.games,
+                lolGames: leagueGameValidation.games,
               },
             })
             .where(eq(matches.id, matchId));
@@ -250,7 +273,8 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
           resourceId: matchId,
           after: {
             winnerId,
-            games: gameValidation.games,
+            games: smashGameValidation.games,
+            lolGames: leagueGameValidation.games,
             reportingMode: ctx.tournament.settings?.reportingMode ?? 'bilateral',
           },
         });

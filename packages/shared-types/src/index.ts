@@ -27,7 +27,47 @@ export interface SmashUltimateRules {
   stageClause: SmashUltimateStageClause;
 }
 
-export type TournamentGameRules = SmashUltimateRules;
+export const LEAGUE_OF_LEGENDS_REGIONS = [
+  'lan',
+  'las',
+  'br',
+  'na',
+  'euw',
+  'eune',
+  'kr',
+  'jp',
+  'oce',
+  'tr',
+  'ru',
+  'ph',
+  'sg',
+  'th',
+  'tw',
+  'vn',
+] as const;
+export type LeagueOfLegendsRegion = (typeof LEAGUE_OF_LEGENDS_REGIONS)[number];
+
+export const LEAGUE_OF_LEGENDS_SIDE_SELECTIONS = [
+  'higher_seed_game_1_then_loser',
+  'alternating',
+  'coin_toss',
+] as const;
+export type LeagueOfLegendsSideSelection = (typeof LEAGUE_OF_LEGENDS_SIDE_SELECTIONS)[number];
+
+export interface LeagueOfLegendsRules {
+  game: 'lol';
+  map: 'summoners_rift';
+  region: LeagueOfLegendsRegion;
+  draftMode: 'tournament_draft';
+  fearlessDraft: boolean;
+  patchPolicy: 'live' | 'fixed';
+  patchVersion: string | null;
+  sideSelection: LeagueOfLegendsSideSelection;
+  pauseBudgetMinutes: number;
+  spectatorDelayMinutes: number;
+}
+
+export type TournamentGameRules = SmashUltimateRules | LeagueOfLegendsRules;
 
 export const RESULT_REPORTING_MODES = ['bilateral', 'winner_reports', 'staff_only'] as const;
 export type ResultReportingMode = (typeof RESULT_REPORTING_MODES)[number];

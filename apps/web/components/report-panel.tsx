@@ -6,6 +6,16 @@ import type { GameAdapterKey, TournamentSettings } from '@opentournament/shared-
 import { apiClient, ApiClientError } from '@/lib/api';
 import { getReportOutcomeMessage, getReportPanelState } from '@/lib/participant-experience';
 import {
+  buildLeagueReportPayload,
+  createLeagueGames,
+  getLeagueScorePresets,
+  updateLeagueGameWinner,
+  validateLeagueReport,
+  type LeagueGameDraft,
+  type LeagueReportPayload,
+  type LeagueScorePreset,
+} from '@/lib/lol-report';
+import {
   buildSmashReportPayload,
   createSmashGames,
   getSmashScorePresets,
@@ -70,6 +80,17 @@ interface SmashReportFormProps {
   onDispute: () => Promise<void>;
 }
 
+interface LeagueReportFormProps {
+  match: CompleteMatchView;
+  allowedWinnerTeamId?: string;
+  bestOf: number;
+  isBusy: boolean;
+  message?: string;
+  error?: string;
+  onReport: (payload: LeagueReportPayload) => Promise<void>;
+  onDispute: () => Promise<void>;
+}
+
 function GenericReportForm({
   match,
   allowedWinnerTeamId,
@@ -128,6 +149,226 @@ function GenericReportForm({
           />
         </label>
       </div>
+      <ReportActions isBusy={isBusy} onDispute={onDispute} />
+      <ReportFeedback message={message} error={error} />
+    </form>
+  );
+}
+
+function LeagueReportForm({
+  match,
+  allowedWinnerTeamId,
+  bestOf,
+  isBusy,
+  message,
+  error,
+  onReport,
+  onDispute,
+}: LeagueReportFormProps) {
+  const [preset, setPreset] = useState<LeagueScorePreset | null>(null);
+  const [games, setGames] = useState<LeagueGameDraft[]>([]);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const scorePresets = getLeagueScorePresets(bestOf, match.homeTeamId, match.awayTeamId).filter(
+    (scorePreset) => !allowedWinnerTeamId || scorePreset.winnerTeamId === allowedWinnerTeamId,
+  );
+  const fieldIdPrefix = `lol-${match.id}`;
+
+  function selectPreset(nextPreset: LeagueScorePreset) {
+    setPreset(nextPreset);
+    setGames(createLeagueGames(nextPreset));
+    setValidationErrors({});
+  }
+
+  function updateGame(gameNumber: number, changes: Partial<LeagueGameDraft>) {
+    setGames((currentGames) =>
+      currentGames.map((game) => (game.number === gameNumber ? { ...game, ...changes } : game)),
+    );
+    setValidationErrors({});
+  }
+
+  function focusInvalidField(fieldId: string) {
+    requestAnimationFrame(() => {
+      const field = document.getElementById(fieldId);
+      if (!(field instanceof HTMLElement)) return;
+      field.focus({ preventScroll: true });
+      field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+  }
+
+  function submitLeagueReport() {
+    if (!preset) {
+      setValidationErrors({ score: 'Elegí el marcador final de la serie.' });
+      focusInvalidField(`lol-score-${match.id}`);
+      return;
+    }
+
+    const validation = validateLeagueReport({ preset, games, fieldIdPrefix });
+    setValidationErrors(validation.errors);
+    if (validation.firstInvalidFieldId) {
+      focusInvalidField(validation.firstInvalidFieldId);
+      return;
+    }
+
+    void onReport(buildLeagueReportPayload({ preset, games }));
+  }
+
+  return (
+    <form
+      className={styles.smashForm}
+      onSubmit={(event) => {
+        event.preventDefault();
+        submitLeagueReport();
+      }}
+    >
+      <fieldset
+        className={styles.scoreFieldset}
+        id={`lol-score-${match.id}`}
+        tabIndex={-1}
+        aria-describedby={validationErrors.score ? `lol-score-${match.id}-error` : undefined}
+      >
+        <legend>1. ¿Cómo terminó la serie? · BO{bestOf}</legend>
+        <div className={styles.scorePresets}>
+          {scorePresets.map((scorePreset) => {
+            const isSelected =
+              preset?.homeScore === scorePreset.homeScore &&
+              preset.awayScore === scorePreset.awayScore;
+            return (
+              <button
+                key={`${scorePreset.homeScore}-${scorePreset.awayScore}`}
+                type="button"
+                className={isSelected ? styles.scorePresetActive : styles.scorePreset}
+                aria-pressed={isSelected}
+                onClick={() => selectPreset(scorePreset)}
+              >
+                <span>{scorePreset.label}</span>
+                <small>
+                  Gana{' '}
+                  {scorePreset.winnerTeamId === match.homeTeamId ? match.homeTeam : match.awayTeam}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+        <FieldError id={`lol-score-${match.id}-error`} message={validationErrors.score} />
+      </fieldset>
+
+      {preset && (
+        <fieldset className={styles.gamesFieldset} disabled={isBusy}>
+          <legend>2. Completá cada partida</legend>
+          <p className={styles.help}>
+            Indicá ganador, lado azul y duración. El Riot Match ID es opcional, pero mejora la
+            trazabilidad si luego se consulta el historial oficial.
+          </p>
+          <div className={styles.gameGrid}>
+            {games.map((game) => {
+              const prefix = `${fieldIdPrefix}-game-${game.number}`;
+              return (
+                <article className={styles.gameCard} key={game.number}>
+                  <div className={styles.gameHeader}>
+                    <span>Game {game.number}</span>
+                    <strong>
+                      {game.winnerTeamId === match.homeTeamId ? match.homeTeam : match.awayTeam}
+                    </strong>
+                  </div>
+
+                  <div className={styles.resultFields}>
+                    <label>
+                      Ganador
+                      <select
+                        value={game.winnerTeamId}
+                        onChange={(event) => {
+                          setGames((currentGames) =>
+                            currentGames.map((currentGame) =>
+                              currentGame.number === game.number
+                                ? updateLeagueGameWinner(currentGame, event.target.value)
+                                : currentGame,
+                            ),
+                          );
+                          setValidationErrors({});
+                        }}
+                      >
+                        <option value={match.homeTeamId}>{match.homeTeam}</option>
+                        <option value={match.awayTeamId}>{match.awayTeam}</option>
+                      </select>
+                    </label>
+                    <label htmlFor={`${prefix}-blue-team`}>
+                      Lado azul
+                      <select
+                        id={`${prefix}-blue-team`}
+                        value={game.blueTeamId}
+                        aria-invalid={Boolean(validationErrors[`${prefix}-blue-team`])}
+                        aria-describedby={
+                          validationErrors[`${prefix}-blue-team`]
+                            ? `${prefix}-blue-team-error`
+                            : undefined
+                        }
+                        onChange={(event) =>
+                          updateGame(game.number, { blueTeamId: event.target.value })
+                        }
+                      >
+                        <option value={match.homeTeamId}>{match.homeTeam}</option>
+                        <option value={match.awayTeamId}>{match.awayTeam}</option>
+                      </select>
+                    </label>
+                  </div>
+                  <FieldError
+                    id={`${prefix}-blue-team-error`}
+                    message={validationErrors[`${prefix}-blue-team`]}
+                  />
+
+                  <div className={styles.resultFields}>
+                    <label htmlFor={`${prefix}-duration`}>
+                      Duración (min)
+                      <input
+                        id={`${prefix}-duration`}
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={game.durationMinutes}
+                        aria-invalid={Boolean(validationErrors[`${prefix}-duration`])}
+                        aria-describedby={
+                          validationErrors[`${prefix}-duration`]
+                            ? `${prefix}-duration-error`
+                            : undefined
+                        }
+                        onChange={(event) =>
+                          updateGame(game.number, { durationMinutes: Number(event.target.value) })
+                        }
+                      />
+                    </label>
+                    <label htmlFor={`${prefix}-riot-id`}>
+                      Riot Match ID <small>(opcional)</small>
+                      <input
+                        id={`${prefix}-riot-id`}
+                        placeholder="LA1_123456789"
+                        value={game.riotMatchId}
+                        aria-invalid={Boolean(validationErrors[`${prefix}-riot-id`])}
+                        aria-describedby={
+                          validationErrors[`${prefix}-riot-id`]
+                            ? `${prefix}-riot-id-error`
+                            : undefined
+                        }
+                        onChange={(event) =>
+                          updateGame(game.number, { riotMatchId: event.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+                  <FieldError
+                    id={`${prefix}-duration-error`}
+                    message={validationErrors[`${prefix}-duration`]}
+                  />
+                  <FieldError
+                    id={`${prefix}-riot-id-error`}
+                    message={validationErrors[`${prefix}-riot-id`]}
+                  />
+                </article>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
+
       <ReportActions isBusy={isBusy} onDispute={onDispute} />
       <ReportFeedback message={message} error={error} />
     </form>
@@ -500,6 +741,7 @@ export function ReportPanel({
   const smashRules = settings?.gameRules?.game === 'smash_ultimate' ? settings.gameRules : null;
   const allowedStages = smashRules ? [...smashRules.starters, ...smashRules.counterpicks] : [];
   const stockLimit = smashRules?.stocks ?? 3;
+  const isLeagueOfLegends = gameAdapterKey === 'lol';
 
   async function report(matchId: string, payload: unknown) {
     setBusyMatchId(matchId);
@@ -582,7 +824,11 @@ export function ReportPanel({
 
   if (panelState.kind === 'empty') {
     return (
-      <section id="reportar" className={`card ${styles.panel}`} aria-labelledby="report-panel-title">
+      <section
+        id="reportar"
+        className={`card ${styles.panel}`}
+        aria-labelledby="report-panel-title"
+      >
         <div className={styles.emptyState}>
           <p className={styles.eyebrow}>Todo al día</p>
           <h2 id="report-panel-title">{panelState.title}</h2>
@@ -599,7 +845,11 @@ export function ReportPanel({
           <p className={styles.eyebrow}>{staffMode ? 'Operación de staff' : 'Competencia'}</p>
           <h2 id="report-panel-title">
             {staffMode ? 'Control de' : 'Mis'}{' '}
-            {gameAdapterKey === 'smash_ultimate' ? 'sets' : 'partidas'}
+            {gameAdapterKey === 'smash_ultimate'
+              ? 'sets'
+              : isLeagueOfLegends
+                ? 'series'
+                : 'partidas'}
           </h2>
         </div>
         <span>{reportableMatches.length} por reportar</span>
@@ -623,7 +873,9 @@ export function ReportPanel({
                 <span>
                   {gameAdapterKey === 'smash_ultimate'
                     ? 'Set listo para reportar'
-                    : 'Partida lista para reportar'}
+                    : isLeagueOfLegends
+                      ? 'Serie lista para reportar'
+                      : 'Partida lista para reportar'}
                 </span>
                 <h3>
                   {match.homeTeam} <small>vs.</small> {match.awayTeam}
@@ -636,6 +888,17 @@ export function ReportPanel({
                   bestOf={seriesBestOf}
                   allowedStages={allowedStages}
                   stockLimit={stockLimit}
+                  isBusy={busyMatchId === match.id}
+                  message={messages[match.id]}
+                  error={errors[match.id]}
+                  onReport={(payload) => report(match.id, payload)}
+                  onDispute={() => openDispute(match.id)}
+                />
+              ) : isLeagueOfLegends && isCompleteMatch ? (
+                <LeagueReportForm
+                  match={match as CompleteMatchView}
+                  allowedWinnerTeamId={allowedWinnerTeamId}
+                  bestOf={seriesBestOf}
                   isBusy={busyMatchId === match.id}
                   message={messages[match.id]}
                   error={errors[match.id]}

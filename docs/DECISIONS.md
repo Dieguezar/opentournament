@@ -352,7 +352,7 @@ Este documento registra las decisiones de producto, arquitectura y proceso de Op
 
 - **Tema:** Diferenciación real de torneos según el videojuego.
 - **Opciones:** Solo etiquetas visuales | Valores del formulario sin contrato | Plantillas versionadas dentro del adaptador.
-- **Decisión:** Los adaptadores pueden publicar una plantilla editable y versionada con defaults de torneo y reglas específicas; la API aplica el merge y valida sus invariantes. Super Smash Bros. Ultimate inaugura el contrato con `smash_ultimate.standard_v1`.
+- **Decisión:** Los adaptadores pueden publicar una plantilla editable y versionada con defaults de torneo y reglas específicas; la API aplica el merge y valida sus invariantes. Super Smash Bros. Ultimate inaugura el contrato con `smash_ultimate.standard_v1` y League of Legends lo extiende con `lol.standard_v1`.
 - **Motivo:** Un torneo debe reflejar la cultura competitiva del juego sin duplicar el motor ni depender de que el frontend envíe valores correctos.
 - **Consecuencias:** La configuración queda persistida por torneo, el roster y la terminología pueden variar por juego, y los cambios futuros de reglas requieren una nueva versión de plantilla.
 - **Estado:** aprobada.
@@ -361,7 +361,7 @@ Este documento registra las decisiones de producto, arquitectura y proceso de Op
 
 - **Tema:** Persistencia de detalles competitivos que varían según el juego.
 - **Opciones:** Columnas específicas en el núcleo | Tabla polimórfica | Documento tipado dentro de `matches.result`.
-- **Decisión:** Conservar el resumen común (`winnerId`, marcador) y agregar detalles tipados por adaptador dentro del JSONB del resultado. Smash Ultimate inaugura el contrato con games, escenario, personajes, ganador y stocks.
+- **Decisión:** Conservar el resumen común (`winnerId`, marcador) y agregar detalles tipados por adaptador dentro del JSONB del resultado. Smash Ultimate registra games, escenario, personajes, ganador y stocks; League of Legends registra partidas, ganador, lado azul, duración y Riot Match ID opcional.
 - **Motivo:** El bracket necesita una lectura atómica del resultado sin acoplar el esquema relacional central a cada videojuego.
 - **Consecuencias:** Cada adaptador debe validar su documento antes de persistirlo; futuras consultas analíticas por campos específicos podrían requerir índices JSONB o una proyección dedicada.
 - **Estado:** aprobada.
@@ -370,21 +370,21 @@ Este documento registra las decisiones de producto, arquitectura y proceso de Op
 
 Estos valores se tomaron por defecto durante el descubrimiento y se confirman en la revisión de la especificación:
 
-| ID | Supuesto | Valor por defecto |
-| --- | --- | --- |
-| AF-01 | Idiomas | Español e inglés; LatAm primero, sin bloquear el resto del mundo |
-| AF-02 | Correo | SMTP configurable; sin SMTP los correos se loguean y la verificación puede desactivarse |
-| AF-03 | Comunicación | Entre capitanes fuera de la plataforma (Discord); campo `lobbyUrl` opcional por partida |
-| AF-04 | Check-in | Ventana configurable; por defecto abre 24 h antes y cierra 1 h antes del inicio |
-| AF-05 | Ventanas | Tolerancia de retraso 10 min; confirmación de resultados 30 min; disputa 60 min (todas configurables por torneo) |
-| AF-06 | Evidencias | Máx. 10 MB por archivo y 5 archivos por resultado |
-| AF-07 | Seeds | Manuales; los mejores seeds reciben BYEs |
-| AF-08 | Gran final | Doble eliminación sin bracket reset por defecto (configurable) |
-| AF-09 | Roster | Bloqueado al cierre del check-in |
-| AF-10 | Calidad | Conventional Commits, semver, Dependabot, logs estructurados (pino) y auditoría de acciones críticas |
-| AF-11 | IDs | UUID v4 generado con `gen_random_uuid()` en PostgreSQL |
-| AF-12 | Sesiones | Cookie httpOnly + token CSRF; contraseñas con Argon2id; rate limiting global y por ruta |
-| AF-13 | Agentes libres | Sin inscripción de agentes libres en torneos por equipos en el MVP (los equipos se inscriben completos) |
-| AF-14 | Chat | Sin chat interno de la plataforma en el MVP |
-| AF-15 | Cloud futuro | El servicio cloud solo agregará extras de infraestructura (storage, dominios, analítica); las funciones core del open source nunca serán privadas |
-| AF-16 | Observabilidad | Logs estructurados, health checks y métricas básicas; OpenTelemetry y dashboards en fase 5/6 |
+| ID    | Supuesto       | Valor por defecto                                                                                                                                 |
+| ----- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AF-01 | Idiomas        | Español e inglés; LatAm primero, sin bloquear el resto del mundo                                                                                  |
+| AF-02 | Correo         | SMTP configurable; sin SMTP los correos se loguean y la verificación puede desactivarse                                                           |
+| AF-03 | Comunicación   | Entre capitanes fuera de la plataforma (Discord); campo `lobbyUrl` opcional por partida                                                           |
+| AF-04 | Check-in       | Ventana configurable; por defecto abre 24 h antes y cierra 1 h antes del inicio                                                                   |
+| AF-05 | Ventanas       | Tolerancia de retraso 10 min; confirmación de resultados 30 min; disputa 60 min (todas configurables por torneo)                                  |
+| AF-06 | Evidencias     | Máx. 10 MB por archivo y 5 archivos por resultado                                                                                                 |
+| AF-07 | Seeds          | Manuales; los mejores seeds reciben BYEs                                                                                                          |
+| AF-08 | Gran final     | Doble eliminación sin bracket reset por defecto (configurable)                                                                                    |
+| AF-09 | Roster         | Bloqueado al cierre del check-in                                                                                                                  |
+| AF-10 | Calidad        | Conventional Commits, semver, Dependabot, logs estructurados (pino) y auditoría de acciones críticas                                              |
+| AF-11 | IDs            | UUID v4 generado con `gen_random_uuid()` en PostgreSQL                                                                                            |
+| AF-12 | Sesiones       | Cookie httpOnly + token CSRF; contraseñas con Argon2id; rate limiting global y por ruta                                                           |
+| AF-13 | Agentes libres | Sin inscripción de agentes libres en torneos por equipos en el MVP (los equipos se inscriben completos)                                           |
+| AF-14 | Chat           | Sin chat interno de la plataforma en el MVP                                                                                                       |
+| AF-15 | Cloud futuro   | El servicio cloud solo agregará extras de infraestructura (storage, dominios, analítica); las funciones core del open source nunca serán privadas |
+| AF-16 | Observabilidad | Logs estructurados, health checks y métricas básicas; OpenTelemetry y dashboards en fase 5/6                                                      |

@@ -24,8 +24,8 @@ export const dynamic = 'force-dynamic';
 interface BracketMatchView {
   id: string;
   status: string;
-  home: { participantId: string; name: string } | null;
-  away: { participantId: string; name: string } | null;
+  home: { participantId: string; teamId: string; name: string } | null;
+  away: { participantId: string; teamId: string; name: string } | null;
   result: {
     winnerId?: string;
     homeScore?: number;
@@ -35,6 +35,13 @@ interface BracketMatchView {
       stage: string;
       homeCharacter: string;
       awayCharacter: string;
+    }>;
+    lolGames?: Array<{
+      number: number;
+      winnerTeamId: string;
+      blueTeamId: string;
+      durationMinutes: number;
+      riotMatchId?: string;
     }>;
   } | null;
 }
@@ -81,17 +88,20 @@ function BracketSection({
   brackets,
   tournamentId,
   isSmash,
+  isLeagueOfLegends,
 }: {
   brackets: BracketView[];
   tournamentId: string;
   isSmash: boolean;
+  isLeagueOfLegends: boolean;
 }) {
+  const matchLabel = isSmash ? 'sets' : isLeagueOfLegends ? 'series' : 'partidas';
   return (
     <section className={styles.bracketPanel} aria-labelledby="bracket-title">
       <div className={styles.bracketHeader}>
         <div>
           <p className={styles.eyebrow}>Competencia</p>
-          <h2 id="bracket-title">Bracket y {isSmash ? 'sets' : 'partidas'}</h2>
+          <h2 id="bracket-title">Bracket y {matchLabel}</h2>
         </div>
         <span className={styles.liveRegion}>
           <LiveTournament tournamentId={tournamentId} />
@@ -123,7 +133,7 @@ function BracketSection({
                   style={
                     {
                       '--bracket-max-matches': maxMatches,
-                      '--bracket-track-row': isSmash ? '9rem' : '7rem',
+                      '--bracket-track-row': isSmash || isLeagueOfLegends ? '9rem' : '7rem',
                     } as CSSProperties
                   }
                 >
@@ -155,8 +165,13 @@ function BracketSection({
                               match.result?.winnerId !== undefined &&
                               match.away?.participantId === match.result.winnerId;
                             const games = match.result?.games;
+                            const leagueGames = match.result?.lolGames;
                             const homeCharacters = formatCharacterSummary(games, 'home');
                             const awayCharacters = formatCharacterSummary(games, 'away');
+                            const totalLeagueMinutes = leagueGames?.reduce(
+                              (total, game) => total + game.durationMinutes,
+                              0,
+                            );
 
                             return (
                               <li
@@ -175,6 +190,17 @@ function BracketSection({
                                           {homeCharacters}
                                         </small>
                                       )}
+                                      {isLeagueOfLegends && leagueGames?.length && match.home && (
+                                        <small data-testid="lol-blue-side">
+                                          Azul en{' '}
+                                          {leagueGames
+                                            .filter(
+                                              (game) => game.blueTeamId === match.home?.teamId,
+                                            )
+                                            .map((game) => `G${game.number}`)
+                                            .join(' · ') || 'ninguna'}
+                                        </small>
+                                      )}
                                     </span>
                                     <span className={styles.matchScore}>
                                       {match.result?.homeScore ?? '—'}
@@ -190,6 +216,17 @@ function BracketSection({
                                           {awayCharacters}
                                         </small>
                                       )}
+                                      {isLeagueOfLegends && leagueGames?.length && match.away && (
+                                        <small data-testid="lol-blue-side">
+                                          Azul en{' '}
+                                          {leagueGames
+                                            .filter(
+                                              (game) => game.blueTeamId === match.away?.teamId,
+                                            )
+                                            .map((game) => `G${game.number}`)
+                                            .join(' · ') || 'ninguna'}
+                                        </small>
+                                      )}
                                     </span>
                                     <span className={styles.matchScore}>
                                       {match.result?.awayScore ?? '—'}
@@ -201,7 +238,11 @@ function BracketSection({
                                         ? `${games.length} games`
                                         : isSmash
                                           ? 'Set'
-                                          : 'Partida'}
+                                          : isLeagueOfLegends && leagueGames?.length
+                                            ? `${leagueGames.length} partidas · ${totalLeagueMinutes} min`
+                                            : isLeagueOfLegends
+                                              ? 'Serie'
+                                              : 'Partida'}
                                     </span>
                                     <span>{formatMatchStatus(match.status)}</span>
                                   </footer>
@@ -319,6 +360,7 @@ export default async function PublicTournamentPage({
   const brackets = bracketRes.data?.brackets ?? [];
   const status = getTournamentStatus(tournament.status);
   const isSmash = tournament.gameAdapterKey === 'smash_ultimate';
+  const isLeagueOfLegends = tournament.gameAdapterKey === 'lol';
   const seriesBestOf = tournament.seriesConfig?.bo ?? 1;
   const isRegistrationActive = tournament.status === 'open' || tournament.status === 'checkin_open';
   const isTournamentRunning =
@@ -373,13 +415,18 @@ export default async function PublicTournamentPage({
           <dd>{roundCount}</dd>
         </div>
         <div>
-          <dt>{isSmash ? 'Sets' : 'Partidas'}</dt>
+          <dt>{isSmash ? 'Sets' : isLeagueOfLegends ? 'Series' : 'Partidas'}</dt>
           <dd>{matchCount}</dd>
         </div>
       </dl>
 
       {isTournamentRunning && (
-        <BracketSection brackets={brackets} tournamentId={tournament.id} isSmash={isSmash} />
+        <BracketSection
+          brackets={brackets}
+          tournamentId={tournament.id}
+          isSmash={isSmash}
+          isLeagueOfLegends={isLeagueOfLegends}
+        />
       )}
 
       <JourneySection
@@ -401,7 +448,12 @@ export default async function PublicTournamentPage({
       )}
 
       {!isTournamentRunning && (
-        <BracketSection brackets={brackets} tournamentId={tournament.id} isSmash={isSmash} />
+        <BracketSection
+          brackets={brackets}
+          tournamentId={tournament.id}
+          isSmash={isSmash}
+          isLeagueOfLegends={isLeagueOfLegends}
+        />
       )}
 
       <ReportPanel
