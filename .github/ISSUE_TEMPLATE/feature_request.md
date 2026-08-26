@@ -1,22 +1,27 @@
 ---
-name: Solicitud de funcionalidad
-about: Propón una idea para OpenTournament
-title: "[Feature] Descripción breve"
+name: Feature request
+about: Propose an improvement to OpenTournament
+title: '[Feature] Short description'
 labels: enhancement
-assignees: ""
+assignees: ''
 ---
 
-**Problema que resuelve**
-Describe el problema o necesidad real, no solo la solución deseada.
+## Problem
 
-**Solución propuesta**
-Describe la solución y cómo encaja con la [visión del producto](docs/PRODUCT_VISION.md) y el [alcance del MVP](docs/MVP_SCOPE.md).
+Describe the real user or operational problem, not only the desired solution.
 
-**Alternativas consideradas**
-Otras formas de resolver el problema y por qué se descartan.
+## Proposed solution
 
-**Criterios de aceptación**
-Lista de condiciones que deben cumplirse para considerar la funcionalidad terminada (preferiblemente con escenarios "Dado/Cuando/Entonces").
+Explain the solution and how it aligns with the [product vision](../../docs/PRODUCT_VISION.md) and [MVP scope](../../docs/MVP_SCOPE.md).
 
-**Impacto esperado**
-Usuarios afectados, módulos tocados, riesgos y cambios de documentación necesarios.
+## Alternatives considered
+
+Describe other ways to solve the problem and why they are less suitable.
+
+## Acceptance criteria
+
+List the conditions required to consider the feature complete. Given/When/Then scenarios are welcome.
+
+## Expected impact
+
+Identify affected users, modules, risks, migrations, and documentation changes.

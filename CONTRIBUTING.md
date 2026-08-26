@@ -1,84 +1,111 @@
-# Guía de contribución
+# Contributing to OpenTournament
 
-¡Gracias por querer contribuir a OpenTournament! Esta guía define cómo participar de forma efectiva y consistente. Antes de contribuir, lee el [Código de Conducta](CODE_OF_CONDUCT.md).
+Thank you for helping improve OpenTournament. This guide is the shortest path from an idea or bug report to a reviewable contribution. By participating, you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## Formas de contribuir
+## Quick contribution path
 
-- Reportar bugs o problemas de seguridad (ver [SECURITY.md](SECURITY.md) para vulnerabilidades).
-- Proponer mejoras o funcionalidades nuevas mediante issues.
-- Escribir o corregir documentación.
-- Implementar historias del [backlog](docs/BACKLOG.md).
-- Crear o mejorar [adaptadores de juegos](docs/GAME_ADAPTERS.md).
-- Revisar pull requests.
+1. Search existing issues before opening a new one.
+2. Use the matching issue template and discuss large or architectural changes first.
+3. Fork the repository and create a focused branch.
+4. Add tests and update the documentation affected by your change.
+5. Run the required checks and open a small, focused pull request.
 
-## Cómo reportar bugs
+## Ways to contribute
 
-1. Usa la [plantilla de bug](.github/ISSUE_TEMPLATE/bug_report.md).
-2. Incluye pasos reproducibles, comportamiento esperado vs. real, versión y entorno.
-3. Busca primero si el issue ya existe (usa `is:issue` con palabras clave).
-4. Adjunta logs y capturas cuando sea posible, sin exponer secretos ni datos personales ajenos.
+- Report bugs or privately disclose security vulnerabilities through [SECURITY.md](SECURITY.md).
+- Propose product improvements through issues.
+- Improve code, tests, accessibility, translations, or documentation.
+- Implement a scoped item from the [backlog](docs/BACKLOG.md).
+- Create or improve a [game adapter](docs/GAME_ADAPTERS.md).
+- Review open pull requests.
 
-## Cómo proponer funcionalidades
+## Reporting bugs
 
-1. Usa la [plantilla de feature](.github/ISSUE_TEMPLATE/feature_request.md).
-2. Explica el problema real que resuelve, no solo la solución deseada.
-3. Si la funcionalidad afecta al MVP, discútela primero en un issue antes de abrir un PR.
+1. Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md).
+2. Include reproducible steps, expected and actual behavior, the OpenTournament version, and your environment.
+3. Search existing issues first using `is:issue` and relevant keywords.
+4. Attach useful logs or screenshots without exposing secrets or another person’s private data.
 
-## Proceso de pull requests
+## Proposing features
 
-1. **Discute primero** cuando el cambio sea grande o afecte arquitectura, modelo de datos o API. Consulta [docs/DECISIONS.md](docs/DECISIONS.md).
-2. Crea una rama con el prefijo `codex/` o `feat/`, `fix/`, `docs/` según el cambio.
-3. Escribe commits con [Conventional Commits](https://www.conventionalcommits.org/es/v1.0.0/):
-   - `feat(scope): descripción`
-   - `fix(scope): descripción`
-   - `docs(scope): descripción`
-   - `test(scope): descripción`
-   - `refactor(scope): descripción`
-   - `chore(scope): descripción`
-4. Asegúrate de que pase todo el pipeline: lint, typecheck, tests y build.
-5. Agrega o actualiza pruebas junto con el código.
-6. Actualiza la documentación afectada (`docs/`, `CHANGELOG.md` cuando aplique).
-7. Completa la [plantilla de PR](.github/PULL_REQUEST_TEMPLATE.md).
-8. Mantén el PR pequeño y enfocado; un PR, una idea.
+1. Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md).
+2. Explain the real problem, not only the preferred solution.
+3. Discuss changes that affect architecture, the data model, the API, or product scope before opening a pull request.
+4. Record accepted architectural decisions in [docs/DECISIONS.md](docs/DECISIONS.md).
 
-## Entorno de desarrollo
+## Development setup
 
-El setup local (monorepo, Docker Compose, migraciones y seeds) se documenta en [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) y [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md). En resumen:
+Requirements:
 
-- Requiere Node.js 22+, pnpm y Docker.
-- Instala dependencias con `pnpm install`.
-- Levanta los servicios con `docker compose up -d`.
-- Ejecuta migraciones y seeds con los scripts definidos en la raíz del monorepo.
-- Ejecuta `pnpm test` para unitarias e integración y `pnpm test:e2e` para Playwright.
+- Node.js 22 or newer
+- pnpm 11.9.0 through Corepack
+- Docker with Docker Compose
 
-## Reglas de implementación
+Start the development environment:
 
-- Trabaja por tareas pequeñas y probables de forma independiente.
-- Antes de modificar código, explica qué archivos cambiarás (en el issue o PR).
-- No agregues dependencias sin justificarlo en el PR.
-- No cambies la arquitectura silenciosamente; actualiza las decisiones en `docs/DECISIONS.md`.
-- No implementes funciones fuera del alcance del MVP sin abrir antes un issue.
-- Usa migraciones para cambios de base de datos y mantén los datos de demostración.
-- Evita archivos excesivamente grandes; prefiere módulos con responsabilidades claras.
-- Usa TypeScript estricto; valida datos en cliente y servidor.
-- Aplica autorización en el backend; nunca confíes solo en la interfaz.
-- Mantén secretos fuera del repositorio; usa `.env.example` como referencia.
-- Asegúrate de que una instalación nueva pueda iniciarse siguiendo el README.
+```bash
+corepack enable
+pnpm install
+cp .env.example .env
+docker compose up -d postgres minio
+pnpm dev
+```
 
-## Adaptadores de juegos
+For demo data, set `SEED_DEMO_DATA=true` in `.env` before starting the API. See [deployment](docs/DEPLOYMENT.md) and [self-hosting](docs/SELF_HOSTING.md) for the complete setup.
 
-Para proponer un adaptador oficial nuevo, usa la [plantilla de propuesta de adaptador](.github/ISSUE_TEMPLATE/game_adapter_proposal.md) y lee [docs/GAME_ADAPTERS.md](docs/GAME_ADAPTERS.md). Los adaptadores son configuración tipada; no se aceptan integraciones con APIs externas no autorizadas.
+## Pull request workflow
 
-## Revisión de PRs
+1. Create a branch named `feat/<topic>`, `fix/<topic>`, `docs/<topic>`, or another descriptive equivalent.
+2. Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/), for example:
+   - `feat(scope): add tournament setting`
+   - `fix(scope): prevent duplicate report`
+   - `docs(scope): clarify self-hosting`
+   - `test(scope): cover bracket reset`
+   - `refactor(scope): simplify registration policy`
+   - `chore(scope): update tooling`
+3. Keep one pull request focused on one deliverable.
+4. Complete the [pull request template](.github/PULL_REQUEST_TEMPLATE.md).
+5. Link the relevant issue when one exists.
 
-- Los mantenedores revisan cambios, coherencia con las decisiones registradas y cobertura de pruebas.
-- Usa comentarios constructivos; pide aclaraciones antes de marcar *requested changes*.
-- Los PRs grandes sin contexto o sin pruebas serán devueltos para ajuste.
+## Required checks
 
-## Documentación
+Run the checks relevant to your change before requesting review:
 
-Toda la documentación está en español (idioma principal del proyecto). Traducciones al inglés son bienvenidas. Al cambiar comportamiento, actualiza la documentación afectada en el mismo PR.
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+```
 
-## Mantenedores y gobernanza
+Run `pnpm test:e2e` when the change affects a user flow. Add or update tests with the implementation and keep demo data working.
 
-Consulta la sección de gobernanza en [docs/DECISIONS.md](docs/DECISIONS.md) (ADR-038). Las decisiones de arquitectura se toman por consenso de mantenedores y quedan registradas.
+## Implementation rules
+
+- Prefer small changes that can be reviewed and reverted independently.
+- Explain the affected modules in the issue or pull request before making a broad change.
+- Do not add a dependency without documenting why it is needed.
+- Do not change architecture silently; update [docs/DECISIONS.md](docs/DECISIONS.md).
+- Use database migrations for schema changes.
+- Keep TypeScript strict and validate untrusted data at system boundaries.
+- Enforce authorization in the API; UI restrictions are never sufficient.
+- Keep secrets out of the repository and document configuration through `.env.example`.
+- Ensure a clean installation still works by following the README.
+
+## Game adapters
+
+Read [docs/GAME_ADAPTERS.md](docs/GAME_ADAPTERS.md) and use the [game adapter proposal template](.github/ISSUE_TEMPLATE/game_adapter_proposal.md) before proposing an official adapter. Adapters are typed configuration; integrations with unauthorized third-party APIs are not accepted.
+
+## Review expectations
+
+Maintainers review correctness, scope, tests, documentation, security, accessibility, and consistency with recorded decisions. Constructive questions are encouraged. Large pull requests without context or tests may be returned for a smaller design discussion first.
+
+## Documentation language policy
+
+English is the canonical language for contributor-facing documentation, issues, pull requests, code identifiers, and new code comments. Spanish contributions are welcome: maintainers or contributors may translate them during review. The application itself supports both Spanish and English.
+
+When behavior changes, update the affected documentation in the same pull request. A translation must preserve commands, identifiers, links, requirement IDs, ADR numbers, and technical meaning.
+
+## Governance
+
+See ADR-038 in [docs/DECISIONS.md](docs/DECISIONS.md). Maintainers make architectural decisions by consensus and record them in the decision log.

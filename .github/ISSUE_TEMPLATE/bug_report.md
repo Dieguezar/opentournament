@@ -1,35 +1,42 @@
 ---
-name: Reporte de bug
-about: Reporta un problema para ayudarnos a mejorar OpenTournament
-title: "[Bug] Descripción breve"
+name: Bug report
+about: Report a reproducible problem in OpenTournament
+title: '[Bug] Short description'
 labels: bug
-assignees: ""
+assignees: ''
 ---
 
-**Describe el bug**
-Una descripción clara y concisa de cuál es el problema.
+## Description
 
-**Pasos para reproducir**
-1. Ir a '...'
-2. Hacer clic en '...'
-3. Ejecutar '...'
-4. Ver el error
+Describe the problem clearly and concisely.
 
-**Comportamiento esperado**
-Qué debería suceder.
+## Steps to reproduce
 
-**Comportamiento actual**
-Qué sucede realmente.
+1. Go to ...
+2. Select ...
+3. Run ...
+4. Observe the error.
 
-**Capturas o logs**
-Si aplica, agrega capturas de pantalla o fragmentos de logs (sin secretos ni datos personales ajenos).
+## Expected behavior
 
-**Entorno**
-- Despliegue: local / Docker Compose / otro
-- Versión de OpenTournament (si aplica)
-- Navegador y versión
-- Sistema operativo
-- Node.js y pnpm (desarrollo)
+What should happen?
 
-**Contexto adicional**
-Cualquier otro dato relevante.
+## Actual behavior
+
+What happens instead?
+
+## Screenshots or logs
+
+Add screenshots or relevant log excerpts when useful. Remove secrets and other people’s personal data.
+
+## Environment
+
+- Deployment: local / Docker Compose / other
+- OpenTournament version or commit
+- Browser and version
+- Operating system
+- Node.js and pnpm versions when developing
+
+## Additional context
+
+Add any other details that may help reproduce or diagnose the problem.

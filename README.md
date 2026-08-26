@@ -74,7 +74,7 @@ For a production instance, follow the [self-hosting guide](docs/SELF_HOSTING.md)
 
 ## Documentation
 
-The extended design documentation is currently written in Spanish. The application and this setup guide are available in both languages.
+Contributor-facing documentation is canonical in English. Start with the [documentation index](docs/README.md) or [contribution guide](CONTRIBUTING.md).
 
 - [Product vision](docs/PRODUCT_VISION.md)
 - [Product requirements](docs/PRD.md)

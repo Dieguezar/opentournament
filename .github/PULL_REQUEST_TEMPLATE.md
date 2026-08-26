@@ -1,28 +1,36 @@
-## Resumen
+## Summary
 
-¿Qué hace este PR y por qué? Vincula el issue o historia del backlog si existe.
+What does this pull request change, and why? Link the issue or backlog story when one exists.
 
-## Cambios
+## Changes
 
-- Lista de cambios principales.
-- Archivos o módulos afectados.
+- List the main behavior changes.
+- Identify the affected modules or files.
+- Call out migrations, configuration changes, or compatibility risks.
 
-## Pruebas
+## Verification
 
-- [ ] Unitarias agregadas/actualizadas
-- [ ] Integración agregada/actualizada
-- [ ] E2E agregado/actualizado (si aplica)
-- [ ] Lint y typecheck pasan
-- [ ] Build local pasa
+- [ ] Unit tests added or updated
+- [ ] Integration tests added or updated
+- [ ] E2E tests added or updated when applicable
+- [ ] `pnpm lint` passes
+- [ ] `pnpm typecheck` passes
+- [ ] `pnpm test` passes
+- [ ] `pnpm build` passes
 
-## Documentación
+## Documentation
 
-- [ ] `docs/` actualizada si el comportamiento cambió
-- [ ] `docs/DECISIONS.md` actualizada si hay una decisión nueva
-- [ ] `CHANGELOG.md` actualizado si aplica
+- [ ] `docs/` updated when behavior changed
+- [ ] `docs/DECISIONS.md` updated for a new architectural decision
+- [ ] `CHANGELOG.md` updated when applicable
 
-## Checklist
+## Review notes
 
-- [ ] Sin secretos ni datos personales en el diff
-- [ ] Sin dependencias nuevas sin justificación
-- [ ] Cambio dentro del alcance del MVP salvo discusión previa
+Where should reviewers start? What is intentionally out of scope?
+
+## Final checklist
+
+- [ ] No secrets or personal data are included in the diff
+- [ ] New dependencies are justified
+- [ ] The change is focused on one deliverable
+- [ ] User-facing changes work in Spanish and English

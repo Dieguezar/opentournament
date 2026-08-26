@@ -1,38 +1,48 @@
 # Changelog
 
-Todas las versiones notables de OpenTournament se documentan en este archivo.
+All notable OpenTournament changes are documented here.
 
-El formato sigue [Keep a Changelog](https://keepachangelog.com/es/1.1.0/) y el versionado sigue [Semantic Versioning](https://semver.org/lang/es/).
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/).
 
-## [Sin publicar]
+## [Unreleased]
+
+### Added
+
+- Spanish and English application interfaces with persisted language selection.
+- English canonical contributor documentation and a documentation index.
+
+### Changed
+
+- Contributor, security, issue, and pull request guidance is now written in English.
+- Data-model, engine, backlog, and architecture documentation now distinguish implemented behavior from future design.
 
 ## [1.0.0] - 2026-08-26
 
-Primera versión estable y autoalojable de OpenTournament.
+First stable self-hosted OpenTournament release.
 
-### Agregado
+### Added
 
-- Gestión completa de organizaciones, participantes y torneos de eliminación sencilla o doble.
-- Inscripciones, check-in, seeds, BYEs, brackets, programación y avance automático de partidas.
-- Reporte bilateral mediante pases privados revocables, evidencias, disputas y resolución auditada.
-- Lectura pública sin cuenta, paneles para organización y participantes, actualizaciones SSE y PWA.
-- Adaptadores genérico, Valorant, Counter-Strike 2, League of Legends y Super Smash Bros. Ultimate.
-- Plantillas y reportes guiados específicos para LoL y Smash Ultimate, con demos completas de ocho participantes.
-- Temas claro, oscuro y del sistema, navegación adaptable y soporte WCAG A/AA automatizado.
-- Docker Compose para PostgreSQL, MinIO, API y web con datos demo opcionales.
-- CI, CodeQL, Dependabot, instalación limpia, baseline OWASP ZAP y publicación semver en GHCR.
-- Documentación de arquitectura, operación, contribución, seguridad y gobierno comunitario.
+- Organization, participant, and single- or double-elimination tournament management.
+- Registration, check-in, seeds, BYEs, brackets, scheduling, and automatic match advancement.
+- Bilateral reporting through revocable private participant passes, evidence, disputes, and audited rulings.
+- Public reading without an account, organizer and participant workspaces, SSE updates, and PWA support.
+- Generic, Valorant, Counter-Strike 2, League of Legends, and Super Smash Bros. Ultimate adapters.
+- LoL and Smash templates, guided structured reports, and complete eight-participant demos.
+- Light, dark, and system themes, responsive navigation, and automated WCAG A/AA checks.
+- Docker Compose for PostgreSQL, MinIO, API, and web with optional demo data.
+- CI, CodeQL, Dependabot, clean-install smoke, OWASP ZAP baseline, and semantic GHCR publishing.
+- Architecture, operations, contribution, security, and governance documentation.
 
-### Corregido
+### Fixed
 
-- Cabeceras globales de navegador para CSP, clickjacking, MIME sniffing, permisos y aislamiento cross-origin.
-- Health checks de API y web fijados al loopback IPv4 para evitar falsos negativos en Alpine.
-- Conectores visibles del bracket público y presentación consistente de estados de torneo.
-- Aislamiento serial de los E2E que comparten servidor y base de datos.
+- Global browser headers for CSP, clickjacking, MIME sniffing, permissions, and cross-origin isolation.
+- API and web health checks using IPv4 loopback to avoid Alpine false negatives.
+- Visible public-bracket connectors and consistent tournament-status presentation.
+- Serial isolation for E2E scenarios sharing servers and a database.
 
-### Cambiado
+### Changed
 
-- Seguridad del repositorio reforzada con reportes privados, grafo de dependencias y alertas y actualizaciones de Dependabot.
-- Autoalojamiento endurecido con secreto de sesión obligatorio, demo opt-in, verificación segura y health checks encadenados.
-- Compose conecta SMTP, límites de evidencia, rate limiting y credenciales compartidas de MinIO con la configuración real de la API.
-- La portada autenticada reemplaza los accesos de registro por acciones contextuales del organizador o participante.
+- Repository security now includes private vulnerability reporting, dependency graph monitoring, and Dependabot alerts/updates.
+- Self-hosting requires a session secret, keeps demo data opt-in, enforces safe verification defaults, and chains health checks.
+- Compose forwards SMTP, evidence limits, rate limits, and shared MinIO credentials to the actual API configuration.
+- The authenticated home page shows organizer or participant actions instead of registration prompts.

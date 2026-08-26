@@ -1,35 +1,41 @@
 ---
-name: Propuesta de adaptador de juego
-about: Propón un adaptador oficial nuevo para un videojuego
-title: "[Adapter] Nombre del juego"
+name: Game adapter proposal
+about: Propose a new official video game adapter
+title: '[Adapter] Game name'
 labels: adapters
-assignees: ""
+assignees: ''
 ---
 
-**Juego**
-Nombre oficial del juego.
+Read the [game adapter guide](../../docs/GAME_ADAPTERS.md) before proposing an adapter.
 
-**Datos básicos**
-- Plataformas compatibles
-- Tamaño mínimo y máximo del equipo
-- Cantidad de suplentes
-- Identificador de jugador (ej. Riot ID, SteamID64, nombre de invocador + región)
-- Regiones
+## Game
 
-**Formato competitivo**
-- Mapas y modos
-- Formato de partidas (BO1/BO3/BO5, best-of, first-to, tiempo)
-- Reglas de puntuación
-- ¿Se permiten empates?
-- Sistema de veto de mapas
+Official game name and publisher.
 
-**Campos personalizados necesarios**
-Campos adicionales para inscripción o partidas que no cubre el adaptador genérico.
+## Core data
 
-**Referencias**
-Reglamentos oficiales o comunitarios, guías de formato y fuentes de los identificadores de jugador.
+- Supported platforms
+- Minimum and maximum team size
+- Substitute limit
+- Player identifier, such as Riot ID, SteamID64, or summoner name plus region
+- Supported regions
 
-**Mantenimiento**
-¿Quién mantendría el adaptador? ¿Con qué frecuencia cambian las reglas del juego?
+## Competitive format
 
-Lee [docs/GAME_ADAPTERS.md](docs/GAME_ADAPTERS.md) antes de proponer.
+- Maps and modes
+- Match format, such as BO1, BO3, BO5, first-to, or timed
+- Scoring rules
+- Whether draws are allowed
+- Map or stage veto system
+
+## Required custom fields
+
+List registration or match fields that the generic adapter does not cover.
+
+## References
+
+Link official or established community rulesets, format guides, and identifier documentation.
+
+## Maintenance
+
+Who will maintain the adapter? How often do the game rules or identifiers change?

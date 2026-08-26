@@ -294,8 +294,8 @@ test('publishes a private vulnerability reporting channel without placeholder co
     securityPolicy,
     /https:\/\/github\.com\/Dieguezar\/opentournament\/security\/advisories\/new/u,
   );
-  assert.doesNotMatch(securityPolicy, /dirección por definir/iu);
-  assert.match(securityPolicy, /No abras un issue público/u);
+  assert.doesNotMatch(securityPolicy, /address to be defined|TBD/iu);
+  assert.match(securityPolicy, /Do not open a public issue/u);
 });
 
 test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () => {

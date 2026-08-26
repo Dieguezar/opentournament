@@ -1,52 +1,51 @@
-# Política de seguridad
+# Security policy
 
-OpenTournament se toma la seguridad en serio. Si encuentras una vulnerabilidad, reportarla de forma responsable ayuda a proteger a toda la comunidad.
+OpenTournament takes security seriously. Responsible disclosure helps protect every self-hosted instance and the wider community.
 
-## Reportar una vulnerabilidad
+## Report a vulnerability
 
-**No abras un issue público** para vulnerabilidades. En su lugar:
+**Do not open a public issue for a vulnerability.**
 
-1. Usa [Report a vulnerability](https://github.com/Dieguezar/opentournament/security/advisories/new)
-   para enviar un reporte privado a los mantenedores mediante GitHub.
-2. Incluye:
-   - Descripción del problema y su impacto.
-   - Pasos para reproducirlo (sin exponer datos reales de otros usuarios).
-   - Versión afectada y entorno (autoalojado, Docker, versión de Node, etc.).
-   - Si es posible, una prueba de concepto.
-3. Conserva los detalles en privado y espera confirmación de recepción antes de publicarlos.
+1. Use [Report a vulnerability](https://github.com/Dieguezar/opentournament/security/advisories/new) to send a private GitHub Security Advisory to the maintainers.
+2. Include:
+   - A description of the vulnerability and its expected impact.
+   - Reproduction steps that do not expose another person’s real data.
+   - The affected version and environment, such as self-hosted, Docker, and Node.js versions.
+   - A proof of concept when it can be shared safely.
+3. Keep the details private until the maintainers acknowledge the report and coordinate disclosure.
 
-## Proceso de divulgación
+## Disclosure process
 
-1. El equipo de seguridad confirma la recepción en un plazo máximo de 72 horas.
-2. Se evalúa el riesgo (severidad, explotabilidad, alcance) y se acuerda un plan.
-3. Se desarrolla el parche y una prueba de regresión.
-4. El parche se publica en un release de seguridad y el problema se divulga públicamente después, con crédito al reportante si lo desea.
+1. The security team acknowledges the report within 72 hours.
+2. Maintainers assess severity, exploitability, and affected scope.
+3. A fix and regression test are prepared.
+4. The fix is published in a security release.
+5. The vulnerability is disclosed afterward, with reporter credit when requested.
 
-## Versiones soportadas
+## Supported versions
 
-| Versión | Soportada |
-| --- | --- |
-| Última versión estable | Sí |
-| Versiones anteriores | Solo para vulnerabilidades críticas hasta el siguiente release |
-| Ramas de desarrollo | No |
+| Version               | Supported                                             |
+| --------------------- | ----------------------------------------------------- |
+| Latest stable release | Yes                                                   |
+| Earlier releases      | Critical vulnerabilities only, until the next release |
+| Development branches  | No                                                    |
 
-## Prácticas de seguridad del proyecto
+## Project security practices
 
-- Modelo de amenazas y controles documentados en [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
-- Autorización siempre en backend; nunca confiar en controles de interfaz.
-- Secretos fuera del repositorio; solo se publica `.env.example`.
-- Grafo de dependencias, alertas de vulnerabilidades y malware, y actualizaciones de seguridad
-  agrupadas mediante Dependabot.
-- Reportes privados de vulnerabilidades habilitados en GitHub Security Advisories.
-- Revisión de seguridad en cada PR que toque autenticación, autorización, subida de archivos o pagos.
+- Threats and controls are documented in [docs/SECURITY_MODEL.md](docs/SECURITY_MODEL.md).
+- Authorization is enforced in the API, never only in the interface.
+- Secrets stay outside the repository; `.env.example` contains documentation only.
+- Dependabot monitors the dependency graph for vulnerabilities, malware, and compatible updates.
+- Private vulnerability reporting is enabled through GitHub Security Advisories.
+- Pull requests touching authentication, authorization, file uploads, or payments require a security-focused review.
 
-## Checklist para instancias autoalojadas
+## Self-hosting checklist
 
-- Usar HTTPS con un proxy inverso (Caddy, Traefik o Nginx).
-- Cambiar todas las contraseñas y claves de la instalación.
-- Restringir el acceso a MinIO y a los puertos internos.
-- Mantener la imagen actualizada y aplicar parches de seguridad.
-- Configurar respaldos de PostgreSQL y del bucket de objetos.
-- Revisar los logs con regularidad.
+- Terminate HTTPS through a reverse proxy such as Caddy, Traefik, or Nginx.
+- Replace every default password and secret.
+- Restrict MinIO and internal service ports.
+- Keep OpenTournament and its dependencies updated.
+- Back up PostgreSQL and object storage.
+- Review logs regularly.
 
-Detalles en [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md).
+See [docs/SELF_HOSTING.md](docs/SELF_HOSTING.md) for operational details.
