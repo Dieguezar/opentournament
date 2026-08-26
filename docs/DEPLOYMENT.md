@@ -85,6 +85,8 @@ Los workflows de GitHub Actions disponibles son:
   volúmenes al finalizar.
 - **Publish container images (tags):** un tag `vX.Y.Z` construye API y web para AMD64/ARM64,
   publica tags semver en GHCR y adjunta SBOM y procedencia verificable.
+- **OWASP ZAP baseline (manual):** levanta una instalación aislada, ejecuta un análisis pasivo
+  contra la web pública y conserva el reporte como artefacto sin crear issues automáticamente.
 
 Antes del primer release se debe verificar que ambos paquetes de GHCR tengan visibilidad pública.
 La creación del release de GitHub y sus notas sigue pendiente hasta publicar el primer tag.

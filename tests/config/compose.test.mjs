@@ -20,6 +20,10 @@ const releaseWorkflow = await readFile(
   new URL('../../.github/workflows/release-images.yml', import.meta.url),
   'utf8',
 ).catch(() => '');
+const securityScanWorkflow = await readFile(
+  new URL('../../.github/workflows/security-scan.yml', import.meta.url),
+  'utf8',
+).catch(() => '');
 const envExampleEntries = Object.fromEntries(
   envExample
     .split(/\r?\n/u)
@@ -159,7 +163,13 @@ test('provides a safe manual smoke test for a clean Compose installation', () =>
 });
 
 test('uses GitHub Actions backed by the supported Node 24 runtime', () => {
-  const workflows = [ciWorkflow, codeqlWorkflow, composeSmoke, releaseWorkflow].join('\n');
+  const workflows = [
+    ciWorkflow,
+    codeqlWorkflow,
+    composeSmoke,
+    releaseWorkflow,
+    securityScanWorkflow,
+  ].join('\n');
 
   assert.doesNotMatch(workflows, /actions\/checkout@v[1-6]\b/u);
   assert.doesNotMatch(workflows, /actions\/setup-node@v[1-6]\b/u);
@@ -200,4 +210,18 @@ test('publishes signed multi-platform images only from semantic version tags', (
   assert.match(releaseWorkflow, /sbom: true/u);
   assert.match(releaseWorkflow, /actions\/attest-build-provenance@v4/u);
   assert.match(releaseWorkflow, /push-to-registry: true/u);
+});
+
+test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () => {
+  assert.match(securityScanWorkflow, /workflow_dispatch:/u);
+  assert.doesNotMatch(securityScanWorkflow, /schedule:/u);
+  assert.match(securityScanWorkflow, /docker compose up -d --build/u);
+  assert.match(securityScanWorkflow, /zaproxy\/action-baseline@v0\.15\.0/u);
+  assert.match(securityScanWorkflow, /target: http:\/\/127\.0\.0\.1:3000/u);
+  assert.match(securityScanWorkflow, /fail_action: true/u);
+  assert.match(securityScanWorkflow, /allow_issue_writing: false/u);
+  assert.match(securityScanWorkflow, /if: failure\(\)/u);
+  assert.match(securityScanWorkflow, /docker compose logs --no-color/u);
+  assert.match(securityScanWorkflow, /if: always\(\)/u);
+  assert.match(securityScanWorkflow, /docker compose down --volumes --remove-orphans/u);
 });
