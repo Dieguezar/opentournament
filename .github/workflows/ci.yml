@@ -59,7 +59,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @opentournament/api test
+      - run: pnpm test:integration
 
   e2e:
     name: E2E (Playwright)

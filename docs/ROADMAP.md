@@ -43,15 +43,15 @@ OpenTournament v1.0.0 is published. Phases 0–3 and the original release-readin
 - Versioned multi-architecture GHCR images with SBOM/provenance.
 - Published `v1.0.0`.
 - English canonical contribution path and bilingual user interface.
+- Stable localized API errors and a one-command isolated PostgreSQL integration suite.
 
 ## Current hardening priorities
 
-1. Locale-aware API errors built on stable error codes.
-2. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
-3. Expand integration/E2E coverage for participant passes and bilingual flows.
-4. Keep schema, API, and architecture documentation synchronized.
-5. Validate optional Discord behavior against a configured test application.
-6. Improve operational metrics without adding mandatory infrastructure.
+1. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
+2. Expand E2E coverage for bilingual organizer and participant flows.
+3. Keep schema, API, and architecture documentation synchronized.
+4. Validate optional Discord behavior against a configured test application.
+5. Improve operational metrics without adding mandatory infrastructure.
 
 ## Expansion candidates
 

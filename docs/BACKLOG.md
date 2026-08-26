@@ -33,11 +33,11 @@ The codebase already provides these broad capabilities:
 
 A “delivered” row does not guarantee every original product wish is complete. Verify the specific route, UI, and test before opening a change.
 
-## Current hardening stories
+## Hardening status
 
-### I18N-API-01 — Stable localized API errors
+### I18N-API-01 — Stable localized API errors — Delivered
 
-- **Priority:** P1
+- **Status:** Delivered
 - **Related:** NFR-I18N-04, NFR-MAINT-05
 - **Problem:** many API error messages are Spanish strings. English clients need stable codes and localized presentation.
 - **Acceptance criteria:**
@@ -48,9 +48,9 @@ A “delivered” row does not guarantee every original product wish is complete
   - OpenAPI documents the envelope and representative codes.
 - **Out of scope:** translating structured operational logs.
 
-### TEST-INT-01 — Make API integration tests independently runnable
+### TEST-INT-01 — Make API integration tests independently runnable — Delivered
 
-- **Priority:** P1
+- **Status:** Delivered
 - **Related:** TESTING_STRATEGY
 - **Problem:** the integration suite may be skipped when its isolated database environment is unavailable.
 - **Acceptance criteria:**

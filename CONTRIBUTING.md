@@ -75,10 +75,11 @@ Run the checks relevant to your change before requesting review:
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:integration
 pnpm build
 ```
 
-Run `pnpm test:e2e` when the change affects a user flow. Add or update tests with the implementation and keep demo data working.
+`pnpm test:integration` requires Docker unless `TEST_DATABASE_URL` already points to an isolated PostgreSQL database. Run `pnpm test:e2e` when the change affects a user flow. Add or update tests with the implementation and keep demo data working.
 
 ## Implementation rules
 

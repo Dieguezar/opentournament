@@ -25,6 +25,14 @@ See [TOURNAMENT_ENGINE.md](TOURNAMENT_ENGINE.md).
 
 ## Integration tests
 
+Run the complete API integration suite locally with:
+
+```bash
+pnpm test:integration
+```
+
+When `TEST_DATABASE_URL` is already configured, the command uses that database. Otherwise it starts an ephemeral `postgres:16-alpine` container on an automatically assigned loopback port, waits for readiness, runs the API suite, and removes the container. The temporary database never shares the development Compose volume.
+
 - Authentication: registration, login, mocked Discord OAuth, recovery, sessions, and CSRF.
 - Authorization: cross-organization IDOR, role escalation, evidence, and dispute access.
 - Tournament flow: create, register, check in, seed, generate a bracket, play, report, and confirm.
@@ -72,6 +80,7 @@ Demo seeds provide organizations, single- and double-elimination tournaments, va
 | Lint                                  | `pnpm lint`                                                |
 | Type checking                         | `pnpm typecheck`                                           |
 | Unit and configured integration tests | `pnpm test`                                                |
+| Isolated API integration tests        | `pnpm test:integration`                                    |
 | E2E                                   | `pnpm test:e2e`                                            |
 | Build                                 | `pnpm build`                                               |
 | Security                              | `pnpm audit --prod`, CodeQL, and manual OWASP ZAP baseline |
