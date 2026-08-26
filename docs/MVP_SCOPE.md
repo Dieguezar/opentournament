@@ -1,98 +1,109 @@
-# Alcance del MVP
+# MVP scope
 
-Este documento define exactamente qué entra y qué queda fuera del MVP de OpenTournament. Todo lo que no aparece aquí está fuera de alcance salvo que se registre una decisión nueva en `docs/DECISIONS.md`.
+A feature is inside the MVP only when this document or an accepted ADR includes it. New scope requires an issue and an update to [DECISIONS.md](DECISIONS.md).
 
-## 1. En alcance
+## Included
 
-### Organizaciones y usuarios
+### Identity and organizations
 
-- Cuenta con correo + contraseña (verificación opcional según SMTP) y Discord OAuth opcional por instancia, con vinculación de identidades por correo verificado.
-- Organizaciones con owner, admin y miembro; wizard de primer uso crea la primera organización.
-- Perfil público básico: nombre, avatar, IDs de juego y resultados de torneos.
-- Sin rol global de plataforma.
+- Email/password accounts with verification when SMTP is configured.
+- Revocable private participant passes that do not require a permanent account.
+- Optional Discord OAuth per instance.
+- Owner, admin, and member organization roles.
+- First-use wizard for the first account and organization.
+- No global platform role in self-hosted instances.
 
-### Equipos
+### Teams and participants
 
-- Equipos permanentes con plantilla (capitán, miembros, suplentes) y equipos efímeros por torneo.
-- Torneos individuales como equipos de tamaño 1.
-- Roster bloqueado al cierre del check-in.
-- Sin agentes libres (free agents) en torneos por equipos.
+- Permanent and tournament-specific teams.
+- Captains, members, and substitutes.
+- Individual competitors represented as one-player teams.
+- Adapter-based roster validation.
+- No free-agent marketplace.
 
-### Torneos
+### Tournaments
 
-- Creación de torneo: nombre, juego/adaptador, fechas, descripción, reglas (texto enriquecido básico), formato (sencilla o doble eliminación), tamaño de equipo según adaptador, configuración de series (BO1/BO3/BO5/personalizado), empates permitidos, privacidad (público o no listado), capacidad, inscripciones abiertas con aprobación manual opcional, check-in con hora límite, tolerancia de retraso, ventanas de confirmación y disputa, enlaces de streaming.
-- Sorteo aleatorio con seeds manuales y BYEs automáticos.
-- Gran final de doble eliminación sin bracket reset por defecto (configurable).
-- Partidas con fecha/hora, lobby URL opcional, mapas registrados, reprogramación por administradores, walkover y descalificación administrativa.
-- Publicación de resultados finales.
+- Public or unlisted tournaments.
+- Single and double elimination.
+- BO1, BO3, BO5, and adapter-valid series configuration.
+- Random pairing, manual seeds, and automatic BYEs.
+- Configurable capacity, registration approval, check-in, timing, and reporting mode.
+- Optional grand-final reset.
+- Match scheduling, optional lobby URL, registered maps, rescheduling, walkovers, and disqualification.
+- Final result publication.
 
-### Resultados, evidencias y disputas
+### Game-aware behavior
 
-- Reporte bilateral con confirmación automática y timeout que escala al staff.
-- Evidencias: capturas (hasta 10 MB, 5 por resultado) y enlaces externos; privadas por defecto.
-- Disputas: abierta, en revisión, resuelta; mensajes; asignación de árbitro; resolución registrada con decisión y motivo; auditoría.
+- Generic, Valorant, CS2, League of Legends, and Super Smash Bros. Ultimate adapters.
+- Versioned editable LoL and Smash tournament templates.
+- Structured per-game LoL and Smash result detail.
+- Server-side validation of template and result invariants.
+- No required external game API.
 
-### Experiencia pública y PWA
+### Results and disputes
 
-- Página pública del torneo: descripción, reglas, bracket, resultados, clasificación, equipos, jugadores y enlaces de streaming; en tiempo real (SSE) y con SSR/SEO.
-- PWA instalable con caché de lectura (sin acciones offline).
+- Bilateral, winner-only, and staff-only reporting modes.
+- Automatic confirmation under the selected policy.
+- Private screenshot and external-link evidence.
+- Open, review, and resolved dispute states.
+- Messages, referee assignment, final ruling, and audit trail.
 
-### Discord (integración opcional)
+### Public experience
 
-- La instalación y todos los flujos principales funcionan sin credenciales de Discord.
-- Si la instancia lo habilita: Discord OAuth para login, webhooks de notificación y comandos slash (`/checkin`, `/status`).
-- Configuración opt-in por variables de entorno.
+- Public rules, participants, bracket, results, standings, and streams.
+- SSR and SSE updates.
+- Spanish and English interfaces.
+- Installable PWA with read caching and no offline writes.
 
-### Adaptadores
+### Optional Discord integration
 
-- Adaptador genérico para cualquier juego.
-- Adaptadores oficiales de Valorant, CS2, League of Legends y Super Smash Bros. Ultimate (configuración tipada, sin integraciones externas obligatorias).
+Core flows work without Discord. An instance may enable OAuth, notifications, and slash commands through environment configuration.
 
-### Operación
+### Operations
 
-- Monorepo pnpm + Turborepo; apps `web` (Next.js) y `api` (Fastify); worker y bot como módulos de la API.
-- PostgreSQL + Drizzle; cola de jobs en PostgreSQL.
-- S3-compatible con MinIO en desarrollo.
-- Docker Compose (`web`, `api`, `postgres`, `minio`).
-- CI en GitHub Actions (lint, typecheck, tests, build, CodeQL, Dependabot).
-- Seed de datos de demostración.
+- pnpm and Turborepo monorepo.
+- Next.js web and Fastify API.
+- PostgreSQL, Drizzle migrations, and PostgreSQL-backed jobs.
+- S3-compatible storage with MinIO for local operation.
+- Docker Compose with production-safe defaults.
+- CI, CodeQL, Dependabot, demo seeds, and versioned GHCR images.
 
-## 2. Fuera de alcance (post-MVP)
+## Excluded from the MVP
 
-- Pagos e inscripciones de pago; premios.
-- Round-robin, suizo, grupos + playoffs, temporadas, clasificatorias.
-- Widgets embebibles y overlay OBS.
-- Veto interactivo de mapas.
-- Check-in por partida; reprogramación entre capitanes.
-- Chat interno de la plataforma.
-- Apelaciones y sanciones formales.
-- Integraciones con APIs de juegos (Riot, Steam, etc.).
-- Tauri (app de escritorio).
-- Servicio cloud administrado, dominios personalizados, analítica avanzada.
-- Moderación global, baneos, roles de plataforma.
-- Acciones offline de escritura y sincronización.
-- Notificaciones push web (se evalúa en fase 6; el MVP usa SSE con la app abierta).
-- Webhooks salientes.
+- Payments, entry fees, and prize management.
+- Round robin, Swiss, groups plus playoffs, seasons, and qualifiers.
+- Interactive vetoes.
+- Per-match check-in and captain-negotiated rescheduling.
+- Internal chat.
+- Appeals and formal penalty history.
+- Required Riot, Steam, or other game integrations.
+- Desktop application.
+- Managed cloud hosting.
+- Global moderation and platform bans.
+- Offline mutations and synchronization.
+- Web push notifications.
+- General-purpose outgoing webhooks.
 
-## 3. Límites numéricos de diseño
+## Design limits
 
-| Parámetro                                       | Valor                 |
-| ----------------------------------------------- | --------------------- |
-| Participantes por torneo (objetivo)             | 8–128                 |
-| Participantes por torneo (soporte sin rediseño) | 512+                  |
-| Evidencia por archivo                           | ≤ 10 MB               |
-| Evidencias por resultado                        | ≤ 5                   |
-| Tolerancia de retraso (defecto)                 | 10 min (configurable) |
-| Confirmación de resultados (defecto)            | 30 min (configurable) |
-| Ventana de disputa (defecto)                    | 60 min (configurable) |
-| Usuarios concurrentes (smoke)                   | 256                   |
+| Parameter                                | Target                   |
+| ---------------------------------------- | ------------------------ |
+| Normal tournament size                   | 8–128 participants       |
+| Supported without architectural redesign | 512+ participants        |
+| Evidence file                            | At most 10 MB            |
+| Evidence count                           | At most five per result  |
+| Default delay tolerance                  | 10 minutes, configurable |
+| Default result confirmation              | 30 minutes, configurable |
+| Default dispute window                   | 60 minutes, configurable |
+| Concurrency smoke                        | 256 users                |
 
-## 4. Criterio de aceptación del alcance
+## Scope acceptance
 
-Una funcionalidad está "en alcance" solo si cumple todas las condiciones:
+A proposed feature is in scope only when it:
 
-1. Está listada en este documento (o se agregó con un ADR aprobado).
-2. Tiene historias en el backlog con criterios de aceptación.
-3. Tiene pruebas planificadas en `docs/TESTING_STRATEGY.md`.
-4. No requiere microservicios, Redis ni procesos separados.
-5. No compromete la instalación con `docker compose up -d`.
+1. Appears here or in an accepted ADR.
+2. Has testable acceptance criteria.
+3. Has a testing strategy.
+4. Preserves a simple self-hosted installation.
+5. Does not add distributed infrastructure without measured need.
+6. Documents Spanish and English user behavior when user-facing.

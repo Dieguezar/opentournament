@@ -1,117 +1,119 @@
-# Documento de Requisitos de Producto (PRD)
+# Product requirements document
 
-## 1. Resumen ejecutivo
+## Executive summary
 
-OpenTournament es una plataforma web open source (MIT), autoalojable con Docker Compose e instalable como PWA, para gestionar el ciclo completo de torneos de esports. El MVP prioriza a comunidades, cibercafés y organizadores independientes con torneos de 8–128 participantes, online-first con soporte presencial, inscripciones gratuitas y flujo completo de creación a publicación de resultados, incluyendo reporte bilateral, evidencias y arbitraje. Stack: Next.js + Fastify + PostgreSQL (Drizzle) + S3-compatible, en un monolito modular.
+OpenTournament is an MIT-licensed web platform for managing the full esports tournament lifecycle. It is self-hosted through Docker Compose, installable as a PWA, and built as a TypeScript modular monolith with Next.js, Fastify, PostgreSQL/Drizzle, and S3-compatible storage.
 
-## 2. Problema
+The initial product targets communities, gaming cafés, and independent organizers running free online-first competitions with optional in-person support. It covers setup, registration, check-in, brackets, scheduling, reporting, evidence, disputes, arbitration, live public pages, and final standings.
 
-Las comunidades de esports carecen de una herramienta completa, abierta y autoalojable para organizar torneos. Las opciones actuales son fragmentadas (brackets por un lado, inscripciones por otro), cerradas o costosas, y ninguna cubre el flujo completo con verificación de resultados y arbitraje transparente.
+This PRD describes product intent. Use the [release checklist](RELEASE_CHECKLIST.md) and codebase for current implementation status.
 
-## 3. Oportunidad
+## Problem and opportunity
 
-Un proyecto MIT con instalación trivial y foco en el organizador puede convertirse en la herramienta comunitaria de referencia, con opción futura de servicio cloud administrado. El mercado amateur/semiprofesional de esports crece en LatAm y el resto del mundo.
+Communities lack one open, self-hosted tool for the complete tournament flow. Existing workflows are fragmented across registration forms, spreadsheets, bracket sites, and chat. This creates duplicated work, uncertain results, and weak dispute handling.
 
-## 4. Público objetivo
+A self-hosted MIT project with predictable installation and strong organizer UX can become common infrastructure while leaving room for optional managed hosting.
 
-- Primario: comunidades, cibercafés y organizadores independientes.
-- Secundario: universidades, streamers y servidores de Discord.
-- Espectadores y participantes que consumen la página pública del torneo.
+## Audience and personas
 
-## 5. Propuesta de valor
+- **Lucia, community organizer:** runs weekly events and needs a fast, low-friction control center.
+- **Carlos, gaming café operator:** runs online and LAN events and needs dependable check-in and brackets.
+- **Diego, captain:** registers a roster, checks in, reports results, and attaches evidence.
+- **Maria, referee:** reviews private evidence and records an auditable ruling.
+- **Andres, spectator:** follows a live bracket on mobile without creating an account.
 
-Flujo completo, confianza (resultados verificados y arbitraje auditado), libertad (open source y autoalojable), bajo costo, juego-agnóstico (adaptador genérico + Valorant/CS2/LoL), integración con Discord y página pública con tiempo real.
+## Product promise
 
-## 6. Casos de uso principales
+- One workflow from tournament creation to final publication.
+- Configurable trust through bilateral, winner-only, or staff-only reporting.
+- Game-specific templates without game-specific engine forks.
+- Public reading without authentication and private participant access without mandatory permanent accounts.
+- Optional email and Discord identity/automation.
+- Spanish and English interfaces.
+- Data and infrastructure controlled by the instance operator.
 
-1. Crear una organización y un torneo con reglas.
-2. Inscribir equipos (o jugadores individuales) con aprobación y lista de espera.
-3. Realizar check-in general y generar brackets con seeds y BYEs.
-4. Coordinar partidas (lobby, horario, reprogramación, walkover).
-5. Reportar resultados de forma bilateral y confirmarlos.
-6. Adjuntar evidencias y resolver disputas con árbitros.
-7. Publicar y compartir el torneo (página pública, Discord, PWA).
+## Primary use cases
 
-## 7. Personas
+1. Create an organization and tournament with a game template and public rules.
+2. Register teams or individual players with optional approval and waiting lists.
+3. Check in participants, seed them, and generate a single- or double-elimination bracket.
+4. Schedule and administer matches, lobbies, walkovers, and disqualifications.
+5. Submit game-aware results under the configured reporting policy.
+6. Attach private evidence and resolve conflicts through audited disputes.
+7. Publish a live tournament page and final standings.
 
-- **Lucía, organizadora comunitaria (primaria):** administra torneos semanales de Valorant para su comunidad de Discord; quiere velocidad y cero dolores de cabeza; no es técnica.
-- **Carlos, cibercafé:** organiza LANs presenciales y online; necesita check-in simple y brackets confiables.
-- **Diego, capitán de equipo:** inscribe a su equipo, hace check-in, reporta resultados y sube capturas.
-- **María, árbitra:** revisa disputas, consulta evidencias y resuelve con trazabilidad.
-- **Andrés, espectador:** sigue el bracket y los resultados desde el teléfono sin crear cuenta.
+## MVP scope
 
-## 8. Alcance del MVP
+See [MVP_SCOPE.md](MVP_SCOPE.md). The baseline includes:
 
-Ver [docs/MVP_SCOPE.md](MVP_SCOPE.md). En resumen: torneos de eliminación sencilla y doble, inscripción abierta con espera y aprobación, equipos permanentes y efímeros, individuales (equipo de 1), check-in general, series BO configurables, reporte bilateral, evidencias, disputas, página pública en tiempo real, PWA de lectura, auth correo + Discord, bot de Discord (notificaciones + slash), adaptador genérico + Valorant/CS2/LoL, y autoalojamiento con Docker Compose.
+- Single and double elimination.
+- Permanent and tournament-specific teams, including one-player teams.
+- Registration, check-in, seeds, BYEs, match administration, and finalization.
+- Configurable result reporting, evidence, disputes, and rulings.
+- Public SSR pages and SSE updates.
+- Read-cache PWA.
+- Email accounts, private participant passes, and optional Discord.
+- Generic, Valorant, CS2, LoL, and Smash Ultimate adapters.
+- Docker Compose self-hosting.
 
-## 9. Fuera de alcance (MVP)
+## Explicitly out of scope
 
-- Pagos, inscripciones de pago y premios.
-- Round-robin, suizo, grupos + playoffs, temporadas y clasificatorias.
-- Widgets embebibles y overlay OBS.
-- Veto interactivo de mapas dentro de la plataforma.
-- Check-in por partida y reprogramación entre capitanes.
-- Chat interno de la plataforma.
-- Apelaciones y sanciones formales.
-- Integraciones con APIs de juegos.
-- Aplicación de escritorio Tauri.
-- Servicio cloud administrado.
-- Roles globales de plataforma, moderación global y baneos.
-- Acciones offline de escritura (check-in/reporte offline).
+- Payments, paid entry, and prize distribution.
+- Round robin, Swiss, groups plus playoffs, seasons, and qualifiers.
+- Internal chat.
+- Appeals and formal sanctions.
+- Mandatory Riot, Steam, or other game APIs.
+- Full offline writes and synchronization.
+- Global platform moderation in self-hosted instances.
+- Managed cloud hosting as a requirement for core functionality.
 
-## 10. Requisitos funcionales
+## Requirements and flows
 
-Ver [docs/FUNCTIONAL_REQUIREMENTS.md](FUNCTIONAL_REQUIREMENTS.md) (identificadores FR-*).
+- Functional requirements: [FUNCTIONAL_REQUIREMENTS.md](FUNCTIONAL_REQUIREMENTS.md)
+- Non-functional requirements: [NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md)
+- User roles: [USER_ROLES.md](USER_ROLES.md)
+- User flows: [USER_FLOWS.md](USER_FLOWS.md)
+- Architecture decisions: [DECISIONS.md](DECISIONS.md)
 
-## 11. Requisitos no funcionales
+## Success metrics
 
-Ver [docs/NON_FUNCTIONAL_REQUIREMENTS.md](NON_FUNCTIONAL_REQUIREMENTS.md) (identificadores NFR-*).
+| Area        | Target                                                             |
+| ----------- | ------------------------------------------------------------------ |
+| Activation  | Publish a demo tournament with a bracket in under 15 minutes       |
+| Completion  | At least 70% of started tournaments publish final results          |
+| Trust       | At least 90% of reports confirm without a dispute                  |
+| Resolution  | At least 95% of disputes resolve within 72 hours                   |
+| Adoption    | Self-hosted installations, GitHub stars, issues, and contributions |
+| Quality     | No open critical defects for a stable release                      |
+| Engine      | At least 95% test coverage                                         |
+| Performance | Common API p95 under 200 ms and SSE propagation under one second   |
 
-## 12. Flujos principales
+## Dependencies
 
-Ver [docs/USER_FLOWS.md](USER_FLOWS.md): onboarding, creación de torneo, inscripción, check-in, bracket, partida, resultados, disputa, arbitraje y consumo público.
+- Docker and Docker Compose for production installation.
+- PostgreSQL 16 and S3-compatible object storage.
+- Node.js 22 and pnpm for source development.
+- Optional SMTP for delivered account email.
+- Optional Discord application for OAuth and bot features.
 
-## 13. Métricas de éxito (MVP)
+## Constraints
 
-- **Activación:** tiempo medio desde la creación de la organización hasta un torneo publicado con bracket generado (< 15 min en demo).
-- **Completitud:** % de torneos que llegan a resultados finales publicados (objetivo ≥ 70%).
-- **Confianza:** % de resultados confirmados sin disputa (objetivo ≥ 90%).
-- **Resolución:** % de disputas resueltas en ≤ 72 h (objetivo ≥ 95%).
-- **Adopción:** instalaciones autoalojadas, estrellas y contribuciones en GitHub.
-- **Calidad:** 0 bugs críticos abiertos en el release inicial; cobertura de tests del motor ≥ 95%.
-- **Rendimiento:** NFR-01 (p95 API < 200 ms) y propagación SSE < 1 s.
+- Modular monolith; no microservices without measured need.
+- PostgreSQL is the primary database.
+- Authorization always runs in the API.
+- Strict TypeScript and boundary validation.
+- Secrets stay outside the repository.
+- A clean installation follows the README.
+- Contributor-facing documentation is canonical in English.
+- User-facing changes must work in Spanish and English.
 
-## 14. Riesgos
+## Definition of a complete stable release
 
-Ver [docs/RISKS.md](RISKS.md). Los cinco principales: amplitud del MVP, complejidad del motor de torneos, concurrencia e integridad de resultados, fricción de autoalojamiento y seguridad/confianza.
-
-## 15. Supuestos
-
-Ver [docs/DECISIONS.md](DECISIONS.md), sección "Supuestos por defecto" (AF-01 a AF-16). Los más relevantes: idiomas es/en (LatAm primero); SMTP opcional; comunicación fuera de la plataforma; ventanas configurables (tolerancia 10 min, confirmación 30 min, disputa 60 min); evidencias 10 MB/5 archivos; roster bloqueado al check-in; gran final sin reset.
-
-## 16. Dependencias
-
-- Docker y Docker Compose para la instalación.
-- PostgreSQL 16+, MinIO (o R2/S3) y Node.js 22+.
-- Aplicación de Discord (OAuth + bot) para el organizador que quiera esa integración; el resto funciona sin Discord.
-- SMTP opcional para verificación/recuperación de correo.
-
-## 17. Restricciones
-
-- Monolito modular; no microservicios sin justificación probada.
-- PostgreSQL como base principal; SQLite solo para tests o futuro modo local.
-- Autorización siempre en backend.
-- TypeScript estricto, validación en cliente y servidor.
-- Secretos fuera del repositorio; `.env.example` como referencia.
-- Una instalación nueva debe poder iniciarse siguiendo el README.
-
-## 18. Criterios para considerar terminado el MVP
-
-1. Una instalación nueva con `docker compose up -d` permite crear organización y torneo, inscribir equipos, check-in, generar bracket de sencilla y doble eliminación, reportar/confirmar resultados, subir evidencias, resolver una disputa y publicar resultados.
-2. La página pública del torneo muestra bracket y resultados en tiempo real (SSE) y es indexable.
-3. Autenticación con correo y Discord; roles de organización y torneo aplicados en backend.
-4. Bot de Discord envía notificaciones y responde comandos slash de check-in/estado.
-5. PWA instalable con caché de lectura.
-6. Suite de pruebas (unitarias, integración, E2E) verde en CI; motor con cobertura ≥ 95%; smoke de concurrencia y carga a 256 participantes superado.
-7. Documentación completa (docs/) consistente con el comportamiento real.
-8. Primer release semver publicado con política de seguridad y plantillas de contribución.
+1. A clean Compose instance supports organization and tournament creation through final publication.
+2. Public tournament pages are indexable and update through SSE.
+3. API authorization protects organization, tournament, participant, evidence, and dispute scope.
+4. Core tournament flows work without Discord.
+5. Optional integrations fail closed and degrade cleanly.
+6. CI gates lint, types, tests, build, security scanning, and critical browser flows.
+7. Documentation matches current behavior and provides an English contribution path.
+8. A semantic release publishes source and versioned self-hosting artifacts.

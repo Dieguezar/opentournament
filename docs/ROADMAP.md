@@ -1,74 +1,78 @@
 # Roadmap
 
-Estado: las fases 0–3 y 5 están completadas. La fase 4 conserva Discord como integración opcional y
-ya tiene SSE/PWA operativos. OpenTournament `v1.0.0` está publicado; la fase 6 es expansión.
+OpenTournament v1.0.0 is published. Phases 0–3 and the original release-readiness work are complete. Live SSE and PWA support are operational; Discord remains optional and may receive further hardening. Roadmap items are direction, not a promise of delivery.
 
-## Fase 0 — Definición (completada)
+## Completed foundation
 
-- **Objetivo:** especificación profesional y decisiones registradas.
-- **Entregables:** este árbol de `docs/`, README, plantillas, DECISIONS.md, PRD, arquitectura, modelo de datos, backlog.
-- **Dependencias:** entrevista de descubrimiento (completada).
-- **Riesgos:** decisiones ambiguas (mitigado con ADRs).
-- **Pruebas:** revisión de la especificación por el producto.
-- **Criterio de finalización:** documentación completa y aprobación para iniciar la Fase 1.
+### Phase 0 — Product definition
 
-## Fase 1 — Base técnica (completada)
+- Product vision, PRD, scope, requirements, roles, flows, architecture, and ADRs.
+- MIT license, community governance, and security policy.
 
-- **Objetivo:** monorepo funcional, calidad, base de datos, auth, organizaciones/roles, Docker y CI.
-- **Entregables:** estructura pnpm + Turborepo; TS estricto; ESLint/Prettier; Vitest/Playwright; Drizzle + migraciones + seeds; auth (correo + Discord); organizaciones y roles; wizard; Docker Compose (web, api, postgres, minio); GitHub Actions (lint, typecheck, tests, build, CodeQL, Dependabot); health checks; logs pino.
-- **Dependencias:** Fase 0.
-- **Riesgos:** fricción de instalación; configuración de Discord OAuth.
-- **Pruebas:** integración de auth y roles; E2E de onboarding.
-- **Criterio de finalización:** `docker compose up -d` levanta la instancia, el wizard crea la primera organización y el pipeline CI está verde.
+### Phase 1 — Technical foundation
 
-## Fase 2 — MVP de torneos (completada)
+- pnpm/Turborepo strict-TypeScript monorepo.
+- Next.js web and Fastify API.
+- PostgreSQL/Drizzle migrations and demo seeds.
+- Authentication, organizations, roles, Docker Compose, health checks, and CI.
 
-- **Objetivo:** crear y administrar torneos completos con brackets.
-- **Entregables:** CRUD de torneo y reglas; inscripciones (espera, aprobación); check-in general con walkover; motor de sencilla y doble eliminación; sorteo/seeds/BYEs; partidas (programación, lobby, mapas, reprogramación); página pública del torneo; bracket público.
-- **Dependencias:** Fase 1.
-- **Riesgos:** complejidad del motor (BYEs, seeds, doble eliminación).
-- **Pruebas:** propiedades del motor; integración del flujo de torneo; E2E crear→inscribir→check-in→bracket.
-- **Criterio de finalización:** un torneo real (demo seed) recorre inscripción, check-in y bracket hasta resultados sin intervención manual del staff más allá de lo previsto.
+### Phase 2 — Tournament MVP
 
-## Fase 3 — Resultados y arbitraje (completada)
+- Tournament setup and public rules.
+- Registration, approval, check-in, participants, seeds, and BYEs.
+- Single- and double-elimination engine.
+- Match scheduling, administration, public brackets, and results.
 
-- **Objetivo:** verificación de resultados, evidencias y disputas.
-- **Entregables:** reporte bilateral y confirmación; timeouts; evidencias (presign, límites, privacidad); disputas con panel de árbitros; resoluciones; auditoría.
-- **Dependencias:** Fase 2.
-- **Riesgos:** concurrencia de reportes; privacidad de evidencias.
-- **Pruebas:** tests de concurrencia; integración de disputas; E2E de conflicto→disputa→resolución.
-- **Criterio de finalización:** cualquier resultado disputado se resuelve con trazabilidad completa y el bracket avanza correctamente.
+### Phase 3 — Trust and arbitration
 
-## Fase 4 — Discord y tiempo real (parcial)
+- Configurable reporting modes.
+- Private participant passes.
+- LoL and Smash structured reporting.
+- Evidence, disputes, messages, referee rulings, and audit.
 
-- **Objetivo:** actualizaciones en vivo e integración comunitaria opcional.
-- **Entregables:** SSE para bracket/resultados/notificaciones y PWA instalable con caché de lectura; Discord OAuth, webhooks y comandos slash (`/checkin`, `/status`) habilitables por instancia.
-- **Dependencias:** Fase 2 (bot requiere check-in) y Fase 3 (resultados).
-- **Riesgos:** rate limits de Discord; complejidad de reconexión SSE.
-- **Pruebas:** integración del bot (mock gateway); SSE con reconexión; E2E de notificaciones.
-- **Criterio de finalización:** el bracket público se actualiza en vivo y la ausencia de credenciales de Discord no bloquea ningún flujo principal; la integración Discord habilitada se valida con mocks.
+### Phase 4 — Live and optional community integrations
 
-## Fase 5 — Preparación open source (completada)
+- SSE live bracket and result updates.
+- Installable read-cache PWA.
+- Optional Discord OAuth, webhooks, and slash-command infrastructure.
 
-- **Objetivo:** primer release y comunidad.
-- **Entregables:** documentación final verificada; instalación limpia validada en GitHub Actions; datos demo; plantillas y política de seguridad; baseline manual de OWASP ZAP validado sin advertencias bloqueantes; axe WCAG A/AA validado sobre los brackets públicos de LoL y Smash; imágenes públicas multi-arquitectura en GHCR con pipeline semver y atestaciones; release `v1.0.0` publicado; observabilidad con Grafana opcional.
-- **Dependencias:** Fases 1–4.
-- **Riesgos:** bugs de integración; documentación desactualizada.
-- **Pruebas:** smoke completo en entorno limpio; pentest básico; E2E completo en CI.
-- **Criterio de finalización:** un recién llegado instala y publica un torneo siguiendo solo el README, y el release está publicado con changelog.
+### Phase 5 — Open-source release
 
-## Fase 6 — Expansión
+- Clean-install Compose smoke.
+- CI, CodeQL, Dependabot, ZAP baseline, and accessibility automation.
+- Versioned multi-architecture GHCR images with SBOM/provenance.
+- Published `v1.0.0`.
+- English canonical contribution path and bilingual user interface.
 
-- **Objetivo:** ampliar formatos y audiencias.
-- **Entregables (propuestos):** round-robin, suizo, grupos + playoffs; temporadas y rankings; widgets embebibles; overlay OBS; veto interactivo; check-in por partida; chat interno (evalúa WebSockets); apelaciones y sanciones; integraciones con APIs de juegos; app Tauri; servicio cloud administrado (extras de infraestructura, nunca funciones core); webhooks salientes.
-- **Dependencias:** MVP completo (Fases 1–5).
-- **Riesgos:** sobrearquitectura; alcance descontrolado.
-- **Pruebas:** según la funcionalidad, siguiendo esta estrategia.
-- **Criterio de finalización:** cada iniciativa define su propio criterio con un ADR previo.
+## Current hardening priorities
 
-## Prioridad transversal
+1. Locale-aware API errors built on stable error codes.
+2. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
+3. Expand integration/E2E coverage for participant passes and bilingual flows.
+4. Keep schema, API, and architecture documentation synchronized.
+5. Validate optional Discord behavior against a configured test application.
+6. Improve operational metrics without adding mandatory infrastructure.
 
-1. Instalación trivial y documentación.
-2. Confianza (resultados y arbitraje).
-3. Experiencia del organizador.
-4. Comunidad (Discord, público, contribuciones).
+## Expansion candidates
+
+Each initiative requires its own issue, acceptance criteria, and ADR when it changes architecture.
+
+- Round robin, Swiss, groups plus playoffs.
+- Seasons, qualifiers, rankings, and statistics.
+- Interactive map/stage vetoes and DSR assistance.
+- Embeddable brackets and OBS overlays.
+- Per-match check-in and captain-negotiated rescheduling.
+- Appeals and formal sanctions.
+- Authorized Riot/Steam integrations.
+- Outgoing webhooks.
+- Tauri desktop packaging.
+- Managed hosting that adds infrastructure convenience without withholding core open-source features.
+
+## Product priorities
+
+1. Installation and upgrade reliability.
+2. Result trust and arbitration.
+3. Organizer efficiency.
+4. Participant accessibility.
+5. Game-aware depth.
+6. Sustainable contributions and documentation.

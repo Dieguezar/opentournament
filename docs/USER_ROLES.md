@@ -1,78 +1,68 @@
-# Roles de usuario
+# User roles
 
-## 1. Identidades y perfiles
+## Actors
 
-- **Usuario autenticado:** persona con cuenta (correo o Discord vinculado). Tiene un perfil público básico.
-- **Perfil público:** nombre, avatar, IDs de juego (Riot ID, SteamID64, nombre de invocador + región), resultados de torneos (posición, victorias/derrotas agregados).
-- **Visitante:** usuario sin cuenta; solo accede a páginas públicas (torneo, bracket, resultados, perfiles).
+- **Visitor:** no session; may read public tournaments, brackets, results, and public profiles.
+- **Account user:** permanent email or Discord-linked account.
+- **Participant-pass actor:** pseudonymous restricted session for one tournament and team.
+- **Organization member:** account user with an organization role.
+- **Tournament staff:** account user with a tournament-specific assignment.
+- **Team member:** account user associated with a roster.
 
-## 2. Roles de organización
+## Organization roles
 
-La organización es el contenedor raíz de OpenTournament. El primer usuario crea una organización mediante el wizard de primer uso.
+| Role   | Authority                                                                            |
+| ------ | ------------------------------------------------------------------------------------ |
+| Owner  | Admin authority plus ownership transfer, organization deletion, and admin management |
+| Admin  | Organization settings, members, teams, and tournaments                               |
+| Member | Organization access and tournament creation only when policy permits                 |
 
-| Rol | Permisos |
-| --- | --- |
-| **Owner** | Todo lo del admin + transferir propiedad, eliminar la organización, gestionar admins |
-| **Admin** | Gestionar miembros, crear/editar torneos, configurar la organización (nombre, logo, enlaces) |
-| **Miembro** | Ver la organización, participar en torneos, crear torneos si la organización lo permite (configurable) |
+A user may belong to multiple organizations. Organization deletion is soft. Organization roles do not bypass resource checks for another organization.
 
-Reglas:
-- Solo el owner puede eliminar la organización (soft delete + confirmación).
-- Un usuario puede pertenecer a varias organizaciones.
-- Los roles de organización no dan permisos sobre torneos específicos más allá de lo definido por el rol de torneo.
+## Tournament roles
 
-## 3. Roles de torneo
+| Role             | Authority                                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------------- |
+| Tournament admin | Configuration, registrations, bracket, matches, staff, participant passes, disputes, and finalization |
+| Referee          | Assigned disputes, private evidence, administrative result review, and rulings                        |
+| Moderator        | Registration, check-in, and dispute-message support without configuration or ruling authority         |
 
-Cada torneo tiene staff independiente:
+Organization owners/admins assign tournament staff. The API evaluates the role on every resource request.
 
-| Rol | Permisos |
-| --- | --- |
-| **Admin de torneo** | Todo del torneo: editar configuración y reglas, gestionar inscripciones, generar brackets, reprogramar, aplicar walkovers/DQ, asignar árbitros, publicar resultados |
-| **Árbitro** | Ver evidencias, resolver disputas, registrar resoluciones, reportar resultados administrativamente (si el torneo lo permite) |
-| **Moderador** | Gestionar inscripciones y mensajes de disputas, ayudar en check-in; sin editar configuración ni resolver disputas |
+## Team roles
 
-Reglas:
-- El owner/admin de la organización puede nombrar staff de torneo.
-- Los roles de torneo se asignan a usuarios registrados (no a correos arbitrarios).
-- Los permisos se evalúan en backend para cada recurso.
+| Role       | Authority                                                             |
+| ---------- | --------------------------------------------------------------------- |
+| Captain    | Roster, registration, check-in, eligible result reports, and disputes |
+| Member     | Team visibility and any explicitly delegated participant actions      |
+| Substitute | Roster eligibility before roster lock                                 |
 
-## 4. Roles de equipo
+A team has one captain in the MVP. A one-player competitor is both captain and sole member of its internal team.
 
-| Rol | Permisos |
-| --- | --- |
-| **Capitán** | Editar roster, inscribir el equipo, hacer check-in, reportar resultados, abrir/responder disputas, registrar veto/mapas |
-| **Miembro** | Ver el equipo, hacer check-in si el torneo lo permite, confirmar resultados si el capitán lo delega |
-| **Suplente** | Listado en el roster; puede entrar al equipo antes del bloqueo de roster |
+## Participant passes
 
-Reglas:
-- Un equipo tiene exactamente un capitán en el MVP.
-- El roster se bloquea al cierre del check-in (supuesto AF-09).
-- En torneos individuales, el jugador es capitán y miembro del equipo de 1.
+A pass grants only the actions allowed for its tournament and participant. It does not grant organization membership, captain-level roster authority, or access to other tournaments. Staff can regenerate or revoke it, and linked sessions become invalid after revocation.
 
-## 5. Roles de plataforma
+## Permission matrix
 
-- No existe rol global de plataforma en el MVP (ADR-012). Cada instancia es autónoma.
-- El servicio cloud futuro podrá agregar roles de plataforma sin privatizar funciones core.
+| Action                 | Visitor                | Org member       | Org admin          | Tournament admin | Captain/pass          | Referee               |
+| ---------------------- | ---------------------- | ---------------- | ------------------ | ---------------- | --------------------- | --------------------- |
+| Read public tournament | Yes                    | Yes              | Yes                | Yes              | Yes                   | Yes                   |
+| Create organization    | First-use/account flow | Yes              | Yes                | Yes              | No                    | No                    |
+| Create tournament      | No                     | Policy-dependent | Yes                | Yes within org   | No                    | No                    |
+| Edit tournament        | No                     | No               | Organization scope | Yes              | No                    | No                    |
+| Manage registration    | No                     | No               | Organization scope | Yes/moderator    | Own registration only | No                    |
+| Check in               | No                     | Participant only | Staff override     | Yes              | Own participant       | No                    |
+| Generate bracket       | No                     | No               | Organization scope | Yes              | No                    | No                    |
+| Report result          | No                     | No               | Staff policy       | Staff policy     | Eligible match        | Administrative policy |
+| Read evidence          | No                     | No               | Tournament scope   | Yes              | Own match only        | Assigned scope        |
+| Resolve dispute        | No                     | No               | Tournament scope   | Yes              | No                    | Assigned dispute      |
+| Reschedule match       | No                     | No               | Tournament scope   | Yes              | No                    | No                    |
 
-## 6. Matriz de permisos resumida
+See [AUTHORIZATION_MODEL.md](AUTHORIZATION_MODEL.md) for exact permission names and enforcement.
 
-| Acción | Visitante | Miembro org | Admin org | Staff torneo | Capitán | Árbitro |
-| --- | --- | --- | --- | --- | --- | --- |
-| Ver torneo público | Sí | Sí | Sí | Sí | Sí | Sí |
-| Crear organización | No | No | No | No | No | No (primera vía wizard) |
-| Crear torneo | No | Según config | Sí | Sí | No | No |
-| Editar torneo | No | No | Sí | Admin | No | No |
-| Aprobar inscripciones | No | No | Sí | Admin/Mod | No | No |
-| Hacer check-in | No | Si es miembro | Sí | Sí | Sí | No |
-| Generar bracket | No | No | Sí | Admin | No | No |
-| Reportar resultados | No | No | Sí | Admin (si aplica) | Sí | Sí (admin) |
-| Ver evidencias | No | No | Sí | Admin/Árbitro | Solo las propias | Sí |
-| Resolver disputas | No | No | Sí | Admin/Árbitro | No | Sí |
-| Reprogramar partida | No | No | Sí | Admin | No | No |
+## Audit rules
 
-El detalle formal de permisos (catálogo y enforcement) está en [docs/AUTHORIZATION_MODEL.md](AUTHORIZATION_MODEL.md).
-
-## 7. Cambios de rol y auditoría
-
-- Cada cambio de rol (organización o torneo) se registra en el audit log con actor, fecha y motivo.
-- Un usuario no puede autopromoverse; solo el owner/admin correspondiente otorga roles.
+- Membership, role, pass, result, correction, assignment, and ruling changes append audit events.
+- Users cannot promote themselves.
+- Unknown or conflicting roles fail closed.

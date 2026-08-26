@@ -1,99 +1,107 @@
-# Requisitos no funcionales
+# Non-functional requirements
 
-Identificadores `NFR-<categoría>-<n>`. Se verifican con las estrategias de [docs/TESTING_STRATEGY.md](TESTING_STRATEGY.md).
+IDs use `NFR-<category>-<number>` and are verified through [TESTING_STRATEGY.md](TESTING_STRATEGY.md).
 
-## Rendimiento
+## Performance
 
-| ID | Requisito | Objetivo |
-| --- | --- | --- |
-| NFR-PERF-01 | Latencia de API (p95) | < 200 ms en operaciones comunes sin carga anómala |
-| NFR-PERF-02 | Propagación de eventos SSE | < 1 s desde el cambio de estado hasta el cliente conectado |
-| NFR-PERF-03 | Generación de bracket (128 participantes, doble eliminación) | < 1 s |
-| NFR-PERF-04 | Carga básica | 256 participantes concurrentes con degradación aceptable; sin errores |
-| NFR-PERF-05 | Página pública SSR | TTFB p95 < 500 ms en instancia modesta |
+| ID          | Requirement                                   | Target                                                          |
+| ----------- | --------------------------------------------- | --------------------------------------------------------------- |
+| NFR-PERF-01 | Common API latency                            | p95 below 200 ms under normal load                              |
+| NFR-PERF-02 | SSE propagation                               | Below one second from committed state to connected client       |
+| NFR-PERF-03 | 128-participant double-elimination generation | Below one second                                                |
+| NFR-PERF-04 | Concurrency smoke                             | 256 participants without errors and with acceptable degradation |
+| NFR-PERF-05 | Public SSR page                               | TTFB p95 below 500 ms on a modest instance                      |
 
-## Disponibilidad y resiliencia
+## Availability and resilience
 
-| ID | Requisito |
-| --- | --- |
-| NFR-AVAIL-01 | La instancia debe funcionar con un solo nodo; sin puntos únicos innecesarios en el diseño |
-| NFR-AVAIL-02 | Los jobs programados deben sobrevivir reinicios (cola en PostgreSQL) |
-| NFR-AVAIL-03 | Health checks para web, api, postgres y minio |
-| NFR-AVAIL-04 | Degradación documentada sin Redis/SMTP/Discord (funciones core intactas) |
+| ID           | Requirement                                                            |
+| ------------ | ---------------------------------------------------------------------- |
+| NFR-AVAIL-01 | Operate correctly on one node without unnecessary runtime dependencies |
+| NFR-AVAIL-02 | Scheduled jobs survive process restarts through PostgreSQL             |
+| NFR-AVAIL-03 | Web, API, PostgreSQL, and MinIO expose Compose health checks           |
+| NFR-AVAIL-04 | Core features continue without SMTP or Discord                         |
 
-## Seguridad
+## Security
 
-| ID | Requisito |
-| --- | --- |
-| NFR-SEC-01 | Contraseñas con Argon2id; sin almacenamiento de texto plano |
-| NFR-SEC-02 | Sesiones con cookie httpOnly + SameSite + token CSRF |
-| NFR-SEC-03 | Autorización en backend para cada recurso (nunca confiar en UI) |
-| NFR-SEC-04 | Rate limiting por IP y por cuenta en rutas sensibles |
-| NFR-SEC-05 | Validación y sanitización de entradas; sin SQL injection ni XSS almacenado |
-| NFR-SEC-06 | Evidencias privadas por defecto; URLs firmadas con expiración |
-| NFR-SEC-07 | Secretos solo vía variables de entorno; `.env.example` sin valores reales |
-| NFR-SEC-08 | Escaneo de dependencias en CI (Dependabot + audit) y análisis estático (CodeQL) |
-| NFR-SEC-09 | Cabeceras de seguridad (CSP, X-Content-Type-Options, Referrer-Policy, etc.) |
+| ID         | Requirement                                                                        |
+| ---------- | ---------------------------------------------------------------------------------- |
+| NFR-SEC-01 | Hash passwords with Argon2id and never store plaintext                             |
+| NFR-SEC-02 | Use HTTP-only SameSite cookies and CSRF tokens                                     |
+| NFR-SEC-03 | Authorize every resource in the API                                                |
+| NFR-SEC-04 | Rate-limit sensitive routes by IP and actor                                        |
+| NFR-SEC-05 | Validate and sanitize input and prevent injection or stored XSS                    |
+| NFR-SEC-06 | Keep evidence private with expiring signed URLs                                    |
+| NFR-SEC-07 | Read secrets only from environment/secret storage                                  |
+| NFR-SEC-08 | Run dependency and static analysis in CI                                           |
+| NFR-SEC-09 | Apply CSP, content-type, referrer, frame, permissions, and related browser headers |
+| NFR-SEC-10 | Store access-pass and session secrets only as hashes                               |
 
-Ver el detalle en [docs/SECURITY_MODEL.md](SECURITY_MODEL.md).
+See [SECURITY_MODEL.md](SECURITY_MODEL.md).
 
-## Escalabilidad
+## Scalability
 
-| ID | Requisito |
-| --- | --- |
-| NFR-SCALE-01 | Torneos de 512 participantes sin rediseño (índices, paginación, motor) |
-| NFR-SCALE-02 | El motor es determinista y sin estado compartido entre requests |
-| NFR-SCALE-03 | Evolución documentada: worker/bot extraíbles y Redis opcional |
+| ID           | Requirement                                                                             |
+| ------------ | --------------------------------------------------------------------------------------- |
+| NFR-SCALE-01 | Support 512-participant tournaments without a schema or engine redesign                 |
+| NFR-SCALE-02 | Keep the engine deterministic and free of shared request state                          |
+| NFR-SCALE-03 | Preserve documented seams for extracting worker/bot and adding Redis only when measured |
 
-## Accesibilidad y compatibilidad
+## Accessibility and compatibility
 
-| ID | Requisito |
-| --- | --- |
-| NFR-A11Y-01 | WCAG 2.1 nivel AA en todo el frontend |
-| NFR-A11Y-02 | Navegación completa por teclado y foco visible |
-| NFR-A11Y-03 | Regiones live para actualizaciones SSE (bracket/resultados) |
-| NFR-A11Y-04 | Contraste AA, textos alternativos y formularios con labels/errores accesibles |
+| ID          | Requirement                                                               |
+| ----------- | ------------------------------------------------------------------------- |
+| NFR-A11Y-01 | Meet WCAG 2.1 AA across the web interface                                 |
+| NFR-A11Y-02 | Support complete keyboard navigation and visible focus                    |
+| NFR-A11Y-03 | Announce meaningful live tournament updates appropriately                 |
+| NFR-A11Y-04 | Provide AA contrast, alternative text, labels, and accessible form errors |
 
-Ver [docs/ACCESSIBILITY.md](ACCESSIBILITY.md).
+See [ACCESSIBILITY.md](ACCESSIBILITY.md).
 
-| ID | Requisito |
-| --- | --- |
-| NFR-COMP-01 | Navegadores: últimas 2 versiones de Chrome, Edge, Firefox y Safari |
-| NFR-COMP-02 | Diseño responsive (móvil ≥ 360 px de ancho) |
-| NFR-COMP-03 | PWA instalable en Chrome/Edge; instalación en iOS con limitaciones documentadas |
+| ID          | Requirement                                                              |
+| ----------- | ------------------------------------------------------------------------ |
+| NFR-COMP-01 | Support the latest two stable Chrome, Edge, Firefox, and Safari versions |
+| NFR-COMP-02 | Remain usable from 360 px viewport width                                 |
+| NFR-COMP-03 | Install as a PWA where the browser supports installation                 |
+| NFR-COMP-04 | Avoid page-level horizontal overflow except explicit bracket/tab regions |
 
-## Internacionalización
+## Internationalization
 
-| ID | Requisito |
-| --- | --- |
-| NFR-I18N-01 | i18n con español (defecto) e inglés desde el inicio |
-| NFR-I18N-02 | Sin textos hardcodeados en componentes |
-| NFR-I18N-03 | Fechas, horas y zonas horarias localizadas; almacenamiento en UTC |
+| ID          | Requirement                                                            |
+| ----------- | ---------------------------------------------------------------------- |
+| NFR-I18N-01 | Provide Spanish and English, with Spanish as the current default       |
+| NFR-I18N-02 | Keep visible copy in typed dictionaries instead of component literals  |
+| NFR-I18N-03 | Persist explicit language selection and otherwise use browser language |
+| NFR-I18N-04 | Render the correct HTML `lang` and localize dates, times, and statuses |
+| NFR-I18N-05 | Keep contributor documentation canonical in English                    |
 
-## Operación
+## Operations
 
-| ID | Requisito |
-| --- | --- |
-| NFR-OPS-01 | Instalación con `docker compose up -d` siguiendo el README |
-| NFR-OPS-02 | Logs estructurados (pino) con request ID |
-| NFR-OPS-03 | Migraciones automáticas seguras al arrancar (o comando explícito documentado) |
-| NFR-OPS-04 | Backups documentados (PostgreSQL + bucket) y procedimiento de restauración |
-| NFR-OPS-05 | Actualización de versión sin pérdida de datos |
+| ID         | Requirement                                                                    |
+| ---------- | ------------------------------------------------------------------------------ |
+| NFR-OPS-01 | Start a clean production-safe instance through documented Docker Compose steps |
+| NFR-OPS-02 | Emit structured Pino logs with request IDs and redaction                       |
+| NFR-OPS-03 | Apply database migrations safely before serving traffic                        |
+| NFR-OPS-04 | Document and test PostgreSQL and object-storage backup/restore                 |
+| NFR-OPS-05 | Support explicit version upgrades and rollback without data loss               |
+| NFR-OPS-06 | Expose no default demo credentials on a production configuration               |
 
-## Datos y privacidad
+## Data and privacy
 
-| ID | Requisito |
-| --- | --- |
-| NFR-DATA-01 | Datos sensibles identificados y cifrados en tránsito (HTTPS) y en reposo a nivel de infraestructura |
-| NFR-DATA-02 | Evidencias privadas por defecto; política de retención documentada |
-| NFR-DATA-03 | Exportación de datos de una organización (fase 5) y eliminación de cuenta documentadas |
-| NFR-DATA-04 | Auditoría append-only de acciones críticas |
+| ID          | Requirement                                                                           |
+| ----------- | ------------------------------------------------------------------------------------- |
+| NFR-DATA-01 | Encrypt traffic with HTTPS and rely on operator infrastructure for storage encryption |
+| NFR-DATA-02 | Keep evidence private and document retention                                          |
+| NFR-DATA-03 | Document account and organization data lifecycle                                      |
+| NFR-DATA-04 | Keep critical audit records append-only                                               |
+| NFR-DATA-05 | Prevent participant-pass tokens from reaching HTTP logs or referrer headers           |
 
-## Mantenibilidad
+## Maintainability
 
-| ID | Requisito |
-| --- | --- |
-| NFR-MAINT-01 | TypeScript estricto en todo el monorepo |
-| NFR-MAINT-02 | Cobertura de tests del motor ≥ 95%; API ≥ 80% de líneas críticas |
-| NFR-MAINT-03 | Documentación actualizada en el mismo PR que cambia comportamiento |
-| NFR-MAINT-04 | Límites de complejidad: archivos pequeños, módulos con una responsabilidad |
+| ID           | Requirement                                                                      |
+| ------------ | -------------------------------------------------------------------------------- |
+| NFR-MAINT-01 | Use strict TypeScript throughout the monorepo                                    |
+| NFR-MAINT-02 | Maintain at least 95% engine coverage and 80% coverage of critical API lines     |
+| NFR-MAINT-03 | Update behavior documentation in the same pull request                           |
+| NFR-MAINT-04 | Keep modules focused and dependencies directional                                |
+| NFR-MAINT-05 | Require stable API error codes so clients can localize messages                  |
+| NFR-MAINT-06 | Keep migrations, schema documentation, shared types, and validation synchronized |

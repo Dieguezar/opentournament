@@ -1,95 +1,45 @@
-# Glosario
+# Glossary
 
-## A
-
-- **Adaptador (de juego):** configuración tipada que define las reglas de un videojuego para el motor (tamaños de equipo, formatos, mapas, puntuación, empates).
-- **Árbitro:** staff del torneo con permiso para resolver disputas y ver evidencias.
-- **Audit log:** registro append-only de acciones críticas para trazabilidad.
-
-## B
-
-- **BO1/BO3/BO5:** series "best of" de 1, 3 o 5 partidas.
-- **Bracket:** estructura de eliminación que muestra las partidas de un torneo.
-- **BYE:** avance automático de un participante a la siguiente ronda sin jugar (por no ser potencia de 2).
-
-## C
-
-- **Capitán:** líder de un equipo; inscribe, hace check-in y reporta resultados.
-- **Check-in:** confirmación de disponibilidad antes del torneo; su ausencia produce walkover.
+- **Adapter / game adapter:** typed configuration describing roster limits, formats, maps or stages, scoring, draws, and game-specific fields.
+- **Audit log:** append-only record of critical actions.
+- **Best of / BO1 / BO3 / BO5:** a series whose winner is the first to win the required majority of one, three, or five games.
+- **Bracket:** elimination structure connecting tournament matches.
+- **BYE:** automatic advancement when a bracket has fewer participants than its next power-of-two size.
+- **Captain:** team leader responsible for roster, registration, and eligible reports.
+- **Check-in:** pre-tournament availability confirmation.
+- **Counterpick:** a stage or map selected under rules that apply after the first game.
 - **CS2:** Counter-Strike 2.
-
-## D
-
-- **Descalificación (DQ):** exclusión por decisión administrativa o arbitral.
-- **Disputa:** conflicto sobre un resultado que requiere arbitraje.
-- **Doble eliminación:** formato donde se pierde al acumular dos derrotas.
-- **Drizzle:** ORM/query builder de TypeScript sobre SQL.
-
-## E
-
-- **Eliminación sencilla:** formato donde una derrota elimina.
-- **Empate:** resultado sin ganador; permitido solo si el adaptador lo define.
-- **Evidencia:** captura o enlace que respalda un resultado o disputa.
-
-## G
-
-- **Genérico (adaptador):** adaptador por defecto para cualquier juego sin soporte oficial.
-
-## I
-
-- **Identidad:** vínculo entre un usuario y un proveedor OAuth (ej. Discord).
-- **Inscripción:** solicitud de participación de un equipo en un torneo.
-
-## J
-
-- **Jobs:** tareas diferidas o programadas (cierre de check-in, recordatorios, timeouts) gestionadas en una cola PostgreSQL.
-
-## L
-
-- **Lista de espera (waitlist):** cola FIFO de inscripciones cuando el cupo está lleno.
-- **Lobby:** sala de la partida (URL opcional; presencial no usa lobby).
-
-## M
-
-- **Match:** enfrentamiento entre dos participantes.
-- **MatchGame:** partida individual dentro de una serie (mapa).
-- **Moderador:** staff que gestiona inscripciones y mensajes sin resolver disputas.
-- **Monolito modular:** una sola aplicación desplegable con límites de módulos claros.
-
-## O
-
-- **Organización:** contenedor raíz de torneos y equipos (comunidad, cibercafé, etc.).
-- **Outbox:** patrón transaccional que publica eventos/notificaciones sin perderlos tras el commit.
-
-## P
-
-- **Participante:** equipo (o jugador individual) efectivo en el bracket.
-- **PWA:** aplicación web instalable con caché de lectura.
-- **Presencial:** torneo jugado en persona; sin lobby URL.
-
-## R
-
-- **Reporte bilateral:** ambos capitanes reportan el resultado; la coincidencia confirma automáticamente.
-- **Reprogramación:** cambio de fecha/hora de una partida por un administrador.
-- **Roster:** plantilla de un equipo (capitán, miembros, suplentes).
-
-## S
-
-- **Seed:** posición inicial asignada a un participante en el bracket.
-- **SSE:** Server-Sent Events; actualizaciones unidireccionales del servidor al cliente.
-- **S3-compatible:** API estándar de almacenamiento de objetos (MinIO, R2, S3).
-- **Staff de torneo:** admin, árbitro y moderador.
-
-## T
-
-- **Tolerancia de retraso:** tiempo de espera configurable antes de un walkover.
-- **Torneo individual:** formato donde el participante es un equipo de 1 jugador.
-
-## V
-
-- **Veto:** selección/eliminación de mapas antes de la partida (en el MVP se acuerda fuera de la plataforma y se registra).
-
-## W
-
-- **Walkover:** victoria concedida por incomparecencia o decisión administrativa.
-- **Webhook:** notificación saliente hacia un servicio externo (diferido).
+- **Disqualification / DQ:** administrative removal from a match or tournament.
+- **Dispute:** review process for a conflicting or challenged result.
+- **Double elimination:** format where a participant is normally eliminated after two losses.
+- **Drizzle:** TypeScript SQL schema and query toolkit used by the database package.
+- **DSR:** stage-repeat restriction used by some Smash rulesets.
+- **Evidence:** private screenshot metadata or validated external link supporting a result or dispute.
+- **Fearless Draft:** LoL series rule that prevents previously selected champions from being selected again.
+- **Game:** one played map or round inside a match series.
+- **Generic adapter:** fallback adapter for games without official configuration.
+- **Grand-final reset:** second grand-final series required when the lower-bracket winner wins the first final.
+- **Identity:** relationship between an account and an OAuth provider.
+- **Job:** delayed or scheduled task stored in PostgreSQL.
+- **Lobby:** optional match room or URL; in-person matches may omit it.
+- **Match:** competition between two tournament participants.
+- **MatchGame:** generic persisted per-game or per-map row.
+- **Modular monolith:** one operational application boundary with explicit internal modules.
+- **Organization:** root tenant containing members, teams, and tournaments.
+- **Outbox:** transactional pattern that records notifications/events with the state change they describe.
+- **Participant:** effective bracket entry, internally represented by a team.
+- **Participant pass:** revocable secret that creates a restricted tournament/team session.
+- **PWA:** installable web application with browser caching.
+- **Reporting mode:** bilateral, winner-only, or staff-only policy for confirming results.
+- **Roster:** captain, members, and substitutes associated with a team.
+- **Ruling:** final audited decision resolving a dispute.
+- **Seed:** initial bracket position.
+- **Single elimination:** format where one loss eliminates a participant.
+- **SSE:** Server-Sent Events, a one-way HTTP event stream from server to browser.
+- **S3-compatible:** object-storage API implemented by MinIO, R2, S3, and other providers.
+- **Stage:** ordered competitive phase containing one or more brackets.
+- **Tournament template:** versioned adapter configuration providing editable competition defaults and game rules.
+- **Veto:** map or stage elimination/selection process.
+- **Waitlist:** ordered registration queue when capacity is full.
+- **Walkover:** win granted because of absence or an administrative decision.
+- **Webhook:** outgoing service notification; general-purpose webhooks are deferred.

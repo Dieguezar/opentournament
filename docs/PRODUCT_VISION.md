@@ -1,68 +1,73 @@
-# Visión de producto
+# Product vision
 
-## Declaración de visión
+## Vision
 
-**OpenTournament** permite a cualquier comunidad u organizador independiente crear, administrar y publicar torneos de esports profesionales sin depender de herramientas cerradas, costosas o difíciles de instalar. Es open source, autoalojable y tan fácil de usar como de operar.
+**OpenTournament enables any community or independent organizer to create, manage, and publish professional esports tournaments without depending on closed, expensive, or difficult-to-operate platforms.** It is open source, self-hosted, and designed to be as approachable to use as it is to operate.
 
-## Misión
+## Mission
 
-Democratizar la organización de torneos de esports: que un cibercafé, una universidad, un servidor de Discord o un streamer pueda montar un torneo completo en minutos, con brackets confiables, resultados verificados y arbitraje transparente, desde su propia infraestructura.
+Democratize esports tournament operations so a gaming café, university, community server, or streamer can launch a complete competition in minutes with reliable brackets, verifiable results, and transparent arbitration on infrastructure they control.
 
-## Problema
+## Problem
 
-Las comunidades de esports (especialmente en LatAm) dependen de herramientas fragmentadas: hojas de cálculo para inscripciones, plataformas cerradas con costos ocultos, brackets de terceros sin control de resultados, y Discord como "pegamento" improvisado. Los organizadores pierden tiempo, los resultados se disputan sin evidencia y no existe una herramienta completa, abierta y autoalojable.
+Esports communities, especially in Latin America, often combine spreadsheets, closed registration products, third-party brackets, and chat platforms. Organizers duplicate work, participants lack one trustworthy source of truth, and disputed results have weak evidence or auditability.
 
-## Oportunidad
+## Opportunity
 
-- Crecimiento sostenido de comunidades de esports amateur y semiprofesional.
-- Herramientas existentes: cerradas (costo), fragmentadas (integración), o sin foco en el flujo completo (solo brackets).
-- Un proyecto open source con MIT, instalación con `docker compose up -d` y foco en el organizador puede convertirse en la base comunitaria de referencia, con un futuro servicio cloud como opción administrada.
+- Amateur and semi-professional esports communities continue to grow.
+- Existing products are closed, fragmented, expensive, or focused only on brackets.
+- An MIT-licensed project with `docker compose up -d`, strong organizer UX, and complete workflows can become shared community infrastructure.
+- A future managed service may simplify infrastructure without removing core features from the open-source edition.
 
-## Público objetivo
+## Audience
 
-1. **Comunidades, cibercafés y organizadores independientes** (primario).
-2. **Universidades y colegios** (secundario).
-3. **Streamers y servidores de Discord** (secundario).
+1. Communities, gaming cafés, and independent organizers.
+2. Universities and schools.
+3. Streamers and Discord-based communities.
+4. Participants and spectators using the public tournament experience.
 
-Ver [docs/USER_ROLES.md](USER_ROLES.md) para roles y [docs/PRD.md](PRD.md) para personas.
+See [USER_ROLES.md](USER_ROLES.md) and [PRD.md](PRD.md).
 
-## Propuesta de valor
+## Value proposition
 
-- **Flujo completo**, no solo brackets: inscripción, check-in, partidas, evidencias, disputas y resultados finales.
-- **Confianza**: reporte bilateral, evidencias privadas y arbitraje auditado.
-- **Libertad**: open source (MIT), autoalojable, datos bajo el control del organizador.
-- **Bajo costo**: una instancia pequeña corre en hardware modesto.
-- **Juego-agnóstico**: adaptador genérico + adaptadores oficiales de Valorant, CS2, LoL y Super Smash Bros. Ultimate.
-- **Comunidad**: Discord nativo (OAuth, notificaciones y comandos slash).
-- **Público**: página pública del torneo con tiempo real y PWA instalable.
+- **Complete workflow:** registration, check-in, competition, reporting, evidence, disputes, and final standings.
+- **Trust:** configurable reporting, private evidence, and audited rulings.
+- **Control:** MIT-licensed, self-hosted, and organizer-owned data.
+- **Low operating cost:** a small instance runs on modest hardware.
+- **Game-aware:** a generic adapter plus official Valorant, CS2, League of Legends, and Smash Ultimate adapters.
+- **Optional community automation:** Discord OAuth and bot capabilities when an instance enables them.
+- **Public experience:** indexable tournament pages, live updates, and an installable PWA.
+- **Inclusive access:** Spanish and English interfaces plus keyboard and screen-reader support.
 
-## Principios del proyecto
+## Product principles
 
-1. Facilidad de instalación.
-2. Excelente experiencia para organizadores.
-3. Compatibilidad con distintos videojuegos (núcleo separado de las reglas).
-4. Arquitectura modular, mantenible y sin sobrearquitectura.
-5. Documentación completa para contribuir.
-6. Seguridad desde el diseño.
-7. Accesibilidad y diseño responsive.
-8. Escalabilidad razonable (8–128 participantes; preparado para 512+).
-9. Open source desde el día uno, con gobernanza transparente.
-10. Separación clara entre el núcleo de torneos y las reglas específicas de cada juego.
+1. Make installation and upgrades predictable.
+2. Optimize the organizer’s critical path.
+3. Keep game rules outside the tournament core.
+4. Prefer a modular architecture over premature distribution.
+5. Keep contributor documentation accurate and English-accessible.
+6. Design security and authorization into every boundary.
+7. Treat accessibility and responsive behavior as requirements.
+8. Optimize for 8–128 participants and avoid redesign before 512.
+9. Govern the open-source project transparently.
+10. Keep optional integrations from becoming core dependencies.
 
-## No es el objetivo (ahora)
+## Not a current goal
 
-- Ser una red social o plataforma de matchmaking generalista.
-- Gestionar pagos o premios (torneos gratuitos en el MVP).
-- Sustituir a Discord como canal de comunicación.
-- Proveer integraciones con APIs de juegos (fase 6).
-- Ser un servicio cloud desde el día uno (el autoalojamiento es el producto inicial).
+- General social networking or matchmaking.
+- Payments, paid registration, or prize distribution.
+- Replacing community chat platforms.
+- Mandatory external game APIs.
+- A managed cloud service as the primary product.
+- Complex competition formats before the elimination engine is mature.
 
-## Futuro
+## Future directions
 
-- Widgets embebibles y overlay OBS.
-- Round-robin, suizo, temporadas y rankings.
-- Aplicación de escritorio con Tauri.
-- Servicio cloud administrado con extras de infraestructura (dominios, storage, analítica), sin privatizar funciones core.
-- Integraciones externas con APIs de juegos.
+- Embeddable widgets and OBS overlays.
+- Round robin, Swiss, seasons, qualifiers, and rankings.
+- Interactive map and stage vetoes.
+- A Tauri desktop application.
+- Managed hosting with domains, storage, and analytics.
+- Authorized game API integrations.
 
-Ver [docs/ROADMAP.md](ROADMAP.md).
+See [ROADMAP.md](ROADMAP.md).
