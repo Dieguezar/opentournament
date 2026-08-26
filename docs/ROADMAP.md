@@ -1,7 +1,7 @@
 # Roadmap
 
-Estado: las fases 0–3 están completadas. La fase 4 conserva Discord como integración opcional y
-ya tiene SSE/PWA operativos. La fase 5 está en progreso; la fase 6 es expansión.
+Estado: las fases 0–3 y 5 están completadas. La fase 4 conserva Discord como integración opcional y
+ya tiene SSE/PWA operativos. OpenTournament `v1.0.0` está publicado; la fase 6 es expansión.
 
 ## Fase 0 — Definición (completada)
 
@@ -48,10 +48,10 @@ ya tiene SSE/PWA operativos. La fase 5 está en progreso; la fase 6 es expansió
 - **Pruebas:** integración del bot (mock gateway); SSE con reconexión; E2E de notificaciones.
 - **Criterio de finalización:** el bracket público se actualiza en vivo y la ausencia de credenciales de Discord no bloquea ningún flujo principal; la integración Discord habilitada se valida con mocks.
 
-## Fase 5 — Preparación open source (en progreso)
+## Fase 5 — Preparación open source (completada)
 
 - **Objetivo:** primer release y comunidad.
-- **Entregables:** documentación final verificada; instalación limpia validada en GitHub Actions; datos demo; plantillas y política de seguridad; baseline manual de OWASP ZAP validado sin advertencias bloqueantes; axe WCAG A/AA validado sobre los brackets públicos de LoL y Smash; pipeline semver de imágenes GHCR implementado (pendiente primer tag y visibilidad pública); release 1.0.0; observabilidad (Grafana opcional).
+- **Entregables:** documentación final verificada; instalación limpia validada en GitHub Actions; datos demo; plantillas y política de seguridad; baseline manual de OWASP ZAP validado sin advertencias bloqueantes; axe WCAG A/AA validado sobre los brackets públicos de LoL y Smash; imágenes públicas multi-arquitectura en GHCR con pipeline semver y atestaciones; release `v1.0.0` publicado; observabilidad con Grafana opcional.
 - **Dependencias:** Fases 1–4.
 - **Riesgos:** bugs de integración; documentación desactualizada.
 - **Pruebas:** smoke completo en entorno limpio; pentest básico; E2E completo en CI.
