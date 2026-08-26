@@ -47,10 +47,10 @@ describe('game adapters', () => {
       modes: ['Tournament Draft'],
       scoring: { type: 'series', drawAllowed: false, defaultSeries: [1, 3, 5] },
       terminology: {
-        participantSingular: 'equipo',
-        participantPlural: 'equipos',
-        teamSingular: 'equipo',
-        teamPlural: 'equipos',
+        participantSingular: 'team',
+        participantPlural: 'teams',
+        teamSingular: 'team',
+        teamPlural: 'teams',
       },
     });
   });
@@ -97,10 +97,10 @@ describe('game adapters', () => {
       playerId: { label: 'Tag' },
       scoring: { type: 'series', drawAllowed: false, defaultSeries: [3, 5] },
       terminology: {
-        participantSingular: 'competidor',
-        participantPlural: 'competidores',
-        teamSingular: 'jugador',
-        teamPlural: 'jugadores',
+        participantSingular: 'competitor',
+        participantPlural: 'competitors',
+        teamSingular: 'player',
+        teamPlural: 'players',
       },
     });
   });

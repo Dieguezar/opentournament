@@ -64,7 +64,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance): Promise<void
     const access = await canAccessEvidence(resultId, request.user!.id);
     if (!access.allowed) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Sin acceso a este reporte' },
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this report' },
       });
     }
 
@@ -126,7 +126,7 @@ export async function registerEvidenceRoutes(app: FastifyInstance): Promise<void
     const access = await canAccessEvidence(resultId, request.user?.id ?? '');
     if (!access.allowed) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Sin acceso a este reporte' },
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this report' },
       });
     }
     const rows = await db

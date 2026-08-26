@@ -384,7 +384,7 @@ export async function registerResultRoutes(app: FastifyInstance): Promise<void> 
         { matchId, tournamentId: outcome.context.tournament.id, winnerTeamId: body.winnerTeamId },
       );
       void sendDiscordWebhook(
-        `✅ Resultado confirmado en **${outcome.context.tournament.name}** (partida ${matchId.slice(0, 8)}).`,
+        `✅ Result confirmed in **${outcome.context.tournament.name}** (match ${matchId.slice(0, 8)}).`,
       );
       return reply.send({ submission: outcome.submission, confirmed: true });
     }

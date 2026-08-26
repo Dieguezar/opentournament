@@ -100,7 +100,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
         .where(and(eq(disputes.matchId, body.matchId), eq(disputes.status, 'open')))
         .limit(1);
       if (existing) {
-        throw new DomainError(409, 'DISPUTE_OPEN', 'Ya existe una disputa abierta');
+        throw new DomainError(409, 'DISPUTE_OPEN', 'This match already has an open dispute');
       }
 
       const [dispute] = await transaction
@@ -145,7 +145,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       'dispute.opened',
       { matchId: body.matchId, tournamentId: outcome.context.tournament.id },
     );
-    void sendDiscordWebhook(`⚠️ Nueva disputa abierta en **${outcome.context.tournament.name}**.`);
+    void sendDiscordWebhook(`⚠️ A new dispute was opened in **${outcome.context.tournament.name}**.`);
     return reply.status(201).send({ dispute: outcome.dispute });
   });
 
@@ -189,7 +189,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
     const { disputeId } = request.params as { disputeId: string };
     if (!(await canAccessDispute(disputeId, request.user!.id, request.participantAccess))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Sin acceso a esta disputa' },
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this dispute' },
       });
     }
     const [dispute] = await db.select().from(disputes).where(eq(disputes.id, disputeId)).limit(1);
@@ -244,7 +244,7 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
     const { disputeId } = request.params as { disputeId: string };
     if (!(await canAccessDispute(disputeId, request.user!.id, request.participantAccess))) {
       return reply.status(403).send({
-        error: { code: 'FORBIDDEN', message: 'Sin acceso a esta disputa' },
+        error: { code: 'FORBIDDEN', message: 'You do not have access to this dispute' },
       });
     }
     const body = disputeMessageSchema.parse(request.body);

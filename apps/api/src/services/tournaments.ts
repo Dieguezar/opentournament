@@ -266,7 +266,7 @@ async function persistEngineBracket(
 
 export async function loadEngineBracket(db: DbExecutor, stage: StageRow): Promise<EngineBracket> {
   const engine = (stage.config as { engineBracket?: EngineBracket }).engineBracket;
-  if (!engine) throw new DomainError(500, 'ENGINE_MISSING', 'Bracket del motor ausente');
+  if (!engine) throw new DomainError(500, 'ENGINE_MISSING', 'Tournament engine bracket is missing');
   return engine;
 }
 

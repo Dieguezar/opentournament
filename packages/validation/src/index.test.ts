@@ -424,7 +424,7 @@ describe('Smash Ultimate report game details', () => {
   });
 
   it.each(['number', 'homeStocks', 'awayStocks'] as const)(
-    'rechaza booleanos en el campo numérico %s',
+    'rejects booleans in the numeric %s field',
     (field) => {
       expect(
         reportResultSchema.safeParse({

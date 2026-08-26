@@ -47,7 +47,7 @@ export const apiEnvSchema = z.object({
     .default('postgres://opentournament:opentournament@localhost:5432/opentournament'),
   SESSION_SECRET: z
     .string()
-    .min(32, 'SESSION_SECRET debe tener al menos 32 caracteres')
+    .min(32, 'SESSION_SECRET must contain at least 32 characters')
     .default(devSecret),
   SESSION_TTL_HOURS: z.coerce.number().int().positive().default(168),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
@@ -81,7 +81,7 @@ export type ApiEnv = z.infer<typeof apiEnvSchema>;
 export function loadApiEnv(env: NodeJS.ProcessEnv = process.env): ApiEnv {
   const parsed = apiEnvSchema.parse(env);
   if (parsed.NODE_ENV === 'production' && insecureProductionSecrets.has(parsed.SESSION_SECRET)) {
-    throw new Error('En producción, SESSION_SECRET debe configurarse con un valor único.');
+    throw new Error('SESSION_SECRET must be configured with a unique value in production.');
   }
   return parsed;
 }

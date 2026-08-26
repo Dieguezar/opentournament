@@ -164,7 +164,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           if (blockedByTournament.size - 1 >= expectedCount) return;
           await new Promise((resolve) => setTimeout(resolve, 10));
         }
-        throw new Error(`No se bloquearon ${expectedCount} requests sobre el torneo`);
+        throw new Error(`${expectedCount} requests were not blocked on the tournament`);
       }
 
       async function lockTournament(tournamentId: string) {

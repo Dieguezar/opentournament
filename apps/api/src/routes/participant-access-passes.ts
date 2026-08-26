@@ -114,7 +114,7 @@ export async function registerParticipantAccessPassRoutes(app: FastifyInstance):
 
       const [actor] = await transaction
         .insert(users)
-        .values({ displayName: `${team.name} · participante` })
+        .values({ displayName: `${team.name} · participant` })
         .returning({ id: users.id });
       if (!actor) throw new Error('The participant identity could not be created');
 

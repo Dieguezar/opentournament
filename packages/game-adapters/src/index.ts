@@ -72,12 +72,12 @@ export interface GameAdapterConfig {
 export const genericAdapter: GameAdapterConfig = {
   key: 'generic',
   name: 'Generic',
-  platforms: ['cualquiera'],
+  platforms: ['any'],
   team: { minPlayers: 1, maxPlayers: 10, substitutes: 2 },
   playerId: {
-    label: 'Nombre de jugador',
+    label: 'Player name',
     format: /^.{2,64}$/,
-    hint: 'Cualquier identificador de jugador',
+    hint: 'Any player identifier',
   },
   scoring: { type: 'series', drawAllowed: true, defaultSeries: [1, 3, 5] },
   matchFormats: { series: true, timed: false },
@@ -90,7 +90,7 @@ export const valorantAdapter: GameAdapterConfig = {
   name: 'Valorant',
   platforms: ['pc'],
   team: { minPlayers: 5, maxPlayers: 5, substitutes: 1 },
-  playerId: { label: 'Riot ID', format: /^[^#]{3,16}#(?:[A-Z0-9]{3,5})$/i, hint: 'Nombre#TAG' },
+  playerId: { label: 'Riot ID', format: /^[^#]{3,16}#(?:[A-Z0-9]{3,5})$/i, hint: 'Name#TAG' },
   regions: ['latam', 'br', 'na', 'eu', 'apac'],
   maps: [
     'Abyss',
@@ -164,7 +164,7 @@ export const leagueOfLegendsAdapter: GameAdapterConfig = {
   playerId: {
     label: 'Riot ID',
     format: /^[^#]{3,16}#(?:[A-Z0-9]{3,5})$/i,
-    hint: 'Nombre#TAG',
+    hint: 'Name#TAG',
   },
   regions: [
     'lan',
@@ -190,10 +190,10 @@ export const leagueOfLegendsAdapter: GameAdapterConfig = {
   matchFormats: { series: true, timed: false },
   veto: { mode: 'external', mapsRequired: true },
   terminology: {
-    participantSingular: 'equipo',
-    participantPlural: 'equipos',
-    teamSingular: 'equipo',
-    teamPlural: 'equipos',
+    participantSingular: 'team',
+    participantPlural: 'teams',
+    teamSingular: 'team',
+    teamPlural: 'teams',
   },
   tournamentTemplate: leagueOfLegendsStandardTemplate,
   integrations: [],
@@ -248,7 +248,7 @@ export const smashUltimateAdapter: GameAdapterConfig = {
   playerId: {
     label: 'Tag',
     format: /^.{1,32}$/,
-    hint: 'Tag usado por el competidor en el bracket',
+    hint: 'Tag used by the competitor in the bracket',
   },
   modes: ['Singles'],
   maps: [...smashUltimateStandardRules.starters, ...smashUltimateStandardRules.counterpicks],
@@ -256,10 +256,10 @@ export const smashUltimateAdapter: GameAdapterConfig = {
   matchFormats: { series: true, timed: false },
   veto: { mode: 'external', mapsRequired: true },
   terminology: {
-    participantSingular: 'competidor',
-    participantPlural: 'competidores',
-    teamSingular: 'jugador',
-    teamPlural: 'jugadores',
+    participantSingular: 'competitor',
+    participantPlural: 'competitors',
+    teamSingular: 'player',
+    teamPlural: 'players',
   },
   tournamentTemplate: smashUltimateStandardTemplate,
   integrations: [],

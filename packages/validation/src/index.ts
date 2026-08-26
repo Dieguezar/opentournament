@@ -118,7 +118,7 @@ export const smashUltimateRulesSchema = z
     if (normalizedCounterpicks.some((stageName) => starterSet.has(stageName))) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Un escenario no puede ser inicial y counterpick a la vez',
+        message: 'A stage cannot be both a starter and a counterpick',
         path: ['counterpicks'],
       });
     }
@@ -447,7 +447,7 @@ export const reportResultSchema = z
     if (report.games && report.lolGames) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Un reporte no puede mezclar detalles de juegos distintos',
+        message: 'A report cannot mix details from different games',
         path: ['lolGames'],
       });
     }
@@ -473,12 +473,12 @@ export const addEvidenceSchema = z
     if (value.kind === 'screenshot' && (!value.key || !value.mimeType || !value.sizeBytes)) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Para capturas se requieren key, mimeType y sizeBytes',
+        message: 'Screenshot evidence requires key, mimeType, and sizeBytes',
         path: ['key'],
       });
     }
     if (value.kind === 'link' && !value.url) {
-      ctx.addIssue({ code: 'custom', message: 'Para enlaces se requiere url', path: ['url'] });
+      ctx.addIssue({ code: 'custom', message: 'Link evidence requires a URL', path: ['url'] });
     }
   });
 export type AddEvidenceInput = z.infer<typeof addEvidenceSchema>;

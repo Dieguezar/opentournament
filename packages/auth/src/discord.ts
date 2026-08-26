@@ -49,7 +49,10 @@ export async function exchangeDiscordCode(params: {
     body,
   });
   if (!res.ok) {
-    throw new DiscordOAuthError('No se pudo intercambiar el código de Discord.', 'discord_token_exchange_failed');
+    throw new DiscordOAuthError(
+      'The Discord authorization code could not be exchanged.',
+      'discord_token_exchange_failed',
+    );
   }
   const data = (await res.json()) as { access_token: string };
   return { accessToken: data.access_token };
@@ -60,7 +63,10 @@ export async function fetchDiscordUser(accessToken: string): Promise<DiscordUser
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!res.ok) {
-    throw new DiscordOAuthError('No se pudo obtener el usuario de Discord.', 'discord_user_fetch_failed');
+    throw new DiscordOAuthError(
+      'The Discord user could not be fetched.',
+      'discord_user_fetch_failed',
+    );
   }
   const data = (await res.json()) as {
     id: string;

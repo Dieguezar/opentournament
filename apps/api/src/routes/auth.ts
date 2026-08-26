@@ -55,7 +55,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         .limit(1);
       if (existing.length > 0) {
         return reply.status(409).send({
-          error: { code: 'EMAIL_TAKEN', message: 'Ya existe una cuenta con ese correo' },
+          error: { code: 'EMAIL_TAKEN', message: 'An account already uses this email address' },
         });
       }
 
@@ -127,7 +127,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         return reply.status(403).send({
           error: {
             code: 'EMAIL_NOT_VERIFIED',
-            message: 'Debes verificar tu correo antes de ingresar',
+            message: 'Verify your email before signing in',
           },
         });
       }

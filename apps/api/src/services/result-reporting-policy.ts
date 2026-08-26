@@ -67,7 +67,7 @@ export function authorizeResultReport(
       return {
         ok: false,
         code: 'WINNER_MUST_REPORT',
-        message: 'En este torneo el resultado debe reportarlo el ganador',
+        message: 'The tournament winner must report the result',
       };
     }
     return { ok: true, reporterTeamId, strategy: 'authoritative' };

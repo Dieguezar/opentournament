@@ -43,11 +43,11 @@ export async function registerSlashCommands(clientId: string, botToken: string):
     body: JSON.stringify([
       {
         name: 'checkin',
-        description: 'Hacer check-in de tu equipo en un torneo',
+        description: 'Check in your team for a tournament',
         options: [
           {
-            name: 'torneo',
-            description: 'ID del torneo',
+            name: 'tournament',
+            description: 'Tournament ID',
             type: 3,
             required: true,
           },
@@ -55,11 +55,11 @@ export async function registerSlashCommands(clientId: string, botToken: string):
       },
       {
         name: 'status',
-        description: 'Estado de tu equipo en un torneo',
+        description: "View your team's status in a tournament",
         options: [
           {
-            name: 'torneo',
-            description: 'ID del torneo',
+            name: 'tournament',
+            description: 'Tournament ID',
             type: 3,
             required: true,
           },
@@ -98,7 +98,7 @@ export async function handleInteraction(
   const tournamentId = data.options?.[0]?.value;
 
   if (typeof tournamentId !== 'string') {
-    return { type: 4, data: { content: 'Falta el ID del torneo' } };
+    return { type: 4, data: { content: 'Missing tournament ID' } };
   }
   if (!discordId) {
     return { type: 4, data: { content: 'Your Discord account could not be identified' } };
@@ -126,7 +126,7 @@ export async function handleInteraction(
 
   if (data.name === 'checkin') {
     const result = await performCheckIn(db, tournamentId, team.id, identity.userId);
-    const content = result.ok ? '✅ Check-in completado.' : `❌ ${result.message}`;
+    const content = result.ok ? '✅ Check-in completed.' : `❌ ${result.message}`;
     return { type: 4, data: { content } };
   }
 
@@ -168,16 +168,16 @@ export async function handleInteraction(
     return { type: 4, data: { content } };
   }
 
-  return { type: 4, data: { content: 'Comando desconocido.' } };
+  return { type: 4, data: { content: 'Unknown command.' } };
 }
 
 export function startDiscordBot(envConfig: ApiEnv): void {
   if (!envConfig.DISCORD_BOT_TOKEN || !envConfig.DISCORD_CLIENT_ID) {
-    console.log('[discord-bot] Sin token o client id; bot deshabilitado.');
+    console.log('[discord-bot] Missing token or client ID; bot disabled.');
     return;
   }
   void registerSlashCommands(envConfig.DISCORD_CLIENT_ID, envConfig.DISCORD_BOT_TOKEN)
-    .then(() => console.log('[discord-bot] Comandos slash registrados.'))
+    .then(() => console.log('[discord-bot] Slash commands registered.'))
     .catch((error) => console.error('[discord-bot] Failed to register commands:', error));
 }
 

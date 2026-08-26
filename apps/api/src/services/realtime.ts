@@ -26,7 +26,7 @@ export function publish(channel: string, event: RealtimeEvent): void {
     try {
       listener(event);
     } catch {
-      // Un listener con error no debe romper el resto.
+      // A failing listener must not break the remaining listeners.
     }
   }
 }

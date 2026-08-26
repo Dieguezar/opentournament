@@ -67,7 +67,7 @@ export function validateLeagueGameReport(
     return {
       ok: false,
       code: 'DUPLICATE_RIOT_MATCH_ID',
-      message: 'Cada Riot Match ID debe identificar una partida distinta',
+      message: 'Each Riot Match ID must identify a different game',
     };
   }
 
