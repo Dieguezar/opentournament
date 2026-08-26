@@ -18,16 +18,16 @@
     "@opentournament/shared-types": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
     "geist": "^1.7.2",
-    "next": "^16.3.0",
+    "next": "^16.3.2",
     "qrcode.react": "4.2.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.3.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4",
+    "@types/react-dom": "^19.2.5",
     "typescript": "~5.9.3",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
