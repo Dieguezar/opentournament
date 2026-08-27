@@ -2,125 +2,125 @@
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/brand/opentournament-symbol-on-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="apps/web/public/brand/opentournament-symbol-on-light.png">
-    <img src="apps/web/public/brand/opentournament-symbol-on-light.png" width="408" alt="OpenTournament symbol: an open circle and a tournament bracket">
+    <img src="apps/web/public/brand/opentournament-symbol-on-light.png" width="408" alt="Símbolo de OpenTournament: un círculo abierto y un bracket de torneo">
   </picture>
 </p>
 
 <h1 align="center">OpenTournament</h1>
 
 <p align="center">
-  <strong>Run the whole tournament. Keep control of the platform.</strong><br>
-  Open-source tournament operations for esports communities, venues, universities, streamers, and independent organizers.
+  <strong>Gestioná todo el torneo. Conservá el control de la plataforma.</strong><br>
+  Operación open source de torneos para comunidades de esports, locales, universidades, streamers y organizadores independientes.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Dieguezar/opentournament/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Dieguezar/opentournament/ci.yml?branch=main&style=flat-square&label=CI" alt="CI status"></a>
-  <a href="https://github.com/Dieguezar/opentournament/releases/latest"><img src="https://img.shields.io/github/v/release/Dieguezar/opentournament?style=flat-square&color=4C7DFF" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111318?style=flat-square" alt="MIT license"></a>
-  <a href="docs/SELF_HOSTING.md"><img src="https://img.shields.io/badge/self--hosted-Docker_Compose-255EDB?style=flat-square&logo=docker&logoColor=white" alt="Self-hosted with Docker Compose"></a>
+  <a href="https://github.com/Dieguezar/opentournament/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Dieguezar/opentournament/ci.yml?branch=main&style=flat-square&label=CI" alt="Estado de CI"></a>
+  <a href="https://github.com/Dieguezar/opentournament/releases/latest"><img src="https://img.shields.io/github/v/release/Dieguezar/opentournament?style=flat-square&color=4C7DFF" alt="Última versión"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-111318?style=flat-square" alt="Licencia MIT"></a>
+  <a href="docs/SELF_HOSTING.md"><img src="https://img.shields.io/badge/autoalojable-Docker_Compose-255EDB?style=flat-square&logo=docker&logoColor=white" alt="Autoalojable con Docker Compose"></a>
 </p>
 
 <p align="center">
-  <a href="#quick-start">Quick start</a> ·
-  <a href="docs/README.md">Documentation</a> ·
-  <a href="CONTRIBUTING.md">Contribute</a> ·
+  <a href="#inicio-rápido">Inicio rápido</a> ·
+  <a href="docs/README.md">Documentación</a> ·
+  <a href="CONTRIBUTING.md">Contribuir</a> ·
   <a href="docs/ROADMAP.md">Roadmap</a> ·
-  <a href="docs/BRAND_IDENTITY.md">Brand system</a>
+  <a href="docs/BRAND_IDENTITY.md">Sistema de marca</a>
 </p>
 
-<p align="center"><sub><strong>English</strong> · <a href="README.es.md">Español</a></sub></p>
+<p align="center"><sub><a href="README.md">English</a> · <strong>Español</strong></sub></p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme-tournament-dark.jpg">
   <source media="(prefers-color-scheme: light)" srcset=".github/assets/readme-tournament-light.jpg">
-  <img src=".github/assets/readme-tournament-light.jpg" width="100%" alt="OpenTournament public tournament page showing the Copa Nexo 2026 bracket">
+  <img src=".github/assets/readme-tournament-light.jpg" width="100%" alt="Página pública de OpenTournament con el bracket de Copa Nexo 2026">
 </picture>
 
-## Tournament operations, not just a bracket generator
+## Operación de torneos, no sólo un generador de brackets
 
-OpenTournament manages the full lifecycle in one self-hosted workspace: public rules, registration, teams, check-in, brackets, match coordination, reports, private evidence, disputes, arbitration, and final standings.
+OpenTournament gestiona el ciclo completo en un único espacio autoalojable: reglas públicas, inscripciones, equipos, check-in, brackets, coordinación de partidas, reportes, evidencias privadas, disputas, arbitraje y clasificación final.
 
-| Organize                                                | Compete                                                                 | Resolve                                                                  | Publish                                                                   |
-| ------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| Registration, waitlists, approvals, teams, and check-in | Single or double elimination, BO1/BO3/BO5, walkovers, and game adapters | Configurable reporting, private evidence, disputes, and recorded rulings | Public tournament pages, live SSE updates, standings, and installable PWA |
+| Organizá                                                         | Competí                                                                      | Resolvé                                                                      | Publicá                                                                       |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Inscripciones, lista de espera, aprobaciones, equipos y check-in | Eliminación sencilla o doble, BO1/BO3/BO5, walkovers y adaptadores por juego | Reportes configurables, evidencia privada, disputas y decisiones registradas | Páginas públicas, actualizaciones SSE en vivo, clasificación y PWA instalable |
 
-## Quick start
+## Inicio rápido
 
-Get a complete demo running locally:
+Levantá una demo completa en local:
 
 ```bash
 cp .env.example .env
-# Set SEED_DEMO_DATA=true in .env
+# Configurá SEED_DEMO_DATA=true en .env
 pnpm install
 docker compose up -d postgres minio
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The API applies migrations and creates the demo automatically when `SEED_DEMO_DATA=true`.
+Abrí [http://localhost:3000](http://localhost:3000). La API aplica las migraciones y crea la demo automáticamente cuando `SEED_DEMO_DATA=true`.
 
 <details>
-<summary><strong>Demo account and public tournaments</strong></summary>
+<summary><strong>Cuenta demo y torneos públicos</strong></summary>
 
-- Email: `admin@opentournament.local`
-- Password: `demo-password-123`
+- Correo: `admin@opentournament.local`
+- Contraseña: `demo-password-123`
 - Valorant: [Copa Nexo 2026](http://localhost:3000/t/copa-nexo-demo)
 - League of Legends: [Liga Nexo LoL](http://localhost:3000/t/liga-nexo-lol)
 - Super Smash Bros. Ultimate: [Smash Random Showdown](http://localhost:3000/t/smash-random-showdown)
 
-The idempotent seed includes active and completed tournaments, registered teams, check-ins, match results, per-game details, and a resolved dispute. Run it again at any time with `pnpm db:seed`.
+La semilla idempotente incluye torneos activos y finalizados, equipos inscritos, check-ins, resultados, detalle por partida y una disputa resuelta. Podés ejecutarla nuevamente con `pnpm db:seed`.
 </details>
 
-For production, follow the [self-hosting guide](docs/SELF_HOSTING.md). Docker requires a unique `SESSION_SECRET`, does not seed demo data by default, and waits for service health checks before starting dependents.
+Para producción, seguí la [guía de autoalojamiento](docs/SELF_HOSTING.md). Docker exige un `SESSION_SECRET` único, no carga datos demo por defecto y espera los chequeos de salud antes de iniciar cada servicio dependiente.
 
-## What is included
+## Qué incluye
 
-- **Tournament engine:** single and double elimination for 8–128 participants, designed to scale beyond 512 without an architectural rewrite.
-- **Competition formats:** BO1, BO3, and BO5 series, game-specific draws, configurable check-in windows, and automatic walkovers.
-- **Identity and access:** public viewing without an account, revocable participant passes, and optional permanent accounts through email or Discord.
-- **Game support:** generic, Valorant, CS2, League of Legends, and Super Smash Bros. Ultimate adapters. LoL and Smash include versioned competitive templates and guided reporting.
-- **Operational trust:** bilateral, winner-only, or staff-only reporting; private-by-default evidence; referee disputes; audit trail.
-- **Reach:** Spanish and English interfaces, live public pages through SSE, an installable PWA, and optional Discord integration.
+- **Motor de torneos:** eliminación sencilla y doble para 8–128 participantes, diseñado para escalar a más de 512 sin reescribir la arquitectura.
+- **Formatos competitivos:** series BO1, BO3 y BO5, empates según el juego, ventanas de check-in configurables y walkovers automáticos.
+- **Identidad y acceso:** lectura pública sin cuenta, pases revocables para participantes y cuentas permanentes opcionales con correo o Discord.
+- **Juegos:** adaptadores genérico, Valorant, CS2, League of Legends y Super Smash Bros. Ultimate. LoL y Smash incluyen plantillas competitivas versionadas y reportes guiados.
+- **Confianza operativa:** reporte bilateral, sólo por el ganador o exclusivo del staff; evidencia privada por defecto; disputas; auditoría.
+- **Alcance:** interfaz en español e inglés, páginas públicas en vivo mediante SSE, PWA instalable e integración opcional con Discord.
 
-## Architecture
+## Arquitectura
 
 ```mermaid
 flowchart LR
-    WEB["Next.js PWA<br/>Spanish + English"] <-->|"REST + SSE"| API["Fastify API"]
+    WEB["PWA en Next.js<br/>Español + English"] <-->|"REST + SSE"| API["API Fastify"]
     API --> DB[(PostgreSQL)]
-    API --> STORAGE[(S3-compatible storage)]
-    DISCORD["Optional Discord bot"] --> API
+    API --> STORAGE[(Almacenamiento compatible con S3)]
+    DISCORD["Bot de Discord opcional"] --> API
 ```
 
-| Layer     | Technology                            |
-| --------- | ------------------------------------- |
-| Frontend  | Next.js + TypeScript                  |
-| Backend   | Fastify + TypeScript                  |
-| Data      | PostgreSQL + Drizzle ORM              |
-| Storage   | MinIO locally; R2/S3 in production    |
-| Real-time | Server-Sent Events                    |
-| Tooling   | pnpm + Turborepo, Vitest + Playwright |
+| Capa           | Tecnología                            |
+| -------------- | ------------------------------------- |
+| Frontend       | Next.js + TypeScript                  |
+| Backend        | Fastify + TypeScript                  |
+| Datos          | PostgreSQL + Drizzle ORM              |
+| Almacenamiento | MinIO en local; R2/S3 en producción   |
+| Tiempo real    | Server-Sent Events                    |
+| Herramientas   | pnpm + Turborepo, Vitest + Playwright |
 
-## Project status
+## Estado del proyecto
 
-`v1.0.0` is released. The technical foundation, tournament management, results, arbitration, SSE/PWA, and open-source release workflow are operational. Discord remains optional and expansion work continues.
+`v1.0.0` está publicada. La base técnica, la gestión de torneos, resultados, arbitraje, SSE/PWA y el flujo de publicación open source están operativos. Discord permanece opcional y la expansión continúa.
 
-Track the [latest release](https://github.com/Dieguezar/opentournament/releases/latest), [roadmap](docs/ROADMAP.md), [release checklist](docs/RELEASE_CHECKLIST.md), and [decision log](docs/DECISIONS.md).
+Consultá la [última versión](https://github.com/Dieguezar/opentournament/releases/latest), el [roadmap](docs/ROADMAP.md), el [checklist de release](docs/RELEASE_CHECKLIST.md) y el [registro de decisiones](docs/DECISIONS.md).
 
-## Documentation and contributing
+## Documentación y contribuciones
 
-Contributor-facing documentation is canonical in English. Start with the [documentation index](docs/README.md), then use the path that matches your goal:
+La documentación canónica para contribuidores está en inglés. Empezá por el [índice de documentación](docs/README.md) y seguí la ruta que corresponda a tu objetivo:
 
-| I want to…                        | Start here                                                                                                   |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Understand the product            | [Product vision](docs/PRODUCT_VISION.md) and [MVP scope](docs/MVP_SCOPE.md)                                  |
-| Understand the system             | [Architecture](docs/ARCHITECTURE.md), [data model](docs/DATA_MODEL.md), and [API design](docs/API_DESIGN.md) |
-| Add a game                        | [Game adapter guide](docs/GAME_ADAPTERS.md)                                                                  |
-| Run my own instance               | [Self-hosting guide](docs/SELF_HOSTING.md)                                                                   |
-| Contribute code or documentation  | [Contributing guide](CONTRIBUTING.md)                                                                        |
-| Use the visual identity correctly | [Brand identity](docs/BRAND_IDENTITY.md)                                                                     |
+| Quiero…                                | Empezá acá                                                                                                        |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Entender el producto                   | [Visión de producto](docs/PRODUCT_VISION.md) y [alcance del MVP](docs/MVP_SCOPE.md)                               |
+| Entender el sistema                    | [Arquitectura](docs/ARCHITECTURE.md), [modelo de datos](docs/DATA_MODEL.md) y [diseño de API](docs/API_DESIGN.md) |
+| Agregar un juego                       | [Guía de adaptadores](docs/GAME_ADAPTERS.md)                                                                      |
+| Ejecutar mi propia instancia           | [Guía de autoalojamiento](docs/SELF_HOSTING.md)                                                                   |
+| Contribuir código o documentación      | [Guía de contribución](CONTRIBUTING.md)                                                                           |
+| Usar correctamente la identidad visual | [Identidad de marca](docs/BRAND_IDENTITY.md)                                                                      |
 
-Please read the [Code of Conduct](CODE_OF_CONDUCT.md) and [Security Policy](SECURITY.md) before contributing or reporting a vulnerability.
+Leé el [Código de Conducta](CODE_OF_CONDUCT.md) y la [Política de Seguridad](SECURITY.md) antes de contribuir o reportar una vulnerabilidad.
 
-## License
+## Licencia
 
-OpenTournament is released under the [MIT License](LICENSE).
+OpenTournament se publica bajo la [Licencia MIT](LICENSE).
