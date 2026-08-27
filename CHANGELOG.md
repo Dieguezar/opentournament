@@ -6,8 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-27
+
 ### Added
 
+- A complete OpenTournament visual identity with official responsive marks, PWA icons, product tokens, and an editable OpenPencil design system.
+- A bilingual repository presentation with theme-aware product screenshots and clearer contributor paths.
 - Spanish and English application interfaces with persisted language selection.
 - English canonical contributor documentation and a documentation index.
 - Browser coverage for persisted English authentication, organizer, public tournament, and participant navigation.
@@ -28,6 +32,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ### Fixed
 
+- Light-theme winner labels now meet WCAG 2 AA contrast requirements.
+- The seeded-demo E2E flow now selects Copa Nexo explicitly instead of depending on tournament ordering.
 - Demo seeding now serializes queries within a transaction, avoiding the concurrent `client.query()` behavior deprecated for `pg@9`.
 
 ## [1.0.0] - 2026-08-26

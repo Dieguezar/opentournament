@@ -30,17 +30,17 @@ docker run --rm alpine:3.22 sh -c "head -c 32 /dev/urandom | od -An -tx1 | tr -d
 
 ### Use release images
 
-Pin both the repository checkout and images to the same exact release. For `v1.0.0`:
+Pin both the repository checkout and images to the same exact release. For `v1.1.0`:
 
 ```bash
-git checkout v1.0.0
+git checkout v1.1.0
 ```
 
 Set:
 
 ```dotenv
-API_IMAGE=ghcr.io/dieguezar/opentournament-api:1.0.0
-WEB_IMAGE=ghcr.io/dieguezar/opentournament-web:1.0.0
+API_IMAGE=ghcr.io/dieguezar/opentournament-api:1.1.0
+WEB_IMAGE=ghcr.io/dieguezar/opentournament-web:1.1.0
 IMAGE_PULL_POLICY=always
 ```
 

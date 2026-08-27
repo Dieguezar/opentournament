@@ -336,9 +336,9 @@ test('runs an isolated OWASP ZAP baseline without creating GitHub issues', () =>
   assert.match(zapRules, /^10055\tINFO\t/mu);
 });
 
-test('keeps every workspace and the OpenAPI document on release version 1.0.0', () => {
+test('keeps every workspace and the OpenAPI document on release version 1.1.0', () => {
   for (const { path, manifest } of workspacePackages) {
-    assert.equal(manifest.version, '1.0.0', `${path} must declare the release version`);
+    assert.equal(manifest.version, '1.1.0', `${path} must declare the release version`);
   }
   assert.match(apiCore, /import apiPackage from '..\/..\/package\.json'/u);
   assert.match(apiCore, /version: apiPackage\.version/u);

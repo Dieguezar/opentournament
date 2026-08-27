@@ -1,6 +1,6 @@
 # Roadmap
 
-OpenTournament v1.0.0 is published. Phases 0–3 and the original release-readiness work are complete. Live SSE and PWA support are operational; Discord remains optional and may receive further hardening. Roadmap items are direction, not a promise of delivery.
+OpenTournament v1.1.0 is published. Phases 0–3 and the original release-readiness work are complete. The bilingual product experience and official visual identity are operational; Discord remains optional and may receive further hardening. Roadmap items are direction, not a promise of delivery.
 
 ## Completed foundation
 

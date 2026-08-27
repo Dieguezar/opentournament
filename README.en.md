@@ -102,7 +102,7 @@ flowchart LR
 
 ## Project status
 
-`v1.0.0` is released. The technical foundation, tournament management, results, arbitration, SSE/PWA, and open-source release workflow are operational. Discord remains optional and expansion work continues.
+`v1.1.0` is released. The technical foundation, tournament management, results, arbitration, SSE/PWA, bilingual experience, and official visual identity are operational. Discord remains optional and expansion work continues.
 
 Track the [latest release](https://github.com/Dieguezar/opentournament/releases/latest), [roadmap](docs/ROADMAP.md), [release checklist](docs/RELEASE_CHECKLIST.md), and [decision log](docs/DECISIONS.md).
 
