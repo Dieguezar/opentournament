@@ -25,8 +25,14 @@ export const registerSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
   displayName: displayNameSchema,
+  locale: localeSchema.default('es'),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
+
+export const resendVerificationSchema = z.object({
+  email: emailSchema,
+});
+export type ResendVerificationInput = z.infer<typeof resendVerificationSchema>;
 
 export const loginSchema = z.object({
   email: emailSchema,

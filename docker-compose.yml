@@ -109,6 +109,20 @@ services:
       timeout: 5s
       retries: 12
 
+  mailpit:
+    profiles: ['mail']
+    image: axllent/mailpit:v1.30
+    ports:
+      - '127.0.0.1:${MAILPIT_UI_HOST_PORT:-8025}:8025'
+
+  cloudflared:
+    profiles: ['share']
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://web:3000
+    depends_on:
+      web:
+        condition: service_healthy
+
 volumes:
   pgdata:
   miniodata:

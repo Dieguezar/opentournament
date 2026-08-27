@@ -191,6 +191,21 @@ A “delivered” row does not guarantee every original product wish is complete
   - Verify on a clean Windows host with Docker Desktop.
   - Keep POSIX commands as the primary CI/self-hosting contract.
 
+## Product access model
+
+### ACCESS-01 — Separate participant management, visibility, and installation reach
+
+- **Priority:** P1
+- **Related:** PRODUCT_VISION, USER_FLOWS, AUTHORIZATION_MODEL
+- **Problem:** manual participants, invitations, open registration, bracket visibility, and internet reach are distinct decisions but can appear as one large “public/private tournament” choice.
+- **Acceptance criteria:**
+  - Document the current support for manual participants, open registration, unlisted/public visibility, and private participant passes.
+  - Propose the smallest missing capability for invitation-only registration without replacing existing passes.
+  - Treat `private` visibility as a separately authorized product change; do not infer it from a local-only installation.
+  - Keep installation reach (`host`, trusted event network, temporary tunnel, permanent internet deployment) in operations documentation rather than tournament state.
+  - Add migration and authorization analysis before changing persisted visibility or registration modes.
+- **Out of scope:** a combined access-control redesign or mandatory public infrastructure.
+
 ## Story template
 
 ```markdown

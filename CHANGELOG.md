@@ -12,6 +12,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - English canonical contributor documentation and a documentation index.
 - Browser coverage for persisted English authentication, organizer, public tournament, and participant navigation.
 - A source-language guard for non-localized runtime code and canonical game-adapter metadata.
+- Explicit SMTP/console verification delivery, secure verification resend, and bilingual guidance.
+- Optional Mailpit and Cloudflare Quick Tunnel Compose profiles plus a guarded `pnpm share` command.
 
 ### Changed
 
@@ -22,6 +24,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 - Contributor-facing test titles and operational messages are now written in English.
 - Contributor, security, issue, and pull request guidance is now written in English.
 - Data-model, engine, backlog, and architecture documentation now distinguish implemented behavior from future design.
+- Self-hosting documentation now separates host-only, event-network, temporary-tunnel, and permanent-public reach.
 
 ### Fixed
 

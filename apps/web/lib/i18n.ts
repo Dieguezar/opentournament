@@ -634,10 +634,20 @@ const es = {
     verifyingPass: 'Estamos verificando el enlace y limitando la sesión a tu participante.',
     backHome: 'Volver al inicio',
     checkEmail: 'Revisá tu correo',
+    consoleVerificationTitle: 'Verificación pendiente',
     verificationSent:
       'Te enviamos un enlace de verificación{email}. Debes abrirlo antes de iniciar sesión.',
     verificationEmailSuffix: ' a {email}',
     verificationExpiry: 'El enlace vence en 24 horas.',
+    consoleVerificationInstructions:
+      'Este servidor no tiene SMTP configurado. El enlace se escribió en los logs del servidor. Pedile al administrador que ejecute docker compose logs api.',
+    verificationResend: 'Reenviar verificación',
+    verificationResending: 'Reenviando…',
+    verificationResendSmtpSuccess:
+      'Si la cuenta sigue pendiente, enviamos un nuevo enlace por correo.',
+    verificationResendConsoleSuccess:
+      'Si la cuenta sigue pendiente, escribimos un nuevo enlace en los logs del servidor.',
+    verificationResendError: 'No pudimos solicitar otro enlace. Intentá de nuevo.',
     goToSignIn: 'Ir a iniciar sesión',
     createOrganizationTitle: 'Crear tu organización',
     createOrganizationIntro:
@@ -1331,9 +1341,18 @@ const en: Dictionary = {
     verifyingPass: 'We are verifying the link and limiting the session to your participant.',
     backHome: 'Back to home',
     checkEmail: 'Check your email',
+    consoleVerificationTitle: 'Verification pending',
     verificationSent: 'We sent you a verification link{email}. Open it before signing in.',
     verificationEmailSuffix: ' at {email}',
     verificationExpiry: 'The link expires in 24 hours.',
+    consoleVerificationInstructions:
+      'This server does not have SMTP configured. The link was written to the server logs. Ask the administrator to run docker compose logs api.',
+    verificationResend: 'Resend verification',
+    verificationResending: 'Resending…',
+    verificationResendSmtpSuccess: 'If the account is still pending, we sent a new link by email.',
+    verificationResendConsoleSuccess:
+      'If the account is still pending, we wrote a new link to the server logs.',
+    verificationResendError: 'We could not request another link. Try again.',
     goToSignIn: 'Go to sign in',
     createOrganizationTitle: 'Create your organization',
     createOrganizationIntro:

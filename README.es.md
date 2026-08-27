@@ -59,6 +59,8 @@ La API aplica las migraciones y crea la demo automáticamente al arrancar con `S
 
 Para autoalojar una instancia, seguí la guía de [self-hosting](docs/SELF_HOSTING.md). Docker exige un `SESSION_SECRET` único, no carga datos demo por defecto y espera a que cada servicio esté saludable antes de iniciar el siguiente.
 
+Para una prueba temporal y deliberada, `pnpm share` abre un Cloudflare Quick Tunnel sólo después de comprobar que el contenedor web está saludable. La URL generada es pública, temporal, no tiene disponibilidad garantizada y no soporta SSE. Leé [Compartir temporalmente un torneo](docs/SELF_HOSTING.md#share-a-tournament-temporarily-compartir-temporalmente-un-torneo) antes de usarlo.
+
 ## Stack previsto
 
 | Capa           | Tecnología                                               |

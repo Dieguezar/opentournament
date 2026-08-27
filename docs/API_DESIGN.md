@@ -26,19 +26,23 @@ The error `code`, not the human-readable `message`, is the stable client contrac
 
 ## Authentication
 
-| Method | Route                    | Purpose                                          |
-| ------ | ------------------------ | ------------------------------------------------ |
-| POST   | `/auth/register`         | Register with email and password                 |
-| POST   | `/auth/login`            | Sign in with email                               |
-| POST   | `/auth/participant-pass` | Exchange a private pass for a restricted session |
-| POST   | `/auth/logout`           | End the current session                          |
-| POST   | `/auth/forgot-password`  | Request password recovery                        |
-| POST   | `/auth/reset-password`   | Reset a password with a token                    |
-| GET    | `/auth/discord`          | Start optional Discord OAuth                     |
-| GET    | `/auth/discord/callback` | Complete Discord OAuth                           |
-| GET    | `/auth/me`               | Read the current profile and session             |
-| PATCH  | `/auth/me`               | Update the profile                               |
-| GET    | `/auth/me/notifications` | List notifications                               |
+| Method | Route                       | Purpose                                          |
+| ------ | --------------------------- | ------------------------------------------------ |
+| POST   | `/auth/register`            | Register with email and password                 |
+| POST   | `/auth/resend-verification` | Request a replacement verification link          |
+| GET    | `/auth/verify`              | Consume a one-time verification token            |
+| POST   | `/auth/login`               | Sign in with email                               |
+| POST   | `/auth/participant-pass`    | Exchange a private pass for a restricted session |
+| POST   | `/auth/logout`              | End the current session                          |
+| POST   | `/auth/forgot-password`     | Request password recovery                        |
+| POST   | `/auth/reset-password`      | Reset a password with a token                    |
+| GET    | `/auth/discord`             | Start optional Discord OAuth                     |
+| GET    | `/auth/discord/callback`    | Complete Discord OAuth                           |
+| GET    | `/auth/me`                  | Read the current profile and session             |
+| PATCH  | `/auth/me`                  | Update the profile                               |
+| GET    | `/auth/me/notifications`    | List notifications                               |
+
+Registration reports `verificationDelivery: "smtp" | "console" | null` without exposing the token. Resend uses a neutral response for known, unknown, verified, and deleted accounts; it is rate-limited, invalidates older unused tokens after issuing the replacement, keeps a 24-hour expiry, and appends an audit event only for an actual pending account.
 
 ## Organizations
 

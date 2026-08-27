@@ -6,7 +6,7 @@ A feature is inside the MVP only when this document or an accepted ADR includes 
 
 ### Identity and organizations
 
-- Email/password accounts with verification when SMTP is configured.
+- Email/password accounts with verification enforced by default through SMTP or private operator logs.
 - Revocable private participant passes that do not require a permanent account.
 - Optional Discord OAuth per instance.
 - Owner, admin, and member organization roles.

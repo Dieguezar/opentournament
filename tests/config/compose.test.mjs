@@ -38,6 +38,10 @@ const apiCore = await readFile(
   new URL('../../apps/api/src/plugins/core.ts', import.meta.url),
   'utf8',
 );
+const shareScript = await readFile(
+  new URL('../../scripts/share.mjs', import.meta.url),
+  'utf8',
+).catch(() => '');
 const workspacePackagePaths = [
   '../../package.json',
   '../../apps/api/package.json',
@@ -159,6 +163,23 @@ test('forwards every documented API runtime setting', () => {
     assert.match(compose, new RegExp(`${variable}: \\$\\{${variable}`));
     assert.ok(variable in envExampleEntries, `${variable} must be documented in .env.example`);
   }
+});
+
+test('keeps Mailpit and public sharing explicit and optional', () => {
+  const rootPackage = workspacePackages.find(({ path }) => path === '../../package.json')?.manifest;
+
+  assert.match(compose, /mailpit:\s+[\s\S]*profiles:\s*\[['"]mail['"]\]/u);
+  assert.match(compose, /image: axllent\/mailpit:v\d/u);
+  assert.match(compose, /127\.0\.0\.1:\$\{MAILPIT_UI_HOST_PORT:-8025\}:8025/u);
+  assert.equal(envExampleEntries.SMTP_HOST, '');
+  assert.equal(envExampleEntries.MAILPIT_UI_HOST_PORT, '8025');
+
+  assert.match(compose, /cloudflared:\s+[\s\S]*profiles:\s*\[['"]share['"]\]/u);
+  assert.match(compose, /tunnel --no-autoupdate --url http:\/\/web:3000/u);
+  assert.equal(rootPackage?.scripts?.share, 'node scripts/share.mjs');
+  assert.match(shareScript, /docker compose/u);
+  assert.match(shareScript, /trycloudflare/u);
+  assert.match(shareScript, /Ctrl\+C/u);
 });
 
 test('probes Node services through the IPv4 loopback inside Alpine containers', () => {

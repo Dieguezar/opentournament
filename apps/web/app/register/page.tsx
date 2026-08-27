@@ -7,7 +7,7 @@ import { useI18n } from '@/components/i18n-provider';
 import { apiClient, ApiClientError } from '@/lib/api';
 
 export default function RegisterPage() {
-  const { dictionary } = useI18n();
+  const { dictionary, locale } = useI18n();
   const router = useRouter();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -20,12 +20,18 @@ export default function RegisterPage() {
     setSubmitting(true);
     setError(null);
     try {
-      const result = await apiClient<{ requiresEmailVerification: boolean }>('/auth/register', {
+      const result = await apiClient<{
+        requiresEmailVerification: boolean;
+        verificationDelivery: 'smtp' | 'console' | null;
+      }>('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ displayName, email, password }),
+        body: JSON.stringify({ displayName, email, password, locale }),
       });
       if (result.requiresEmailVerification) {
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+        const verificationDelivery = result.verificationDelivery ?? 'console';
+        router.push(
+          `/verify-email?email=${encodeURIComponent(email)}&delivery=${verificationDelivery}`,
+        );
         return;
       }
       router.push('/dashboard');

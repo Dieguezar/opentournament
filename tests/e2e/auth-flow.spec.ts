@@ -62,7 +62,9 @@ test('seeded demo → tournament → bracket → resolved dispute', async ({ pag
   await expect(page.getByText('La evidencia del servidor confirma')).toBeVisible();
 });
 
-test('English selection persists across authentication and public tournaments', async ({ page }) => {
+test('English selection persists across authentication and public tournaments', async ({
+  page,
+}) => {
   await page.goto('/login');
   await page.getByLabel('Idioma').selectOption('en');
 
@@ -86,9 +88,31 @@ test('English selection persists across authentication and public tournaments', 
 
   await page.goto('/t/smash-random-showdown');
   await expect(page.getByRole('heading', { name: 'Registered players (8)' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Competitive Smash Ultimate rules' })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Competitive Smash Ultimate rules' }),
+  ).toBeVisible();
   await expect(page.getByTestId('smash-character')).toHaveCount(30);
   await expect(page.getByLabel('Language')).toHaveValue('en');
+});
+
+test('verification guidance distinguishes console and SMTP delivery in both languages', async ({
+  page,
+}) => {
+  const email = `verification-${Date.now()}@example.com`;
+
+  await page.goto(`/verify-email?email=${encodeURIComponent(email)}&delivery=console`);
+  await expect(page.getByRole('heading', { name: 'Verificación pendiente' })).toBeVisible();
+  await expect(page.getByText('docker compose logs api', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Reenviar verificación' }).click();
+  await expect(page.getByRole('status')).toContainText('logs del servidor');
+
+  await page.getByLabel('Idioma').selectOption('en');
+  await expect(page.getByRole('heading', { name: 'Verification pending' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Resend verification' })).toBeVisible();
+
+  await page.goto(`/verify-email?email=${encodeURIComponent(email)}&delivery=smtp`);
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible();
+  await expect(page.getByText('We sent you a verification link', { exact: false })).toBeVisible();
 });
 
 test('the authenticated home offers useful actions and its menu reflows on mobile', async ({

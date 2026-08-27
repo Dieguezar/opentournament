@@ -1548,7 +1548,12 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         const registerRes = await app.inject({
           method: 'POST',
           url: '/api/v1/auth/register',
-          payload: { displayName: 'Verify User', email, password: 'password-123' },
+          payload: {
+            displayName: 'Verify User',
+            email,
+            password: 'password-123',
+            locale: 'en',
+          },
           headers,
         });
         expect(registerRes.statusCode).toBe(201);
@@ -1616,6 +1621,128 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
       } finally {
         mailLog.mockRestore();
         env.ALLOW_UNVERIFIED_EMAILS = true;
+        await app.close();
+      }
+    },
+  );
+
+  it(
+    'resends verification without account enumeration and invalidates previous tokens',
+    { timeout: INTEGRATION_TEST_TIMEOUT_MS },
+    async () => {
+      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+      const { auditLogs, emailVerificationTokens, runMigrations, users } =
+        await import('@opentournament/database');
+      const { env } = await import('./config.js');
+      const { db } = await import('./db.js');
+      const { initServer } = await import('./app.js');
+
+      await runMigrations(process.env.TEST_DATABASE_URL!);
+      const previousAllowUnverified = env.ALLOW_UNVERIFIED_EMAILS;
+      const previousSmtpHost = env.SMTP_HOST;
+      env.ALLOW_UNVERIFIED_EMAILS = false;
+      env.SMTP_HOST = undefined;
+      const app = await initServer(false);
+      const mailLog = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+      try {
+        const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+        const csrfCookie = csrfRes.cookies.find((cookie) => cookie.name === 'csrf')!;
+        const csrfToken = csrfRes.json<{ token: string }>().token;
+        const headers = {
+          'x-csrf-token': csrfToken,
+          cookie: `csrf=${csrfCookie.value}`,
+        };
+        const email = `resend-${Date.now()}@example.com`;
+
+        const registerRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register',
+          payload: { displayName: 'Resend User', email, password: 'password-123', locale: 'es' },
+          headers,
+        });
+        expect(registerRes.statusCode).toBe(201);
+        expect(registerRes.json()).toMatchObject({
+          requiresEmailVerification: true,
+          verificationDelivery: 'console',
+        });
+
+        const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email));
+        const [initialToken] = await db
+          .select()
+          .from(emailVerificationTokens)
+          .where(eq(emailVerificationTokens.userId, user!.id));
+        expect(initialToken?.usedAt).toBeNull();
+
+        const unknownRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/resend-verification',
+          payload: { email: `unknown-${Date.now()}@example.com` },
+          headers,
+        });
+        expect(unknownRes.statusCode).toBe(200);
+        expect(unknownRes.json()).toEqual({ ok: true, verificationDelivery: 'console' });
+
+        const beforeResend = Date.now();
+        const resendRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/resend-verification',
+          payload: { email },
+          headers,
+        });
+        expect(resendRes.statusCode).toBe(200);
+        expect(resendRes.json()).toEqual({ ok: true, verificationDelivery: 'console' });
+
+        const tokens = await db
+          .select()
+          .from(emailVerificationTokens)
+          .where(eq(emailVerificationTokens.userId, user!.id));
+        expect(tokens).toHaveLength(2);
+        expect(tokens.find((token) => token.id === initialToken!.id)?.usedAt).not.toBeNull();
+        const replacementToken = tokens.find((token) => token.id !== initialToken!.id)!;
+        expect(replacementToken.usedAt).toBeNull();
+        expect(replacementToken.expiresAt.getTime()).toBeGreaterThanOrEqual(
+          beforeResend + 24 * 60 * 60 * 1000,
+        );
+        expect(replacementToken.expiresAt.getTime()).toBeLessThanOrEqual(
+          Date.now() + 24 * 60 * 60 * 1000,
+        );
+
+        const resendAudits = await db
+          .select()
+          .from(auditLogs)
+          .where(eq(auditLogs.action, 'auth.verification_resent'));
+        expect(resendAudits).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              actorId: user!.id,
+              resourceType: 'user',
+              resourceId: user!.id,
+              after: { delivery: 'console' },
+            }),
+          ]),
+        );
+
+        for (let requestNumber = 0; requestNumber < 3; requestNumber += 1) {
+          const withinLimit = await app.inject({
+            method: 'POST',
+            url: '/api/v1/auth/resend-verification',
+            payload: { email: `rate-limit-${requestNumber}@example.com` },
+            headers,
+          });
+          expect(withinLimit.statusCode).toBe(200);
+        }
+        const rateLimited = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/resend-verification',
+          payload: { email: 'rate-limit-blocked@example.com' },
+          headers,
+        });
+        expect(rateLimited.statusCode).toBe(429);
+      } finally {
+        mailLog.mockRestore();
+        env.ALLOW_UNVERIFIED_EMAILS = previousAllowUnverified;
+        env.SMTP_HOST = previousSmtpHost;
         await app.close();
       }
     },

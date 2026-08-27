@@ -59,6 +59,8 @@ With `SEED_DEMO_DATA=true`, the API applies migrations and creates the demo auto
 
 For a production instance, follow the [self-hosting guide](docs/SELF_HOSTING.md). Docker requires a unique `SESSION_SECRET`, does not load demo data by default, and waits for each service to become healthy before starting its dependents.
 
+For a deliberate temporary test, `pnpm share` opens a Cloudflare Quick Tunnel only after confirming that the web container is healthy. The generated URL is public, temporary, has no uptime guarantee, and does not support SSE. Read [Share a tournament temporarily](docs/SELF_HOSTING.md#share-a-tournament-temporarily-compartir-temporalmente-un-torneo) before using it.
+
 ## Technology
 
 | Layer             | Technology                                                         |

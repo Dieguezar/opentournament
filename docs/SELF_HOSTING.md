@@ -82,8 +82,38 @@ The other overrides are `MINIO_API_HOST_PORT`, `MINIO_CONSOLE_HOST_PORT`, `API_H
 
 - With SMTP, OpenTournament sends verification and password-recovery email.
 - Compose forwards every `SMTP_*` variable to the API.
-- Without SMTP, messages are logged.
+- Without SMTP, messages are logged and the verification screen tells the user to ask the administrator to run `docker compose logs api`.
+- Registration and verification-resend responses report `smtp` or `console` delivery without exposing tokens.
 - A private instance may explicitly use `ALLOW_UNVERIFIED_EMAILS=true`; production should keep it false.
+
+#### Evaluate email locally with Mailpit
+
+Mailpit captures email inside the local Docker network and exposes a browser inbox on the host. It is an optional evaluation tool, not a production dependency.
+
+1. Set these values in `.env`:
+
+   ```dotenv
+   SMTP_HOST=mailpit
+   SMTP_PORT=1025
+   SMTP_USER=
+   SMTP_PASS=
+   SMTP_SECURE=false
+   ```
+
+2. Start the optional profile and recreate the API with the new settings:
+
+   ```bash
+   docker compose --profile mail up -d
+   ```
+
+3. Open `http://localhost:8025`, register a new account, and open the captured verification message.
+
+The Mailpit UI remains bound to `127.0.0.1`. To stop using it, clear `SMTP_HOST`, recreate the API, and remove only the optional service:
+
+```bash
+docker compose --profile mail rm --stop --force mailpit
+docker compose up -d api web
+```
 
 ### Discord
 
@@ -100,6 +130,54 @@ Discord is optional. Participant passes and email accounts continue to work with
 - `S3_ACCESS_KEY` and `S3_SECRET_KEY` configure both MinIO and the API client; change them together before exposing an instance.
 - Production may point `S3_*` to Cloudflare R2, Amazon S3, or another compatible provider.
 - The `S3_BUCKET` stores public and private objects under separate prefixes.
+
+## Share a tournament temporarily (Compartir temporalmente un torneo)
+
+Choose the reach that matches the event. Tournament access rules and installation reach are separate concerns.
+
+| Reach                       | Who can open it                                                                                                      | Intended use                                |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| This computer               | Only browsers on the Docker host through `localhost`                                                                 | Setup and private rehearsal                 |
+| Event network               | Devices on the same trusted LAN after an operator deliberately configures a LAN listener, firewall, or reverse proxy | On-site bracket screens and staff devices   |
+| Temporary HTTPS tunnel      | Anyone who knows the random public URL while the host and tunnel remain online                                       | Short external tests                        |
+| Permanent public deployment | Internet users through an operator-owned domain, TLS, backups, monitoring, and SMTP                                  | Open registration and ongoing community use |
+
+Compose binds OpenTournament to `127.0.0.1` by default. Do not weaken that safe default merely to obtain LAN access; configure a deliberate reverse proxy or host binding and review the firewall first.
+
+### Quick path with pnpm
+
+From a source checkout with Node.js and pnpm available:
+
+```bash
+pnpm share
+```
+
+The command checks Docker, Compose, the running `web` service, and its internal health endpoint. It then starts only the optional `cloudflared` service, prints the generated `https://…trycloudflare.com` URL, and keeps running until you press `Ctrl+C`. It honors the active Compose project, including `COMPOSE_PROJECT_NAME`, and connects to the internal `web:3000` service rather than assuming a host port.
+
+### Docker-only path
+
+Release-image installations do not require Node.js or pnpm. After the normal stack is healthy, run:
+
+```bash
+docker compose --profile share up --no-deps cloudflared
+```
+
+Copy the `https://…trycloudflare.com` URL printed by Cloudflare. Keep that terminal open while testing. Stop with `Ctrl+C`, then remove only the temporary tunnel container:
+
+```bash
+docker compose --profile share rm --stop --force cloudflared
+```
+
+### Security and service limitations
+
+- Anyone who knows the URL can reach the installation; treat it as public.
+- Quick Tunnels have no availability guarantee and are intended only for testing and development.
+- Cloudflare currently limits Quick Tunnels to 200 in-flight requests.
+- Quick Tunnels do not support Server-Sent Events. Live bracket changes may require a manual refresh.
+- The random URL changes when the tunnel restarts. Do not store it in documentation, tests, commits, or screenshots intended for publication.
+- A Quick Tunnel does not replace a domain, TLS-aware reverse proxy, SMTP, backups, monitoring, or a permanent deployment.
+
+See Cloudflare's [official Quick Tunnels documentation](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/do-more-with-tunnels/trycloudflare/).
 
 ## Production hardening checklist
 

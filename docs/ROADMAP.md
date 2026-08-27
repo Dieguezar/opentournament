@@ -47,11 +47,14 @@ OpenTournament v1.0.0 is published. Phases 0–3 and the original release-readin
 
 ## Current hardening priorities
 
-1. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
-2. Extend the delivered bilingual authentication, public-tournament, and participant-shell E2E coverage to remaining mutation-heavy organizer flows.
-3. Keep schema, API, and architecture documentation synchronized.
-4. Validate optional Discord behavior against a configured test application.
-5. Improve operational metrics without adding mandatory infrastructure.
+1. Keep clean installation, verification delivery, upgrades, backups, and temporary evaluation paths predictable.
+2. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
+3. Extend the delivered bilingual authentication, public-tournament, and participant-shell E2E coverage to remaining mutation-heavy organizer flows.
+4. Keep schema, API, and architecture documentation synchronized.
+5. Validate optional Discord behavior against a configured test application.
+6. Improve operational metrics without adding mandatory infrastructure.
+
+Product work should keep three independent axes explicit: participant management (`manual`, `invitation`, or `open registration`), tournament visibility (`private`, `unlisted`, or `public`), and installation reach (`host`, `event network`, or `internet`). Existing registration, participant, and private-pass capabilities should be extended incrementally instead of replaced by a large access-control redesign.
 
 ## Expansion candidates
 

@@ -44,7 +44,8 @@ General-purpose webhooks are deferred. A future implementation must use HMAC sig
 ### Authentication
 
 - Argon2id password hashes use 19 MiB memory, two iterations, and one thread.
-- Email verification applies when SMTP is available. `ALLOW_UNVERIFIED_EMAILS` must be an explicit private-instance choice.
+- Email verification is enforced by default. SMTP delivers the link when configured; otherwise the link is written to private API logs and the UI explains the operator step. `ALLOW_UNVERIFIED_EMAILS` must remain an explicit private-instance choice.
+- Verification resend responses do not reveal whether an account exists. Requests are rate-limited, replacement tokens expire after 24 hours, older unused tokens are invalidated, and successful reissues are audited.
 - Session cookies use `HttpOnly`, `Secure` in production, and `SameSite=Lax`; database sessions store token hashes and expire after seven days by default.
 - Discord OAuth uses `state` and verified-email rules.
 

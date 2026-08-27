@@ -29,17 +29,53 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resendVerificationSchema,
   resetPasswordSchema,
 } from '@opentournament/validation';
 import { env } from '../config.js';
 import { db } from '../db.js';
-import { sendMail } from '../mailer.js';
+import { buildEmailVerificationMessage, EMAIL_VERIFICATION_TTL_MS } from '../email-verification.js';
+import { getMailDeliveryMode, sendMail, type MailDeliveryMode } from '../mailer.js';
 import { requireAuth, setSessionCookies } from '../plugins/auth.js';
 
 async function createSessionForUser(reply: FastifyReply, userId: string) {
   const { token, expiresAt } = await createSession(db, userId, env.SESSION_TTL_HOURS);
   setSessionCookies(reply, token, expiresAt);
   return { sessionStarted: true };
+}
+
+async function issueEmailVerification(input: {
+  userId: string;
+  email: string;
+  locale: string;
+  invalidateExisting?: boolean;
+}): Promise<MailDeliveryMode> {
+  const token = generateResetToken();
+  const issuedAt = new Date();
+  await db.transaction(async (transaction) => {
+    if (input.invalidateExisting) {
+      await transaction
+        .update(emailVerificationTokens)
+        .set({ usedAt: issuedAt })
+        .where(
+          and(
+            eq(emailVerificationTokens.userId, input.userId),
+            isNull(emailVerificationTokens.usedAt),
+          ),
+        );
+    }
+    await transaction.insert(emailVerificationTokens).values({
+      userId: input.userId,
+      tokenHash: hashSessionToken(token),
+      expiresAt: new Date(issuedAt.getTime() + EMAIL_VERIFICATION_TTL_MS),
+    });
+  });
+
+  const message = buildEmailVerificationMessage(
+    input.locale,
+    `${env.API_URL}/api/v1/auth/verify?token=${token}`,
+  );
+  return sendMail({ to: input.email, ...message });
 }
 
 export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
@@ -67,6 +103,7 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
           email: body.email,
           passwordHash,
           displayName: body.displayName,
+          locale: body.locale,
           emailVerifiedAt: verified ? new Date() : null,
         })
         .returning();
@@ -76,19 +113,13 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
         });
       }
 
-      if (!verified) {
-        const resetToken = generateResetToken();
-        await db.insert(emailVerificationTokens).values({
-          userId: user.id,
-          tokenHash: hashSessionToken(resetToken),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        });
-        await sendMail({
-          to: body.email,
-          subject: 'Verify your email in OpenTournament',
-          text: `Your verification link (valid for 24 hours): ${env.API_URL}/api/v1/auth/verify?token=${resetToken}`,
-        });
-      }
+      const verificationDelivery = verified
+        ? null
+        : await issueEmailVerification({
+            userId: user.id,
+            email: body.email,
+            locale: body.locale,
+          });
 
       if (verified) await createSessionForUser(reply, user.id);
       await db.insert(auditLogs).values({
@@ -100,7 +131,51 @@ export async function registerAuthRoutes(app: FastifyInstance): Promise<void> {
       return reply.status(201).send({
         user: { id: user.id, email: user.email },
         requiresEmailVerification: !verified,
+        verificationDelivery,
       });
+    },
+  );
+
+  app.post(
+    '/auth/resend-verification',
+    { config: { rateLimit: { max: 5, timeWindow: '15 minutes' } } },
+    async (request, reply) => {
+      const body = resendVerificationSchema.parse(request.body);
+      const verificationDelivery = getMailDeliveryMode();
+      const [user] = await db
+        .select({
+          id: users.id,
+          email: users.email,
+          locale: users.locale,
+        })
+        .from(users)
+        .where(
+          and(eq(users.email, body.email), isNull(users.emailVerifiedAt), isNull(users.deletedAt)),
+        )
+        .limit(1);
+
+      if (user?.email) {
+        try {
+          const delivery = await issueEmailVerification({
+            userId: user.id,
+            email: user.email,
+            locale: user.locale,
+            invalidateExisting: true,
+          });
+          await db.insert(auditLogs).values({
+            actorId: user.id,
+            action: 'auth.verification_resent',
+            resourceType: 'user',
+            resourceId: user.id,
+            after: { delivery },
+          });
+        } catch (error) {
+          request.log.error({ err: error }, 'verification resend failed');
+        }
+      }
+
+      // Keep this response identical whether or not the account exists.
+      return reply.send({ ok: true, verificationDelivery });
     },
   );
 
