@@ -33,7 +33,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="container">
+    <main className="container narrow">
       <h1>{dictionary.auth.loginTitle}</h1>
       <form className="card" onSubmit={onSubmit}>
         <label htmlFor="email">{dictionary.auth.email}</label>

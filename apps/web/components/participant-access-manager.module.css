@@ -49,9 +49,9 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: 1rem;
   align-items: start;
-  padding: 1rem;
+  padding: 1.5rem;
   border: 1px solid color-mix(in srgb, var(--primary) 42%, var(--border));
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--primary-soft);
 }
 
@@ -84,7 +84,7 @@
 .secretContent input {
   min-width: 0;
   margin: 0;
-  font-family: var(--font-geist-mono), monospace;
+  font-family: var(--font-interface), sans-serif;
 }
 
 .secretContent button {

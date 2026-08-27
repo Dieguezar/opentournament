@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { GeistMono } from 'geist/font/mono';
-import { GeistSans } from 'geist/font/sans';
+import '@fontsource-variable/inter';
 import './showcase.css';
 import { PwaRegister } from '@/components/pwa-register';
 import { Header } from '@/components/header';
@@ -26,11 +25,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const dictionary = getDictionary(locale);
 
   return (
-    <html
-      lang={locale}
-      className={`${GeistSans.variable} ${GeistMono.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang={locale} suppressHydrationWarning>
       <head>
         <ThemeScript />
       </head>

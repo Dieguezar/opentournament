@@ -33,7 +33,7 @@ export default function WizardPage() {
   }
 
   return (
-    <main className="container">
+    <main className="container narrow">
       <h1>{copy.createOrganizationTitle}</h1>
       <p className="muted">{copy.createOrganizationIntro}</p>
       <form className="card" onSubmit={onSubmit}>

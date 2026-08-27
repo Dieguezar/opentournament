@@ -59,7 +59,7 @@ export default function NewTeamPage() {
   const isSmash = gameAdapterKey === 'smash_ultimate';
 
   return (
-    <main className="container">
+    <main className="container narrow">
       <h1>{isSmash ? copy.createPlayer : copy.createTeam}</h1>
       <form className="card" onSubmit={onSubmit}>
         <label htmlFor="organizationId">{copy.organization}</label>

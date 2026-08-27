@@ -44,7 +44,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="container">
+    <main className="container narrow">
       <h1>{dictionary.auth.registerTitle}</h1>
       <form className="card" onSubmit={onSubmit}>
         <label htmlFor="displayName">{dictionary.auth.displayName}</label>

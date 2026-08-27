@@ -14,7 +14,7 @@ export default async function VerifyEmailPage({
   const usesConsoleDelivery = delivery === 'console';
 
   return (
-    <main className="container">
+    <main className="container narrow">
       <div className="card">
         <h1>{usesConsoleDelivery ? copy.consoleVerificationTitle : copy.checkEmail}</h1>
         <p>

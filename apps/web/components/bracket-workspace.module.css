@@ -78,17 +78,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 42px;
-  padding: 0.65rem 1rem;
+  min-height: 40px;
+  padding: 0 1.125rem;
   border: 1px solid var(--primary);
   border-radius: 5px;
   text-decoration: none;
-  font-weight: 700;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
 }
 
 .primaryAction {
-  background: var(--primary-strong);
-  border-color: var(--primary-strong);
+  background: var(--action-primary);
+  border-color: var(--action-primary);
   color: var(--on-primary);
 }
 
@@ -101,7 +103,7 @@
 
 .primaryAction:hover,
 .primaryAction:focus-visible {
-  background: color-mix(in srgb, var(--primary-strong) 84%, black);
+  background: var(--action-primary-hover);
   color: var(--on-primary);
 }
 
@@ -278,8 +280,8 @@
   overflow: visible;
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface);
+  border-radius: 6px;
+  background: var(--match-card-background);
   text-align: left;
 }
 
@@ -364,7 +366,11 @@
 
 .status {
   display: inline-flex;
-  padding: 0.2rem 0.5rem;
+  min-height: 1.75rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  background: var(--badge-primary-background);
   color: var(--primary);
   border: 1px solid var(--primary);
   border-radius: 4px;
@@ -375,16 +381,19 @@
 .statusSuccess {
   color: var(--success);
   border-color: var(--success);
+  background: var(--badge-success-background);
 }
 
 .statusWarning {
   color: var(--warning);
   border-color: var(--warning);
+  background: var(--badge-warning-background);
 }
 
 .statusDanger {
   color: var(--danger);
   border-color: var(--danger);
+  background: var(--badge-danger-background);
 }
 
 .details {
@@ -475,6 +484,7 @@
   margin-top: 1.5rem;
   padding: 2rem;
   border: 1px solid var(--border);
+  border-radius: 6px;
   background: var(--surface);
 }
 
@@ -486,9 +496,9 @@
 }
 
 .supportPanel {
-  padding: 1.25rem;
+  padding: 1.5rem;
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--surface);
 }
 

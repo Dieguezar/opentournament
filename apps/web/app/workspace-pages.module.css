@@ -1,6 +1,6 @@
 .page {
-  width: min(100%, 1380px);
-  max-width: 1380px;
+  width: min(100%, 1296px);
+  max-width: 1296px;
 }
 
 .pageHeader {
@@ -98,7 +98,7 @@
 .notice,
 .journeyPanel {
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--surface);
 }
 
@@ -106,7 +106,7 @@
 .featureCard,
 .bracketPanel,
 .journeyPanel {
-  padding: 1rem;
+  padding: 1.5rem;
 }
 
 .sectionHeader,
@@ -174,7 +174,8 @@
 .tournamentCard {
   display: grid;
   gap: 0.75rem;
-  padding: 0.9rem;
+  padding: 1.5rem;
+  background: var(--canvas-subtle);
 }
 
 .tournamentCard h3,
@@ -354,8 +355,8 @@
   z-index: 1;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 4px;
-  background: var(--surface-raised);
+  border-radius: 6px;
+  background: var(--match-card-background);
 }
 
 .matchTeam {
@@ -363,8 +364,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  min-height: 2.4rem;
-  padding: 0.48rem 0.62rem;
+  min-height: 3rem;
+  padding: 0.625rem 1rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -406,7 +407,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  padding: 0.42rem 0.62rem;
+  padding: 0.75rem 1rem;
   border-top: 1px solid var(--border);
   color: var(--text-muted);
   font-size: 0.72rem;
@@ -476,7 +477,7 @@
 }
 
 .formSection {
-  padding: 1rem;
+  padding: 1.5rem;
   border: 0;
   border-bottom: 1px solid var(--border);
 }
@@ -651,7 +652,7 @@
   display: block;
   overflow-wrap: anywhere;
   color: var(--text);
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-family: var(--font-interface), sans-serif;
 }
 
 .optionStack {
@@ -758,7 +759,7 @@
   }
 
   .formSection {
-    padding: 1.25rem;
+    padding: 1.5rem;
   }
 }
 
@@ -802,6 +803,15 @@
   .formActions button {
     width: 100%;
     text-align: center;
+  }
+
+  .panel,
+  .featureCard,
+  .bracketPanel,
+  .journeyPanel,
+  .tournamentCard,
+  .formSection {
+    padding: 1.25rem;
   }
 }
 

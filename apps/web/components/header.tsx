@@ -1,7 +1,7 @@
-import { TrophyIcon } from '@phosphor-icons/react/dist/ssr/Trophy';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ActiveNavLink } from '@/components/active-nav-link';
+import { BrandLogo } from '@/components/brand-logo';
 import { LanguageSelector } from '@/components/language-selector';
 import { LogoutButton } from '@/components/logout-button';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -42,27 +42,20 @@ export async function Header({ locale }: { locale: Locale }) {
       <div className="nav-inner">
         <div className="nav-leading">
           <Link className="brand" href="/">
-            <span className="brand-mark" aria-hidden="true">
-              <TrophyIcon size={17} weight="bold" />
-            </span>
-            OpenTournament
+            <BrandLogo />
+            <span className="brand-wordmark">OpenTournament</span>
           </Link>
           {presentation && <span className="workspace-chip">{presentation.workspaceLabel}</span>}
         </div>
-        <nav className="nav-links" aria-label={dictionary.navigation.primary}>
-          {presentation ? (
-            presentation.links.map((link) => (
+        {presentation && (
+          <nav className="nav-links" aria-label={dictionary.navigation.primary}>
+            {presentation.links.map((link) => (
               <HeaderNavLink href={link.href} key={link.href}>
                 {link.label}
               </HeaderNavLink>
-            ))
-          ) : (
-            <>
-              <HeaderNavLink href="/login">{dictionary.navigation.signIn}</HeaderNavLink>
-              <HeaderNavLink href="/register">{dictionary.navigation.register}</HeaderNavLink>
-            </>
-          )}
-        </nav>
+            ))}
+          </nav>
+        )}
         <div className="nav-actions">
           {isApiUnavailable && (
             <span className="badge badge-danger" role="status">
@@ -71,7 +64,7 @@ export async function Header({ locale }: { locale: Locale }) {
           )}
           <LanguageSelector />
           <ThemeToggle />
-          {presentation && (
+          {presentation ? (
             <>
               <span className="nav-account">
                 <span className="nav-avatar" aria-hidden="true">
@@ -80,6 +73,15 @@ export async function Header({ locale }: { locale: Locale }) {
                 <span className="nav-user">{presentation.accountLabel}</span>
               </span>
               <LogoutButton />
+            </>
+          ) : (
+            <>
+              <Link className="button button-secondary button-small" href="/login">
+                {dictionary.navigation.signIn}
+              </Link>
+              <Link className="button button-small" href="/register">
+                {dictionary.navigation.register}
+              </Link>
             </>
           )}
         </div>

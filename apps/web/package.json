@@ -13,11 +13,11 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
     "@opentournament/bracket-ui": "workspace:*",
     "@opentournament/game-adapters": "workspace:*",
     "@opentournament/shared-types": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
-    "geist": "^1.7.2",
     "next": "^16.3.2",
     "qrcode.react": "4.2.0",
     "react": "^19.2.8",

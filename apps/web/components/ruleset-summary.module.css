@@ -2,10 +2,10 @@
   --game-accent: #b3294a;
 
   margin-top: 1rem;
-  padding: 1.1rem;
+  padding: 1.5rem;
   border: 1px solid color-mix(in srgb, var(--game-accent) 42%, var(--border));
   border-left: 3px solid var(--game-accent);
-  border-radius: 5px;
+  border-radius: 6px;
   background: color-mix(in srgb, var(--game-accent) 5%, var(--surface));
 }
 

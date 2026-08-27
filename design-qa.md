@@ -1,43 +1,82 @@
-# Design QA — tournament workspace themes
+# OpenTournament visual identity — Design QA
 
-## Visual target and evidence
+## Comparison target
 
-- Dark source: `C:\Users\diegu\.codex\generated_images\01a0267a-2e05-74b0-b350-ae84c36cfbfa\exec-40943ea8-94a5-42e8-824f-1e65881d7ce6.png`
-- Light source: `C:\Users\diegu\.codex\generated_images\01a0267a-2e05-74b0-b350-ae84c36cfbfa\exec-1f3d8cd0-f196-4f0a-ab1e-7412875a8571.png`
-- Dark implementation: `C:\Users\diegu\.codex\visualizations\2026\08\23\opentournament-redesign-final\implementation-dark-1440x1025.png`
-- Light implementation: `C:\Users\diegu\.codex\visualizations\2026\08\23\opentournament-redesign-final\implementation-light-1440x1025.png`
-- Combined comparison: `C:\Users\diegu\.codex\visualizations\2026\08\23\opentournament-redesign-final\source-vs-implementation-desktop.png`
+- Source visual truth:
+  - `design/openpencil/OpenTournament-Brand-System.fig`
+  - `design/openpencil/preview-navigation.png` — 1440 × 1420 px
+  - `design/openpencil/preview-buttons.png` — 1440 × 1600 px
+  - `design/openpencil/preview-fields-badges.png` — 1440 × 1750 px
+  - `design/openpencil/preview-cards.png` — 1440 × 1500 px
+  - `design/openpencil/preview-match-cards.png` — 1440 × 1700 px
+- Rendered implementation:
+  - `artifacts/brand-implementation-desktop-light.png` — 1440 × 999 px
+  - `artifacts/brand-implementation-desktop-dark-final.png` — 1440 × 999 px
+  - `artifacts/brand-implementation-login-light-final.png` — 1440 × 999 px
+  - `artifacts/brand-implementation-login-dark-focus.png` — 1440 × 999 px
+  - `artifacts/brand-implementation-mobile-light-final.png` — 390 × 844 px
+- Combined comparison evidence:
+  - `artifacts/brand-design-qa-comparison.png`
+  - `artifacts/brand-design-qa-header-focused.png`
 
-The source and implementation were compared together at a CSS viewport of 1440 × 1025, DPR 1.1. Browser captures are 1425 × 972 pixels; the comparison normalizes both sides with the same crop and aspect ratio. The authenticated demo tournament was shown with the grand final selected in both dark and light themes.
+## Viewport and state
 
-## Interaction and responsive checks
+- Desktop CSS viewport: 1440 × 1000 px; browser DPR 1.1. Browser screenshots were normalized to the CSS width and saved at 1440 × 999 px.
+- Mobile CSS viewport: 390 × 845 px; final screenshot is 390 × 844 px.
+- States checked: guest navigation, API-unavailable badge, Spanish copy, light theme, dark theme, login form, keyboard focus styling, and responsive guest navigation.
+- The source is a component specification rather than a full product screen. Comparisons therefore use matching component state, dimensions, color theme, and density instead of judging unrelated page composition or dynamic copy.
 
-- System, light, and dark theme states work; the explicit selection persists after reload.
-- Bracket match selection updates the details panel and administrative actions.
-- Tournament anchors and horizontally scrollable bracket regions remain usable with keyboard focus.
-- Admin, public tournament, dashboard, and tournament creation screens were inspected at desktop size.
-- Admin, public tournament, and tournament creation screens were visually inspected at 390 × 844. Navigation and content reflow without page-level horizontal overflow; intentional bracket and tab overflow stays inside labeled, focusable regions.
-- The initial Next.js hydration/console issue was fixed by placing the early theme script in the root document head. A clean reload showed no application error overlay.
+## Full-view comparison evidence
 
-## Findings resolved
+- The combined board/product comparison confirms Inter hierarchy, the official O + bracket asset, palette, restrained radii, 1 px borders, 24 px panel padding, primary/secondary actions, and 44 px form controls.
+- Light and dark product captures use the approved canvas, surface, border, text, primary, semantic status, and control tokens.
+- Real OpenPencil exports are used for the logo and app icons. No CSS drawing, emoji, text glyph, inline SVG, or approximate replacement is present.
+- App-specific copy remains functional and coherent. Differences from the component board—language/theme controls, API status, and actual authentication labels—are intentional product content, not visual drift.
 
-- P1: dark primary-action contrast was raised with the stronger cobalt token.
-- P1: header navigation overflow risk was removed with the 900 px compact-header breakpoint.
-- P1: bracket scroll regions gained accessible labels, keyboard focus, and visible focus styling.
-- P1: double-elimination rounds are grouped and ordered independently; the behavior is covered by tests.
-- P1: administrative controls are rendered only after an authorized registrations response.
-- P2: theme storage tolerates unavailable or restricted browser storage.
-- P2: client-side fetches cancel on unmount.
-- P2: live connection copy now reflects connecting, live, and reconnecting states instead of claiming a false live state.
-- P2: bracket connectors and vertical board fill were aligned to the selected visual hierarchy.
+## Focused comparison evidence
 
-## Accepted differences
+- `artifacts/brand-design-qa-header-focused.png` compares the 1296 × 88 px light guest header directly. The implementation renders a 1296 px inner frame, 88.9 px header, 82 × 40 px symbol, 18 px wordmark, and 18 px logo-to-wordmark gap.
+- Rendered control measurements:
+  - Header small actions: 32 px high, 5 px radius, 13 px semibold.
+  - Primary buttons: 40 px high, 5 px radius, 14 px semibold.
+  - Inputs: 44 px high, 5 px radius, 14 px text.
+  - Focus: 2 px primary outline with visible separation.
+  - Badges: 28 px high, 4 px radius, 12 px semibold.
+  - Cards and match cards: 6 px radius with 1 px semantic border.
+- Focused dark-form evidence confirms the approved dark control background and blue focus treatment without clipping or halo artifacts.
 
-- The implementation uses the real product routes, navigation, actions, tournament metadata, and demo data rather than inventing the mockup's audit history or unsupported actions.
-- Team logos are not fabricated because the current bracket payload does not expose logo URLs; real team labels are used instead.
-- The accessible primary action is intentionally darker than the visual source.
-- Match columns use slightly more vertical space to accommodate real status and action information.
+## Findings
 
-No unresolved P0, P1, or P2 visual or interaction defects remain.
+No actionable P0, P1, or P2 visual differences remain.
+
+- P3 test gap: authenticated navigation and data-populated tournament/match screens could not be opened with live data because the local API was unavailable. Their shared tokens and component CSS were audited and aligned, but a future end-to-end pass with a seeded session would add runtime evidence for those dynamic states.
+- Development-only Next.js tooling appears in preview screenshots; it is not part of the application UI.
+
+## Comparison history
+
+### Iteration 1
+
+- [P1] Mobile navigation overflowed horizontally.
+  - Evidence: `artifacts/brand-implementation-mobile-light.png` rendered a 570 px document inside a 390 px viewport.
+  - Fix: made the action group occupy the available width and wrap while preserving 32 px controls and the compact symbol.
+  - Post-fix evidence: `artifacts/brand-implementation-mobile-light-final.png` renders document and body widths at exactly 390 px with no horizontal overflow.
+- [P2] Focused authentication forms were too wide and lost the compact field rhythm from the source.
+  - Evidence: `artifacts/brand-implementation-login-light.png` rendered the initial login card at 1200 px.
+  - Fix: applied the existing 760 px narrow content container to login, registration, verification, organization, and team forms.
+  - Post-fix evidence: `artifacts/brand-implementation-login-light-final.png` renders a 760 px main container and 720 px card while retaining 44 px controls.
+
+### Iteration 2
+
+- Rechecked desktop light, desktop dark, mobile light, and dark focused-input states.
+- Confirmed no overflow, no console errors, correct theme-specific logo variant, and exact shared component geometry.
+- No actionable P0/P1/P2 findings remained.
+
+## Verification
+
+- Web tests: 16 files, 90 tests passed.
+- TypeScript: passed.
+- ESLint: passed.
+- Browser console: no warnings or errors in the checked flows.
+- Build intentionally not run, per project instruction.
 
 final result: passed
