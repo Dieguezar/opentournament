@@ -28,7 +28,7 @@
   <a href="docs/BRAND_IDENTITY.md">Sistema de marca</a>
 </p>
 
-<p align="center"><sub><a href="README.md">English</a> · <strong>Español</strong></sub></p>
+<p align="center"><sub><a href="README.en.md">English</a> · <strong>Español</strong></sub></p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme-tournament-dark.jpg">

@@ -28,7 +28,7 @@
   <a href="docs/BRAND_IDENTITY.md">Brand system</a>
 </p>
 
-<p align="center"><sub><strong>English</strong> · <a href="README.es.md">Español</a></sub></p>
+<p align="center"><sub><strong>English</strong> · <a href="README.md">Español</a></sub></p>
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset=".github/assets/readme-tournament-dark.jpg">
