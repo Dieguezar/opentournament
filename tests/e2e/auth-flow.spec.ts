@@ -36,7 +36,10 @@ test('seeded demo → tournament → bracket → resolved dispute', async ({ pag
   await expect(page.getByText('Aurora Gaming')).toBeVisible();
   await expect(page.getByText('Quetzal Esports')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Ver página pública' }).click();
+  const copaNexoCard = page
+    .getByRole('article')
+    .filter({ has: page.getByRole('heading', { name: 'Copa Nexo 2026' }) });
+  await copaNexoCard.getByRole('link', { name: /página pública/i }).click();
   await page.waitForURL('**/t/copa-nexo-demo');
   await expect(
     page.getByText(

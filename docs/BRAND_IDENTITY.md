@@ -34,13 +34,13 @@ La geometría se construye con formas booleanas, nunca a ojo ni a partir de una 
 
 Usar una unión booleana de cinco rectángulos, todos con el mismo color y sin remates especiales:
 
-| Parte | X | Y | Ancho | Alto |
-| --- | ---: | ---: | ---: | ---: |
-| Entrada izquierda | 0 | 0 | 160 | 580 |
-| Entrada derecha | 640 | 0 | 160 | 580 |
-| Brazo izquierdo | 0 | 420 | 480 | 160 |
-| Brazo derecho | 320 | 420 | 480 | 160 |
-| Salida central | 320 | 420 | 160 | 580 |
+| Parte             |   X |   Y | Ancho | Alto |
+| ----------------- | --: | --: | ----: | ---: |
+| Entrada izquierda |   0 |   0 |   160 |  580 |
+| Entrada derecha   | 640 |   0 |   160 |  580 |
+| Brazo izquierdo   |   0 | 420 |   480 |  160 |
+| Brazo derecho     | 320 | 420 |   480 |  160 |
+| Salida central    | 320 | 420 |   160 |  580 |
 
 La caja visible del bracket mide exactamente `800 × 1000 u`: conserva la altura de la O y usa un ancho óptico equivalente al 80%. Las tres extensiones visibles —las dos entradas superiores y la salida inferior— miden exactamente `420 u`; los rectángulos verticales se solapan `160 u` con el travesaño para formar una sola pieza.
 
@@ -55,33 +55,33 @@ La caja visible del bracket mide exactamente `800 × 1000 u`: conserva la altura
 
 ### Marca
 
-| Uso | Tema oscuro | Tema claro |
-| --- | --- | --- |
-| O / marca principal | `#4C7DFF` | `#255EDB` |
-| Bracket | `#FFFFFF` | `#111827` |
-| Fondo recomendado | `#111318` | `#F7F8FA` |
+| Uso                 | Tema oscuro | Tema claro |
+| ------------------- | ----------- | ---------- |
+| O / marca principal | `#4C7DFF`   | `#255EDB`  |
+| Bracket             | `#FFFFFF`   | `#111827`  |
+| Fondo recomendado   | `#111318`   | `#F7F8FA`  |
 
 Versiones permitidas: color, blanco total y negro/ink total. No usar degradados, contornos adicionales, sombras ni colores distintos en la punta del bracket.
 
 ### Tokens semánticos existentes
 
-| Token | Oscuro | Claro |
-| --- | --- | --- |
-| canvas | `#111318` | `#F7F8FA` |
-| surface | `#171A21` | `#FFFFFF` |
-| surface-raised | `#1D212A` | `#F1F3F6` |
-| border | `#2B303B` | `#D9DEE7` |
-| text | `#F4F6F8` | `#111827` |
-| text-muted | `#A8B0BF` | `#5B6472` |
-| primary | `#4C7DFF` | `#255EDB` |
-| primary-strong | `#3E6EE9` | `#1E4FBD` |
-| primary-soft | `rgba(76,125,255,.14)` | `rgba(37,94,219,.10)` |
-| on-primary | `#FFFFFF` | `#FFFFFF` |
-| success | `#2BB673` | `#15803D` |
-| warning | `#D8A13A` | `#B45309` |
-| danger | `#E05D62` | `#C7353D` |
-| control-background | `#0F1116` | `#FFFFFF` |
-| canvas-subtle | `#14171D` | `#EEF1F5` |
+| Token              | Oscuro                 | Claro                 |
+| ------------------ | ---------------------- | --------------------- |
+| canvas             | `#111318`              | `#F7F8FA`             |
+| surface            | `#171A21`              | `#FFFFFF`             |
+| surface-raised     | `#1D212A`              | `#F1F3F6`             |
+| border             | `#2B303B`              | `#D9DEE7`             |
+| text               | `#F4F6F8`              | `#111827`             |
+| text-muted         | `#A8B0BF`              | `#5B6472`             |
+| primary            | `#4C7DFF`              | `#255EDB`             |
+| primary-strong     | `#3E6EE9`              | `#1E4FBD`             |
+| primary-soft       | `rgba(76,125,255,.14)` | `rgba(37,94,219,.10)` |
+| on-primary         | `#FFFFFF`              | `#FFFFFF`             |
+| success            | `#2BB673`              | `#147A3C`             |
+| warning            | `#D8A13A`              | `#B45309`             |
+| danger             | `#E05D62`              | `#C7353D`             |
+| control-background | `#0F1116`              | `#FFFFFF`             |
+| canvas-subtle      | `#14171D`              | `#EEF1F5`             |
 
 ## Tipografía e iconografía
 
