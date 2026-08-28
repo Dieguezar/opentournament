@@ -25,7 +25,7 @@ jobs:
   publish:
     name: Publish ${{ matrix.service }} image
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     strategy:
