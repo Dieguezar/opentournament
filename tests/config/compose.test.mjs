@@ -281,18 +281,25 @@ test('publishes signed multi-platform images only from semantic version tags', (
   assert.match(releaseWorkflow, /id-token: write/u);
   assert.match(releaseWorkflow, /infrastructure\/Dockerfile\.api/u);
   assert.match(releaseWorkflow, /infrastructure\/Dockerfile\.web/u);
-  assert.match(releaseWorkflow, /docker\/setup-qemu-action@v4/u);
+  assert.doesNotMatch(
+    releaseWorkflow,
+    /docker\/setup-qemu-action@v4/u,
+    'release images must use native runners instead of QEMU emulation',
+  );
   assert.match(releaseWorkflow, /docker\/setup-buildx-action@v4/u);
   assert.match(releaseWorkflow, /docker\/login-action@v4/u);
   assert.match(releaseWorkflow, /docker\/metadata-action@v6/u);
   assert.match(releaseWorkflow, /docker\/build-push-action@v7/u);
-  assert.match(releaseWorkflow, /platforms: linux\/amd64,linux\/arm64/u);
+  assert.match(releaseWorkflow, /runs-on: \$\{\{ matrix\.runner \}\}/u);
+  assert.match(releaseWorkflow, /runner: ubuntu-latest/u);
+  assert.match(releaseWorkflow, /runner: ubuntu-24\.04-arm/u);
+  assert.match(releaseWorkflow, /platforms: \$\{\{ matrix\.platform \}\}/u);
   assert.match(releaseWorkflow, /push: true/u);
   assert.match(releaseWorkflow, /provenance: mode=max/u);
   assert.match(releaseWorkflow, /sbom: true/u);
   assert.match(releaseWorkflow, /actions\/attest-build-provenance@v4/u);
   assert.match(releaseWorkflow, /push-to-registry: true/u);
-  assert.match(releaseWorkflow, /release:\s+name: Create GitHub release\s+needs: publish/u);
+  assert.match(releaseWorkflow, /release:\s+name: Create GitHub release\s+needs: merge/u);
   assert.match(releaseWorkflow, /contents: write/u);
   assert.match(releaseWorkflow, /gh release view "\$\{RELEASE_TAG\}"/u);
   assert.match(releaseWorkflow, /gh release create "\$\{RELEASE_TAG\}"/u);
