@@ -23,9 +23,9 @@ concurrency:
 
 jobs:
   publish:
-    name: Publish ${{ matrix.service }} image
-    runs-on: ubuntu-latest
-    timeout-minutes: 90
+    name: Publish ${{ matrix.service }} (${{ matrix.arch }}) image
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
     strategy:
@@ -34,8 +34,24 @@ jobs:
         include:
           - service: api
             dockerfile: infrastructure/Dockerfile.api
+            arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - service: api
+            dockerfile: infrastructure/Dockerfile.api
+            arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
           - service: web
             dockerfile: infrastructure/Dockerfile.web
+            arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - service: web
+            dockerfile: infrastructure/Dockerfile.web
+            arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v7
         with:
@@ -55,7 +71,6 @@ jobs:
         shell: bash
         run: echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/opentournament-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-qemu-action@v4
       - uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
@@ -70,11 +85,9 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: ${{ steps.image.outputs.name }}
-          flavor: latest=auto
+          flavor: latest=false
           tags: |
-            type=semver,pattern={{version}},value=${{ env.RELEASE_TAG }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ env.RELEASE_TAG }}
-            type=semver,pattern={{major}},value=${{ env.RELEASE_TAG }}
+            type=raw,value=build-${{ github.run_id }}-${{ matrix.service }}-${{ matrix.arch }}
 
       - name: Build and publish image
         id: push
@@ -82,12 +95,12 @@ jobs:
         with:
           context: .
           file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+          cache-from: type=gha,scope=${{ matrix.service }}-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}-${{ matrix.arch }}
           provenance: mode=max
           sbom: true
 
@@ -98,9 +111,66 @@ jobs:
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
 
+  merge:
+    name: Assemble ${{ matrix.service }} multi-architecture image
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        include:
+          - service: api
+          - service: web
+    env:
+      RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+    steps:
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Resolve image and version
+        id: image
+        shell: bash
+        run: |
+          echo "name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/opentournament-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Assemble and attest multi-architecture image
+        id: manifest
+        shell: bash
+        env:
+          IMAGE_NAME: ${{ steps.image.outputs.name }}
+          VERSION: ${{ steps.image.outputs.version }}
+        run: |
+          set -euo pipefail
+          amd_tag="build-${GITHUB_RUN_ID}-${{ matrix.service }}-amd64"
+          arm_tag="build-${GITHUB_RUN_ID}-${{ matrix.service }}-arm64"
+
+          for tag in "$VERSION" "${VERSION%.*}" "${VERSION%%.*}" latest; do
+            docker buildx imagetools create \
+              --tag "${IMAGE_NAME}:${tag}" \
+              "${IMAGE_NAME}:${amd_tag}" \
+              "${IMAGE_NAME}:${arm_tag}"
+          done
+
+          digest="$(docker buildx imagetools inspect "${IMAGE_NAME}:${VERSION}" --format '{{.Manifest.Digest}}')"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Attest published image
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.manifest.outputs.digest }}
+          push-to-registry: true
+
   release:
     name: Create GitHub release
-    needs: publish
+    needs: merge
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
