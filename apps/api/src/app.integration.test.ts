@@ -2319,4 +2319,158 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
       }
     },
   );
+
+  it(
+    'publishes an initial profile avatar and serves it by opaque media ID',
+    { timeout: INTEGRATION_TEST_TIMEOUT_MS },
+    async () => {
+      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+      const { runMigrations } = await import('@opentournament/database');
+      const { initServer } = await import('./app.js');
+      await runMigrations(process.env.TEST_DATABASE_URL!);
+      const app = await initServer(false);
+
+      try {
+        const csrfResponse = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+        const csrfCookie = csrfResponse.cookies.find((cookie) => cookie.name === 'csrf')!;
+        const registration = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register',
+          payload: {
+            displayName: 'Media Owner',
+            email: `media-owner-${Date.now()}@example.com`,
+            password: 'password-123',
+          },
+          headers: { 'x-csrf-token': csrfCookie.value, cookie: `csrf=${csrfCookie.value}` },
+        });
+        expect(registration.statusCode).toBe(201);
+        const sessionCookie = registration.cookies.find((cookie) => cookie.name === 'session')!;
+        const headers = {
+          'x-csrf-token': csrfCookie.value,
+          cookie: `session=${sessionCookie.value}; csrf=${csrfCookie.value}`,
+        };
+        const profile = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profile/public',
+          payload: {
+            slug: `media-${Date.now()}`,
+            gamertag: 'Media',
+            isPublished: true,
+            showAvatar: true,
+          },
+          headers,
+        });
+        expect(profile.statusCode).toBe(200);
+
+        const { default: sharp } = await import('sharp');
+        const png = await sharp({
+          create: {
+            width: 2,
+            height: 2,
+            channels: 4,
+            background: { r: 12, g: 34, b: 56, alpha: 1 },
+          },
+        })
+          .png()
+          .toBuffer();
+        const boundary = 'profile-avatar-boundary';
+        const multipart = Buffer.concat([
+          Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="avatar.png"\r\nContent-Type: image/png\r\n\r\n`,
+          ),
+          png,
+          Buffer.from(`\r\n--${boundary}--\r\n`),
+        ]);
+        const invalidUpload = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profile/public/avatar',
+          payload: Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="payload.svg"\r\n\r\n<svg/>\r\n--${boundary}--\r\n`,
+          ),
+          headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
+        });
+        expect(invalidUpload.statusCode).toBe(400);
+
+        const upload = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profile/public/avatar',
+          payload: multipart,
+          headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
+        });
+
+        expect(upload.statusCode).toBe(201);
+        const mediaId = upload.json<{ media: { id: string } }>().media.id;
+        expect(mediaId).toMatch(/^[0-9a-f-]{36}$/i);
+        const publicResponse = await app.inject({ method: 'GET', url: `/api/v1/media/${mediaId}` });
+        expect(publicResponse.statusCode).toBe(200);
+        expect(publicResponse.headers).toMatchObject({
+          'content-type': 'image/png',
+          'x-content-type-options': 'nosniff',
+        });
+        expect(publicResponse.headers['cache-control']).toContain('immutable');
+        expect(publicResponse.headers['content-length']).toBe(String(png.byteLength));
+        expect(publicResponse.headers.etag).toMatch(/^"[0-9a-f]{64}"$/);
+        expect(
+          await app.inject({
+            method: 'GET',
+            url: '/api/v1/media/11111111-1111-4111-8111-111111111111',
+          }),
+        ).toMatchObject({ statusCode: 404 });
+        const storage = await import('./services/storage.js');
+        const unavailable = vi
+          .spyOn(storage, 'getPrivateObject')
+          .mockRejectedValueOnce(new Error('offline'));
+        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${mediaId}` })).toMatchObject({
+          statusCode: 503,
+        });
+        unavailable.mockRestore();
+        expect(await app.inject({ method: 'GET', url: '/api/v1/media/not-an-id' })).toMatchObject({
+          statusCode: 404,
+        });
+        expect(
+          await app.inject({ method: 'GET', url: '/api/v1/media/private/public-media/key.png' }),
+        ).toMatchObject({
+          statusCode: 404,
+        });
+        expect(
+          (
+            await app.inject({
+              method: 'POST',
+              url: '/api/v1/profile/public/avatar',
+              payload: multipart,
+              headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
+            })
+          ).statusCode,
+        ).toBe(409);
+        expect(
+          (
+            await app.inject({
+              method: 'PUT',
+              url: '/api/v1/profile/public',
+              payload: { gamertag: 'Media', isPublished: true, showAvatar: false },
+              headers,
+            })
+          ).statusCode,
+        ).toBe(200);
+        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${mediaId}` })).toMatchObject({
+          statusCode: 404,
+        });
+        expect(
+          (
+            await app.inject({
+              method: 'PUT',
+              url: '/api/v1/profile/public',
+              payload: { gamertag: 'Media', isPublished: false, showAvatar: true },
+              headers,
+            })
+          ).statusCode,
+        ).toBe(200);
+        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${mediaId}` })).toMatchObject({
+          statusCode: 404,
+        });
+      } finally {
+        await app.close();
+      }
+    },
+  );
 });

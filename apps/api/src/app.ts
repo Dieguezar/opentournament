@@ -1,3 +1,4 @@
+import multipart from '@fastify/multipart';
 import Fastify from 'fastify';
 import { db } from './db.js';
 import { registerCorePlugins } from './plugins/core.js';
@@ -18,6 +19,7 @@ import { registerDiscordRoutes } from './routes/discord.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerParticipantAccessPassRoutes } from './routes/participant-access-passes.js';
 import { registerProfileRoutes } from './routes/profiles.js';
+import { registerPublicMediaRoutes } from './routes/public-media.js';
 
 export function buildServer(options: { logger?: boolean } = {}) {
   const app = Fastify({
@@ -29,6 +31,9 @@ export function buildServer(options: { logger?: boolean } = {}) {
 
 export async function initServer(logger = true) {
   const app = buildServer({ logger });
+  await app.register(multipart, {
+    limits: { files: 1, fields: 4, fileSize: 2 * 1024 * 1024, parts: 5 },
+  });
   await registerCorePlugins(app);
   await registerAuthPlugins(app, db);
   await registerHealthRoutes(app);
@@ -36,6 +41,7 @@ export async function initServer(logger = true) {
     async (api) => {
       await registerAuthRoutes(api);
       await registerProfileRoutes(api);
+      await registerPublicMediaRoutes(api);
       await registerOrganizationRoutes(api);
       await registerTeamRoutes(api);
       await registerTournamentRoutes(api);
