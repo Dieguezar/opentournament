@@ -159,14 +159,14 @@ Tasks 3.1 through 6.3 remain pending. WU3b/WU3c must add the HTTP boundary and l
 
 | Scope | Safety net | RED | GREEN / triangulation | Refactor |
 | --- | --- | --- | --- | --- |
-| Initial avatar upload and read proxy | Existing WU3a focused service suite passed 54 tests, 11 skipped | On a fresh PostgreSQL database, `pnpm --filter @opentournament/api test -- app.integration.test.ts` reached the new avatar flow and failed 404 instead of expected 201 because no multipart/media route was registered. Two unrelated legacy cases also failed in a reused database; later runs used a newly created database. | Fresh PostgreSQL + MinIO focused integration passed 64 tests, 1 skipped. The one flow covers invalid SVG 400, initial upload, opaque ID read/headers, malformed/key-shaped 404, 409 replacement guard, failed-publication object compensation, 503 mapping, hidden and unpublished 404. | Prettier, API typecheck, workspace tests, and diff check retained behavior. |
+| Initial avatar upload and read proxy | Existing WU3a focused service suite passed 54 tests, 11 skipped | On a fresh PostgreSQL database, `pnpm --filter @opentournament/api test -- app.integration.test.ts` reached the new avatar flow and failed 404 instead of expected 201 because no multipart/media route was registered. Two unrelated legacy cases also failed in a reused database; later runs used a newly created database. | Fresh PostgreSQL + MinIO focused integration passed 64 tests, 1 skipped. The real compensation case uploads a valid PNG, uses a PostgreSQL trigger to force the subsequent `avatar_media_id` publication transaction to fail, then proves the `private/public-media/` MinIO `ListObjectsV2` state is unchanged and no `public_media` row was committed. | Prettier, API typecheck, workspace tests, and diff check retained behavior. |
 
 ### Work Unit Evidence
 
 | Evidence | Result |
 | --- | --- |
-| Focused integration command | With fresh `wu3b_media` PostgreSQL at 55432 and MinIO at 59000/59001, `pnpm --filter @opentournament/api test -- app.integration.test.ts` passed 64 tests, 1 skipped. |
-| Runtime harness | Fresh migrations, owner/profile publication, multipart PNG upload, anonymous detected-type read, visibility revocation 404, forced storage outage 503, and MinIO object-compensation check all passed; PostgreSQL and MinIO were stopped without volume deletion. |
+| Focused integration command | With fresh `wu3b_compensation` PostgreSQL at 55432 and MinIO at 59000/59001, `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "removes a staged MinIO avatar"` passed: 1 test, 10 skipped. |
+| Runtime harness | Fresh migrations, owner/profile publication, and a valid multipart PNG upload were exercised against real PostgreSQL and MinIO. A test-only PostgreSQL `BEFORE UPDATE OF avatar_media_id` trigger forced the subsequent publication transaction to fail; the endpoint rejected it with 500, `public_media` retained no owner row, and MinIO `private/public-media/` object keys were exactly unchanged before/after. PostgreSQL and MinIO were stopped without volume deletion. |
 | Rollback boundary | Revert multipart registration/dependency, profile-only initial avatar publication and same-origin proxy, focused integration assertions, and this WU3b evidence. WU3a storage/image validation remains; no replacement, deletion, tournament, queue, worker, or owner-lifecycle behavior is included. |
 
 ### Workload / Delivery Boundary

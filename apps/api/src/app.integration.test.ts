@@ -2473,4 +2473,119 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
       }
     },
   );
+
+  it(
+    'removes a staged MinIO avatar when the profile publication transaction fails',
+    { timeout: INTEGRATION_TEST_TIMEOUT_MS },
+    async () => {
+      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+      const { runMigrations } = await import('@opentournament/database');
+      const { ListObjectsV2Command, S3Client } = await import('@aws-sdk/client-s3');
+      const { pool } = await import('./db.js');
+      const { initServer } = await import('./app.js');
+      await runMigrations(process.env.TEST_DATABASE_URL!);
+      const app = await initServer(false);
+      const client = new S3Client({
+        region: process.env.S3_REGION ?? 'us-east-1',
+        endpoint: process.env.S3_ENDPOINT,
+        forcePathStyle: true,
+        credentials: {
+          accessKeyId: process.env.S3_ACCESS_KEY ?? 'minioadmin',
+          secretAccessKey: process.env.S3_SECRET_KEY ?? 'minioadmin',
+        },
+      });
+      const listPrivateMediaKeys = async () => {
+        const result = await client.send(
+          new ListObjectsV2Command({
+            Bucket: process.env.S3_BUCKET,
+            Prefix: 'private/public-media/',
+          }),
+        );
+        return (result.Contents ?? []).map(({ Key }) => Key).sort();
+      };
+
+      try {
+        const csrfResponse = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+        const csrfCookie = csrfResponse.cookies.find((cookie) => cookie.name === 'csrf')!;
+        const email = `compensation-${Date.now()}@example.com`;
+        const registration = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register',
+          payload: { displayName: 'Compensation Owner', email, password: 'password-123' },
+          headers: { 'x-csrf-token': csrfCookie.value, cookie: `csrf=${csrfCookie.value}` },
+        });
+        const sessionCookie = registration.cookies.find((cookie) => cookie.name === 'session')!;
+        const headers = {
+          'x-csrf-token': csrfCookie.value,
+          cookie: `session=${sessionCookie.value}; csrf=${csrfCookie.value}`,
+        };
+        expect(registration.statusCode).toBe(201);
+        expect(
+          (
+            await app.inject({
+              method: 'PUT',
+              url: '/api/v1/profile/public',
+              payload: {
+                slug: `compensation-${Date.now()}`,
+                gamertag: 'Compensation',
+                isPublished: true,
+                showAvatar: true,
+              },
+              headers,
+            })
+          ).statusCode,
+        ).toBe(200);
+
+        await pool.query(`
+          create function fail_profile_avatar_publication() returns trigger as $$
+          begin
+            raise exception 'forced profile avatar publication failure';
+          end;
+          $$ language plpgsql;
+          create trigger fail_profile_avatar_publication
+          before update of avatar_media_id on public_player_profiles
+          for each row execute function fail_profile_avatar_publication();
+        `);
+        const keysBeforeUpload = await listPrivateMediaKeys();
+        const { default: sharp } = await import('sharp');
+        const png = await sharp({
+          create: { width: 2, height: 2, channels: 4, background: '#123456' },
+        })
+          .png()
+          .toBuffer();
+        const boundary = 'compensation-avatar-boundary';
+        const multipart = Buffer.concat([
+          Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="avatar.png"\r\nContent-Type: image/png\r\n\r\n`,
+          ),
+          png,
+          Buffer.from(`\r\n--${boundary}--\r\n`),
+        ]);
+
+        const upload = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profile/public/avatar',
+          payload: multipart,
+          headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
+        });
+
+        expect(upload.statusCode).toBe(500);
+        expect(await listPrivateMediaKeys()).toEqual(keysBeforeUpload);
+        const mediaRows = await pool.query(
+          `select count(*)::int as count
+           from public_media
+           inner join users on users.id = public_media.user_id
+           where users.email = $1`,
+          [email],
+        );
+        expect(mediaRows.rows[0]?.count).toBe(0);
+      } finally {
+        await pool.query(
+          'drop trigger if exists fail_profile_avatar_publication on public_player_profiles',
+        );
+        await pool.query('drop function if exists fail_profile_avatar_publication()');
+        await app.close();
+      }
+    },
+  );
 });
