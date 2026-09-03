@@ -552,7 +552,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           method: 'GET',
           url: `/api/v1/tournaments/by-slug/${unlistedSlug}`,
         });
-        expect(anonymousUnlistedRes.statusCode).toBe(401);
+        expect(anonymousUnlistedRes.statusCode).toBe(404);
 
         const concurrentTournamentRes = await app.inject({
           method: 'POST',
@@ -2088,6 +2088,232 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         });
         expect(staffOverrideRes.statusCode).toBe(200);
         expect(staffOverrideRes.json()).toMatchObject({ confirmed: true });
+      } finally {
+        await app.close();
+      }
+    },
+  );
+
+  it(
+    'publishes opt-in profiles and administrator appearance without exposing private data',
+    { timeout: INTEGRATION_TEST_TIMEOUT_MS },
+    async () => {
+      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+      const { runMigrations } = await import('@opentournament/database');
+      const { initServer } = await import('./app.js');
+
+      await runMigrations(process.env.TEST_DATABASE_URL!);
+      const app = await initServer(false);
+
+      interface Session {
+        session: string;
+        csrf: string;
+      }
+
+      async function registerUser(displayName: string): Promise<Session> {
+        const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+        const csrfCookie = csrfRes.cookies.find((cookie) => cookie.name === 'csrf')!;
+        const registerRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register',
+          payload: {
+            displayName,
+            email: `${displayName.toLowerCase().replaceAll(' ', '')}-${Date.now()}@example.com`,
+            password: 'password-123',
+          },
+          headers: { 'x-csrf-token': csrfCookie.value, cookie: `csrf=${csrfCookie.value}` },
+        });
+        expect(registerRes.statusCode).toBe(201);
+        const sessionCookie = registerRes.cookies.find((cookie) => cookie.name === 'session')!;
+        return { session: sessionCookie.value, csrf: csrfCookie.value };
+      }
+
+      const headersFor = (session: Session) => ({
+        'x-csrf-token': session.csrf,
+        cookie: `session=${session.session}; csrf=${session.csrf}`,
+      });
+
+      try {
+        const owner = await registerUser('Profile Owner');
+        const outsider = await registerUser('Profile Outsider');
+        const suffix = Date.now();
+        const profileSlug = `owner-${suffix}`;
+
+        const privateProfileRes = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profile/public',
+          payload: {
+            slug: profileSlug,
+            gamertag: 'OwnerTag',
+            realName: 'Private Name',
+            biography: 'Private biography',
+            isPublished: false,
+          },
+          headers: headersFor(owner),
+        });
+        expect(privateProfileRes.statusCode).toBe(200);
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/players/${profileSlug}` }),
+        ).toMatchObject({ statusCode: 404 });
+
+        const publishedProfileRes = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profile/public',
+          payload: {
+            gamertag: 'OwnerTag Updated',
+            realName: 'Private Name',
+            biography: 'Public biography',
+            isPublished: true,
+            showBiography: true,
+          },
+          headers: headersFor(owner),
+        });
+        expect(publishedProfileRes.statusCode).toBe(200);
+
+        const gamertagUpdateRes = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profile/public',
+          payload: { gamertag: 'OwnerTag Stable' },
+          headers: headersFor(owner),
+        });
+        expect(gamertagUpdateRes.statusCode).toBe(200);
+
+        const publicProfileRes = await app.inject({
+          method: 'GET',
+          url: `/api/v1/players/${profileSlug}`,
+        });
+        expect(publicProfileRes.statusCode).toBe(200);
+        expect(publicProfileRes.json()).toEqual({
+          player: {
+            slug: profileSlug,
+            gamertag: 'OwnerTag Stable',
+            biography: 'Public biography',
+          },
+        });
+
+        const orgRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/organizations',
+          payload: { name: 'Appearance Org', slug: `appearance-org-${suffix}` },
+          headers: headersFor(owner),
+        });
+        expect(orgRes.statusCode).toBe(201);
+        const ownerMe = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/me',
+          headers: headersFor(owner),
+        });
+        const organizationId = ownerMe.json<{ user: { organizations: Array<{ id: string }> } }>()
+          .user.organizations[0]!.id;
+
+        const tournamentRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/tournaments',
+          payload: {
+            organizationId,
+            slug: `appearance-${suffix}`,
+            name: 'Appearance Cup',
+            rules: 'Keep it fair',
+          },
+          headers: headersFor(owner),
+        });
+        expect(tournamentRes.statusCode).toBe(201);
+        const tournament = tournamentRes.json<{ tournament: { id: string; slug: string } }>()
+          .tournament;
+
+        const forbiddenAppearanceRes = await app.inject({
+          method: 'PATCH',
+          url: `/api/v1/tournaments/${tournament.id}/appearance`,
+          payload: { primaryColor: '#123456' },
+          headers: headersFor(outsider),
+        });
+        expect(forbiddenAppearanceRes.statusCode).toBe(403);
+
+        const invalidAppearanceRes = await app.inject({
+          method: 'PATCH',
+          url: `/api/v1/tournaments/${tournament.id}/appearance`,
+          payload: { primaryColor: '#invalid' },
+          headers: headersFor(owner),
+        });
+        expect(invalidAppearanceRes.statusCode).toBe(400);
+
+        const appearanceRes = await app.inject({
+          method: 'PATCH',
+          url: `/api/v1/tournaments/${tournament.id}/appearance`,
+          payload: { primaryColor: '#123456', secondaryColor: '#abcdef' },
+          headers: headersFor(owner),
+        });
+        expect(appearanceRes.statusCode).toBe(200);
+
+        const draftRead = await app.inject({
+          method: 'GET',
+          url: `/api/v1/tournaments/by-slug/${tournament.slug}`,
+        });
+        expect(draftRead.statusCode).toBe(404);
+
+        const publishRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${tournament.id}/publish`,
+          headers: headersFor(owner),
+        });
+        expect(publishRes.statusCode).toBe(200);
+
+        const brandedRead = await app.inject({
+          method: 'GET',
+          url: `/api/v1/tournaments/by-slug/${tournament.slug}`,
+        });
+        expect(brandedRead.statusCode).toBe(200);
+        expect(brandedRead.json()).toMatchObject({
+          organization: { name: 'Appearance Org' },
+          tournament: {
+            gameAdapterKey: 'generic',
+            capacity: 16,
+            seriesConfig: { bo: 3 },
+            settings: { grandFinalReset: false },
+            rules: 'Keep it fair',
+          },
+          appearance: { primaryColor: '#123456', secondaryColor: '#abcdef' },
+        });
+
+        const smashTeamRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/teams',
+          payload: {
+            organizationId,
+            name: 'Unlinked Smash Label',
+            gameAdapterKey: 'smash_ultimate',
+          },
+          headers: headersFor(owner),
+        });
+        expect(smashTeamRes.statusCode).toBe(201);
+        const teamId = smashTeamRes.json<{ team: { id: string } }>().team.id;
+        const registrationRes = await app.inject({
+          method: 'POST',
+          url: `/api/v1/tournaments/${tournament.id}/registrations`,
+          payload: { teamId },
+          headers: headersFor(owner),
+        });
+        expect(registrationRes.statusCode).toBe(201);
+        const participantsRes = await app.inject({
+          method: 'GET',
+          url: `/api/v1/tournaments/${tournament.id}/teams`,
+        });
+        expect(participantsRes.json()).toMatchObject({
+          teams: [expect.objectContaining({ teamName: 'Unlinked Smash Label' })],
+        });
+        expect(
+          participantsRes.json<{ teams: Array<Record<string, unknown>> }>().teams[0],
+        ).not.toHaveProperty('profile');
+
+        const revocationRes = await app.inject({
+          method: 'DELETE',
+          url: '/api/v1/profile/public',
+          headers: headersFor(owner),
+        });
+        expect(revocationRes.statusCode).toBe(204);
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/players/${profileSlug}` }),
+        ).toMatchObject({ statusCode: 404 });
       } finally {
         await app.close();
       }

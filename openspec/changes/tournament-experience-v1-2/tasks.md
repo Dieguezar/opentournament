@@ -31,10 +31,10 @@ Chain strategy: pending
 
 ## Phase 2: Profiles/Appearance
 
-- [ ] 2.1 **RED**: Test `apps/api/src/app.integration.test.ts` for publication, opt-ins, stable IDs, unlinked Smash labels, branding, and denial.
-- [ ] 2.2 **GREEN**: Add owner profile route in `apps/api/src/routes/profiles.ts` and `apps/api/src/app.ts`; omit private/unpublished data.
-- [ ] 2.3 **GREEN**: Add admin appearance patch in `apps/api/src/routes/tournaments.ts` and `apps/api/src/services/permissions.ts`.
-- [ ] 2.4 **REFACTOR**: Refactor guards; rerun integration tests.
+- [x] 2.1 **RED**: Test `apps/api/src/app.integration.test.ts` for publication, opt-ins, stable IDs, unlinked Smash labels, branding, and denial.
+- [x] 2.2 **GREEN**: Add owner profile route in `apps/api/src/routes/profiles.ts` and `apps/api/src/app.ts`; omit private/unpublished data.
+- [x] 2.3 **GREEN**: Add admin appearance patch in `apps/api/src/routes/tournaments.ts` and `apps/api/src/services/permissions.ts`.
+- [x] 2.4 **REFACTOR**: Refactor guards; rerun integration tests.
 
 ## Phase 3: Media Lifecycle
 

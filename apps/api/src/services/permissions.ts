@@ -34,13 +34,13 @@ export async function getTournament(
   return row ?? null;
 }
 
-export async function isTournamentAdmin(
+export async function getTournamentForAdmin(
   db: Db,
   tournamentId: string,
   userId: string,
-): Promise<boolean> {
+): Promise<typeof tournaments.$inferSelect | null> {
   const tournament = await getTournament(db, tournamentId);
-  if (!tournament) return false;
+  if (!tournament) return null;
 
   const staff = await db
     .select({ id: tournamentStaff.id })
@@ -53,10 +53,18 @@ export async function isTournamentAdmin(
       ),
     )
     .limit(1);
-  if (staff.length > 0) return true;
+  if (staff.length > 0) return tournament;
 
   const member = await getOrgMembership(db, tournament.organizationId, userId);
-  return member?.role === 'admin' || member?.role === 'owner';
+  return member?.role === 'admin' || member?.role === 'owner' ? tournament : null;
+}
+
+export async function isTournamentAdmin(
+  db: Db,
+  tournamentId: string,
+  userId: string,
+): Promise<boolean> {
+  return Boolean(await getTournamentForAdmin(db, tournamentId, userId));
 }
 
 export async function isOrgMember(

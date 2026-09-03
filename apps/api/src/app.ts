@@ -17,6 +17,7 @@ import { registerDisputeRoutes } from './routes/disputes.js';
 import { registerDiscordRoutes } from './routes/discord.js';
 import { registerEventRoutes } from './routes/events.js';
 import { registerParticipantAccessPassRoutes } from './routes/participant-access-passes.js';
+import { registerProfileRoutes } from './routes/profiles.js';
 
 export function buildServer(options: { logger?: boolean } = {}) {
   const app = Fastify({
@@ -34,6 +35,7 @@ export async function initServer(logger = true) {
   await app.register(
     async (api) => {
       await registerAuthRoutes(api);
+      await registerProfileRoutes(api);
       await registerOrganizationRoutes(api);
       await registerTeamRoutes(api);
       await registerTournamentRoutes(api);

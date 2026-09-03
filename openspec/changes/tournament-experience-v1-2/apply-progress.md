@@ -61,3 +61,60 @@
 ### Remaining Tasks
 
 Tasks 2.1 through 6.3 remain pending.
+
+## Work Unit 2: Profile/appearance API
+
+**Status:** Complete.
+
+### Completed Tasks
+
+- [x] 2.1 RED: Add integration coverage for profile publication/opt-ins/stable slugs, unlinked Smash labels, appearance branding, validation, and denial.
+- [x] 2.2 GREEN: Register public profile owner and read routes with an explicit publication gate and private-field omission.
+- [x] 2.3 GREEN: Add an administrator-only appearance patch with validated colors and visibility-safe public reads.
+- [x] 2.4 REFACTOR: Centralize tournament-admin lookup and rerun focused integration and workspace tests.
+
+### TDD Cycle Evidence
+
+| Task | Safety net | RED | GREEN / triangulation | Refactor |
+| --- | --- | --- | --- | --- |
+| 2.1 | `pnpm --filter @opentournament/api test` passed 49, skipped 8 | Fresh transient-PostgreSQL `pnpm --filter @opentournament/api test -- app.integration.test.ts` exited 1: new profile flow expected 200 but received 404 before routes existed (57 passed, 1 failed) | Final focused run passed 58/58; cases cover unpublished 404, biography-only opt-in, immutable slug through gamertag update, invalid color 400, 403 admin denial, draft 404, public branding, and unlinked Smash label without profile data | Prettier and typecheck retained behavior |
+| 2.2 | Same API baseline | New route was absent; later focused RED exited 1 because an omitted publication flag made the stable-slug gamertag update return public 404 | Owner PUT/DELETE and public GET pass; omitted flags preserve existing settings and profile response includes only opted-in fields | Shared projection omits private fields by construction |
+| 2.3 | Same API baseline | New appearance mutation/read behavior was absent | Authorized patch persists colors, unauthorized patch is 403, public read gates draft/unlisted data | Shared admin lookup backs authorization |
+| 2.4 | Focused suite green before cleanup | N/A: refactor-only task | Focused suite green after cleanup | `pnpm exec prettier --write ...`, `pnpm --filter @opentournament/api typecheck`, and `pnpm test` passed |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused test command | Fresh isolated database on the process-only Compose PostgreSQL host: `pnpm --filter @opentournament/api test -- app.integration.test.ts` passed 10 files and 58/58 tests. |
+| Runtime harness | The same Fastify injection flow ran against a fresh migrated database: owner profile create/publish/revoke, public reads, administrator appearance patch, outsider 403, draft 404, publication, and unlinked Smash team label all passed. |
+| Environment lifecycle | `POSTGRES_HOST_PORT=55432; docker compose up -d postgres` reached healthy. Temporary per-run databases were dropped; `docker compose stop postgres` succeeded without deleting the Compose volume. |
+| Workspace proof | `pnpm test` passed 10 workspace tasks and 31 configuration tests; integration tests were skipped only because the transient test URL was intentionally unset for that workspace command. |
+| Rollback boundary | Revert `apps/api/src/routes/profiles.ts`, profile registration, appearance/public-read route changes, permission lookup refactor, integration coverage, and this WU2 progress/task state. WU1 schema/contracts remain intact. |
+
+### Workload / Delivery Boundary
+
+- Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
+- Current slice: WU2 Profile/appearance API; intended target is `codex/tournament-experience-v1-2-wu1-schema-contracts`, never `main`.
+- Maintainer approved `size:exception` for this cohesive WU2 slice: 492 changed lines total (427 code/tests + 65 required OpenSpec evidence); no test, style, or documentation evidence was removed to meet the review budget.
+
+### Files Included
+
+- `apps/api/src/app.integration.test.ts`
+- `apps/api/src/app.ts`
+- `apps/api/src/routes/profiles.ts`
+- `apps/api/src/routes/tournaments.ts`
+- `apps/api/src/services/permissions.ts`
+- `openspec/changes/tournament-experience-v1-2/tasks.md`
+- `openspec/changes/tournament-experience-v1-2/apply-progress.md`
+
+### Remaining Tasks
+
+Tasks 3.1 through 6.3 remain pending.
+
+### Gatekeeper Correction: Public tournament response compatibility
+
+- **RED:** Added regression assertions for `organization`, `gameAdapterKey`, `capacity`, `seriesConfig`, `settings`, and `rules` alongside WU2 appearance. On fresh transient PostgreSQL, `pnpm --filter @opentournament/api test -- app.integration.test.ts` exited 1 with 57 passed and 1 failed because the narrowed response omitted those established public fields.
+- **GREEN:** Restored the prior `{ tournament, organization }` public contract and extended it with `appearance`; retained the public visibility and `publishedAt` 404 gate.
+- **REFACTOR/verification:** Focused integration rerun passed 58/58; `pnpm --filter @opentournament/api typecheck` and `pnpm test` passed. The owner/admin flow ran on a fresh database at port 55432; Compose PostgreSQL was stopped without volume deletion.
+- **Rollback addition:** Revert the restored by-slug response shape and its regression assertions together with the WU2 route slice; WU1 remains untouched.

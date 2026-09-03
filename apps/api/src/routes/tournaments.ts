@@ -8,9 +8,10 @@ import {
   tournamentStaff,
   tournamentParticipants,
   tournamentRegistrations,
+  tournamentAppearances,
   tournaments,
 } from '@opentournament/database';
-import { updateTournamentSchema } from '@opentournament/validation';
+import { tournamentAppearanceSchema, updateTournamentSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { getTournament, isOrgMember, isTournamentAdmin } from '../services/permissions.js';
@@ -238,6 +239,40 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
     return reply.send({ ok: true });
   });
 
+  app.patch('/tournaments/:id/appearance', async (request, reply) => {
+    if (!requireAuth(request, reply)) return;
+    const { id } = request.params as { id: string };
+    const tournament = await getTournament(db, id);
+    if (!tournament) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
+      });
+    }
+    if (!(await isTournamentAdmin(db, id, request.user!.id))) {
+      return reply.status(403).send({
+        error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' },
+      });
+    }
+    const body = tournamentAppearanceSchema.parse(request.body);
+    const [appearance] = await db
+      .insert(tournamentAppearances)
+      .values({ tournamentId: id, ...body })
+      .onConflictDoUpdate({
+        target: tournamentAppearances.tournamentId,
+        set: { ...body, updatedAt: new Date() },
+      })
+      .returning();
+    await db.insert(auditLogs).values({
+      organizationId: tournament.organizationId,
+      actorId: request.user!.id,
+      action: 'tournament.appearance.updated',
+      resourceType: 'tournament',
+      resourceId: id,
+      after: body,
+    });
+    emitTournamentEvent(id, 'tournament.updated', { appearance: true });
+    return reply.send({ appearance });
+  });
   app.post('/tournaments/:id/publish', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     const { id } = request.params as { id: string };
@@ -298,9 +333,9 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
         .status(404)
         .send({ error: { code: 'NOT_FOUND', message: 'The resource does not exist' } });
     }
-    if (tournament.visibility === 'unlisted' && !request.user) {
-      return reply.status(401).send({
-        error: { code: 'UNAUTHORIZED', message: 'Authentication is required' },
+    if (tournament.visibility !== 'public' || !tournament.publishedAt) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
       });
     }
     const [org] = await db
@@ -308,6 +343,23 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .from(organizations)
       .where(eq(organizations.id, tournament.organizationId))
       .limit(1);
-    return reply.send({ tournament, organization: org ?? null });
+    const [appearance] = await db
+      .select()
+      .from(tournamentAppearances)
+      .where(eq(tournamentAppearances.tournamentId, tournament.id))
+      .limit(1);
+    return reply.send({
+      tournament,
+      organization: org ?? null,
+      appearance: appearance
+        ? {
+            logoMediaId: appearance.logoMediaId,
+            bannerMediaId: appearance.bannerMediaId,
+            primaryColor: appearance.primaryColor,
+            secondaryColor: appearance.secondaryColor,
+            accentColor: appearance.accentColor,
+          }
+        : null,
+    });
   });
 }
