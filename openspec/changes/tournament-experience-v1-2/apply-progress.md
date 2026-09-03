@@ -172,8 +172,10 @@ Tasks 3.1 through 6.3 remain pending. WU3b/WU3c must add the HTTP boundary and l
 ### Workload / Delivery Boundary
 
 - Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
-- Current slice: `wu3b-profile-media-proxy`, based exactly on WU3a commit `05d11bc2b8460e6a61761fa6b6e51689b92e1d18`.
-- Authored code, tests, lockfile, and evidence remain within the 400-line budget; no size exception is used.
+- Primary slice: `wu3b-profile-media-proxy` ends exactly at `bcdccc857413d328b655bdee56d3d5a2e1ecf7cb`, based on WU3a commit `05d11bc2b8460e6a61761fa6b6e51689b92e1d18`.
+- Primary authored code, tests, lockfile, and evidence total 361 additions, within the 400-line review budget; no size exception is used.
+- Dependent compensation-proof child: commit `1fce7c7d6427affa08ccff1c8134e0b1050b9cd6` adds 121 changed lines and retains the real PostgreSQL + MinIO compensation evidence as its own review slice.
+- Future WU3c work must branch from the compensation-proof child tip, not the primary WU3b branch, so it retains the proof dependency.
 
 ### Remaining Tasks
 
