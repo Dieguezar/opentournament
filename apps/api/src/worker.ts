@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, asc, eq, gte, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { jobs, resultSubmissions, type Db, type JobRow } from '@opentournament/database';
 import { closeCheckIn } from './services/tournaments.js';
+import { deleteRetiredPublicMedia } from './services/media-retirement.js';
 
 const JOB_LEASE_MS = 30_000;
 const JOB_HEARTBEAT_MS = 10_000;
@@ -27,6 +28,12 @@ const handlers: Record<string, JobHandler> = {
       .update(resultSubmissions)
       .set({ status: 'escalated' })
       .where(and(eq(resultSubmissions.matchId, matchId), eq(resultSubmissions.status, 'pending')));
+  },
+  'public_media.delete': async (database, payload) => {
+    if (typeof payload.mediaId !== 'string' || typeof payload.objectKey !== 'string') {
+      throw new Error('A public-media deletion payload is required');
+    }
+    await deleteRetiredPublicMedia(database, payload.mediaId, payload.objectKey);
   },
 };
 

@@ -4,6 +4,7 @@ import { auditLogs, publicPlayerProfiles } from '@opentournament/database';
 import { publicProfileSettingsSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
+import { revokeProfileAndAvatar } from '../services/profile-media.js';
 
 function publicProfile(profile: typeof publicPlayerProfiles.$inferSelect) {
   return {
@@ -81,12 +82,8 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
 
   app.delete('/profile/public', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
-    const [profile] = await db
-      .update(publicPlayerProfiles)
-      .set({ isPublished: false, updatedAt: new Date() })
-      .where(eq(publicPlayerProfiles.userId, request.user!.id))
-      .returning({ id: publicPlayerProfiles.id });
-    if (!profile) {
+    const profileId = await revokeProfileAndAvatar(request.user!.id);
+    if (!profileId) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
       });
@@ -95,7 +92,7 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
       actorId: request.user!.id,
       action: 'profile.public.revoked',
       resourceType: 'public_player_profile',
-      resourceId: profile.id,
+      resourceId: profileId,
     });
     return reply.status(204).send();
   });

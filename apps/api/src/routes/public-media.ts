@@ -1,7 +1,11 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { requireAuth } from '../plugins/auth.js';
 import { MAX_PUBLIC_MEDIA_BYTES } from '../services/public-media.js';
-import { publishInitialProfileAvatar, readPublishedAvatar } from '../services/profile-media.js';
+import {
+  publishProfileAvatar,
+  readPublishedAvatar,
+  removeProfileAvatar,
+} from '../services/profile-media.js';
 
 const mediaIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -24,7 +28,7 @@ export async function registerPublicMediaRoutes(app: FastifyInstance): Promise<v
   app.post('/profile/public/avatar', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     try {
-      const media = await publishInitialProfileAvatar(request.user!.id, await readUpload(request));
+      const media = await publishProfileAvatar(request.user!.id, await readUpload(request));
       return reply.status(201).send({ media: { id: media.id } });
     } catch (error) {
       const statusCode =
@@ -35,6 +39,12 @@ export async function registerPublicMediaRoutes(app: FastifyInstance): Promise<v
         .status(statusCode)
         .send({ error: { code: statusCode === 409 ? 'AVATAR_EXISTS' : 'INVALID_MEDIA' } });
     }
+  });
+
+  app.delete('/profile/public/avatar', async (request, reply) => {
+    if (!requireAuth(request, reply)) return;
+    if (!(await removeProfileAvatar(request.user!.id))) return notFound(reply);
+    return reply.status(204).send();
   });
 
   app.get('/media/:id', async (request, reply) => {

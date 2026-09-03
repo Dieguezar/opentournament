@@ -7,6 +7,7 @@ import {
   discardStagedPublicImage,
   stagePublicImage,
 } from './public-media.js';
+import { retirePublicMedia } from './media-retirement.js';
 
 function mediaError(message: string, statusCode: number): Error & { statusCode: number } {
   return Object.assign(new Error(message), { statusCode });
@@ -57,6 +58,92 @@ export async function publishInitialProfileAvatar(
     await discardStagedPublicImage(staged).catch(() => undefined);
     throw error;
   }
+}
+
+export async function publishProfileAvatar(
+  userId: string,
+  input: Uint8Array,
+): Promise<{ id: string }> {
+  const [profile] = await db
+    .select({ id: publicPlayerProfiles.id, avatarMediaId: publicPlayerProfiles.avatarMediaId })
+    .from(publicPlayerProfiles)
+    .where(eq(publicPlayerProfiles.userId, userId))
+    .limit(1);
+  if (!profile) throw mediaError('An avatar cannot be published for this profile', 409);
+  if (!profile.avatarMediaId) return publishInitialProfileAvatar(userId, input);
+
+  const staged = await stagePublicImage(input);
+  try {
+    const media = await db.transaction(async (transaction) => {
+      const [created] = await transaction
+        .insert(publicMedia)
+        .values({
+          userId,
+          kind: 'avatar',
+          objectKey: staged.objectKey,
+          mimeType: staged.mimeType,
+          sizeBytes: staged.bytes.byteLength,
+          width: staged.width,
+          height: staged.height,
+          checksum: staged.checksum,
+        })
+        .returning({ id: publicMedia.id });
+      const [attached] = await transaction
+        .update(publicPlayerProfiles)
+        .set({ avatarMediaId: created!.id, updatedAt: new Date() })
+        .where(
+          and(
+            eq(publicPlayerProfiles.id, profile.id),
+            eq(publicPlayerProfiles.avatarMediaId, profile.avatarMediaId!),
+          ),
+        )
+        .returning({ id: publicPlayerProfiles.id });
+      if (!created || !attached) throw mediaError('The avatar changed during replacement', 409);
+      return created;
+    });
+    await retirePublicMedia(db, profile.avatarMediaId);
+    return media;
+  } catch (error) {
+    await discardStagedPublicImage(staged).catch(() => undefined);
+    throw error;
+  }
+}
+
+export async function removeProfileAvatar(userId: string): Promise<boolean> {
+  const [profile] = await db
+    .select({ id: publicPlayerProfiles.id, avatarMediaId: publicPlayerProfiles.avatarMediaId })
+    .from(publicPlayerProfiles)
+    .where(eq(publicPlayerProfiles.userId, userId))
+    .limit(1);
+  if (!profile?.avatarMediaId) return false;
+  const [detached] = await db
+    .update(publicPlayerProfiles)
+    .set({ avatarMediaId: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(publicPlayerProfiles.id, profile.id),
+        eq(publicPlayerProfiles.avatarMediaId, profile.avatarMediaId),
+      ),
+    )
+    .returning({ id: publicPlayerProfiles.id });
+  if (!detached) return false;
+  await retirePublicMedia(db, profile.avatarMediaId);
+  return true;
+}
+
+export async function revokeProfileAndAvatar(userId: string): Promise<string | null> {
+  const [profile] = await db
+    .select({ id: publicPlayerProfiles.id, avatarMediaId: publicPlayerProfiles.avatarMediaId })
+    .from(publicPlayerProfiles)
+    .where(eq(publicPlayerProfiles.userId, userId))
+    .limit(1);
+  if (!profile) return null;
+  await db
+    .update(publicPlayerProfiles)
+    .set({ isPublished: false, avatarMediaId: null, updatedAt: new Date() })
+    .where(eq(publicPlayerProfiles.id, profile.id));
+  await retirePublicMedia(db, profile.avatarMediaId);
+  return profile.id;
 }
 
 export async function readPublishedAvatar(mediaId: string): Promise<{

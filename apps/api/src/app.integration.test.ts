@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
 const hasDb = Boolean(process.env.TEST_DATABASE_URL);
@@ -2432,16 +2432,110 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         ).toMatchObject({
           statusCode: 404,
         });
+        const { pool } = await import('./db.js');
+        await pool.query(`
+          create function delay_avatar_replacement() returns trigger as $$
+          begin perform pg_sleep(0.1); return new; end;
+          $$ language plpgsql;
+          create trigger delay_avatar_replacement before update of avatar_media_id
+          on public_player_profiles for each row execute function delay_avatar_replacement();
+        `);
+        const replaceAvatar = () =>
+          app.inject({
+            method: 'POST',
+            url: '/api/v1/profile/public/avatar',
+            payload: multipart,
+            headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
+          });
+        const replacements = await Promise.all([replaceAvatar(), replaceAvatar()]);
+        await pool.query('drop trigger delay_avatar_replacement on public_player_profiles');
+        await pool.query('drop function delay_avatar_replacement()');
+        expect(replacements.map(({ statusCode }) => statusCode).sort()).toEqual([201, 409]);
+        const replacement = replacements.find(({ statusCode }) => statusCode === 201)!;
+        expect(replacement.statusCode).toBe(201);
+        const replacementId = replacement.json<{ media: { id: string } }>().media.id;
+        expect(replacementId).not.toBe(mediaId);
+        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${mediaId}` })).toMatchObject({
+          statusCode: 404,
+        });
         expect(
-          (
-            await app.inject({
-              method: 'POST',
-              url: '/api/v1/profile/public/avatar',
-              payload: multipart,
-              headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
-            })
-          ).statusCode,
-        ).toBe(409);
+          await app.inject({ method: 'GET', url: `/api/v1/media/${replacementId}` }),
+        ).toMatchObject({
+          statusCode: 200,
+        });
+        expect(
+          await app.inject({
+            method: 'DELETE',
+            url: '/api/v1/profile/public/avatar',
+            headers,
+          }),
+        ).toMatchObject({ statusCode: 204 });
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/media/${replacementId}` }),
+        ).toMatchObject({
+          statusCode: 404,
+        });
+        const finalUpload = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profile/public/avatar',
+          payload: multipart,
+          headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
+        });
+        expect(finalUpload.statusCode).toBe(201);
+        const finalId = finalUpload.json<{ media: { id: string } }>().media.id;
+        const retirementStorage = await import('./services/storage.js');
+        const deleteFailure = vi
+          .spyOn(retirementStorage, 'deletePrivateObject')
+          .mockRejectedValueOnce(new Error('temporary storage failure'));
+        expect(
+          await app.inject({ method: 'DELETE', url: '/api/v1/profile/public/avatar', headers }),
+        ).toMatchObject({
+          statusCode: 204,
+        });
+        deleteFailure.mockRestore();
+        const { db } = await import('./db.js');
+        const { jobs, publicMedia } = await import('@opentournament/database');
+        const [retry] = await db
+          .select()
+          .from(jobs)
+          .where(eq(jobs.kind, 'public_media.delete'))
+          .orderBy(desc(jobs.id))
+          .limit(1);
+        expect(retry).toMatchObject({ status: 'pending', payload: { mediaId: finalId } });
+        expect(
+          await db
+            .select({ state: publicMedia.state })
+            .from(publicMedia)
+            .where(eq(publicMedia.id, finalId)),
+        ).toEqual([{ state: 'retired' }]);
+        const { runSchedulerTick } = await import('./worker.js');
+        await runSchedulerTick(db);
+        expect(
+          await retirementStorage.objectExists((retry!.payload as { objectKey: string }).objectKey),
+        ).toBe(false);
+        expect(
+          await db
+            .select({ state: publicMedia.state })
+            .from(publicMedia)
+            .where(eq(publicMedia.id, finalId)),
+        ).toEqual([{ state: 'deleted' }]);
+        const cleanupUpload = await app.inject({
+          method: 'POST',
+          url: '/api/v1/profile/public/avatar',
+          payload: multipart,
+          headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
+        });
+        const cleanupId = cleanupUpload.json<{ media: { id: string } }>().media.id;
+        expect(
+          await app.inject({ method: 'DELETE', url: '/api/v1/profile/public', headers }),
+        ).toMatchObject({
+          statusCode: 204,
+        });
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/media/${cleanupId}` }),
+        ).toMatchObject({
+          statusCode: 404,
+        });
         expect(
           (
             await app.inject({

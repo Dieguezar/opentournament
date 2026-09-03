@@ -180,3 +180,26 @@ Tasks 3.1 through 6.3 remain pending. WU3b/WU3c must add the HTTP boundary and l
 ### Remaining Tasks
 
 Tasks 3.1 through 6.3 remain pending. WU3c owns replacement, deletion, tournament media, retirement, and worker lifecycle work.
+
+## Work Unit 3c: Profile lifecycle and retirement executor
+
+**Status:** Complete partial slice. Tasks 3.1–3.3 remain unchecked: authorized tournament logo/banner lifecycle is deferred to WU3d.
+
+### TDD Cycle Evidence
+
+| Scope | Safety net | RED | GREEN / triangulation | Refactor |
+| --- | --- | --- | --- | --- |
+| Avatar replacement and cleanup | Existing initial-avatar and staged-publication-compensation integration cases passed 2/2 against PostgreSQL and MinIO. | `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "publishes an initial profile avatar"` failed with `expected 409 to be 201` after the replacement assertion was written. | The focused command passed 2/2. It proves CAS contention gives one 201 and one 409, replacement exposes the new ID before the old ID is unavailable, explicit DELETE retires media, revocation cleans the final avatar, and forced deletion queues a pending job that the scheduler completes to `deleted` with bytes absent. | Shared retirement service; API typecheck and workspace tests passed. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused integration/runtime | Fresh `wu3c_profile_lifecycle_final` PostgreSQL on 55432 plus MinIO on 59000/59001: avatar/retry and preserved DB-publication-compensation cases passed 2/2 using real multipart, S3, database, trigger, and scheduler paths. |
+| API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |
+| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests. |
+| Rollback boundary | Revert profile replacement/removal/revocation cleanup, `media-retirement` service and worker handler, focused tests, and this WU3c evidence. WU3a ingest and WU3b initial attach/compensation proof remain; tournament media is untouched. |
+
+### Remaining Tasks
+
+Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament logo/banner upload, replacement, deletion, and visibility behavior.
