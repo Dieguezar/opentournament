@@ -73,8 +73,9 @@ export async function publishProfileAvatar(
   if (!profile.avatarMediaId) return publishInitialProfileAvatar(userId, input);
 
   const staged = await stagePublicImage(input);
+  let media: { id: string };
   try {
-    const media = await db.transaction(async (transaction) => {
+    media = await db.transaction(async (transaction) => {
       const [created] = await transaction
         .insert(publicMedia)
         .values({
@@ -101,12 +102,12 @@ export async function publishProfileAvatar(
       if (!created || !attached) throw mediaError('The avatar changed during replacement', 409);
       return created;
     });
-    await retirePublicMedia(db, profile.avatarMediaId);
-    return media;
   } catch (error) {
     await discardStagedPublicImage(staged).catch(() => undefined);
     throw error;
   }
+  await retirePublicMedia(db, profile.avatarMediaId);
+  return media;
 }
 
 export async function removeProfileAvatar(userId: string): Promise<boolean> {
@@ -138,12 +139,21 @@ export async function revokeProfileAndAvatar(userId: string): Promise<string | n
     .where(eq(publicPlayerProfiles.userId, userId))
     .limit(1);
   if (!profile) return null;
-  await db
+  const [revoked] = await db
     .update(publicPlayerProfiles)
     .set({ isPublished: false, avatarMediaId: null, updatedAt: new Date() })
-    .where(eq(publicPlayerProfiles.id, profile.id));
+    .where(
+      and(
+        eq(publicPlayerProfiles.id, profile.id),
+        profile.avatarMediaId
+          ? eq(publicPlayerProfiles.avatarMediaId, profile.avatarMediaId)
+          : isNull(publicPlayerProfiles.avatarMediaId),
+      ),
+    )
+    .returning({ id: publicPlayerProfiles.id });
+  if (!revoked) return null;
   await retirePublicMedia(db, profile.avatarMediaId);
-  return profile.id;
+  return revoked.id;
 }
 
 export async function readPublishedAvatar(mediaId: string): Promise<{

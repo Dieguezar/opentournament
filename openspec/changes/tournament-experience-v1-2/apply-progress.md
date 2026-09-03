@@ -189,7 +189,7 @@ Tasks 3.1 through 6.3 remain pending. WU3c owns replacement, deletion, tournamen
 
 | Scope | Safety net | RED | GREEN / triangulation | Refactor |
 | --- | --- | --- | --- | --- |
-| Avatar replacement and cleanup | Existing initial-avatar and staged-publication-compensation integration cases passed 2/2 against PostgreSQL and MinIO. | `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "publishes an initial profile avatar"` failed with `expected 409 to be 201` after the replacement assertion was written. | The focused command passed 2/2. It proves CAS contention gives one 201 and one 409, replacement exposes the new ID before the old ID is unavailable, explicit DELETE retires media, revocation cleans the final avatar, and forced deletion queues a pending job that the scheduler completes to `deleted` with bytes absent. | Shared retirement service; API typecheck and workspace tests passed. |
+| Avatar replacement and cleanup | Existing initial-avatar and staged-publication-compensation integration cases passed 2/2 against PostgreSQL and MinIO. | `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "publishes an initial profile avatar"` failed with `expected 409 to be 201` after the replacement assertion was written. | `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "publishes an initial profile avatar|removes a staged MinIO avatar"` passed 2/2. It proves CAS contention gives one 201 and one 409, replacement exposes the new ID before the old ID is unavailable, explicit DELETE retires media, revocation cleans the final avatar, and forced deletion queues a pending job that the scheduler completes to `deleted` with bytes absent. | Shared retirement service; API typecheck and workspace tests passed. |
 
 ### Work Unit Evidence
 
@@ -203,3 +203,8 @@ Tasks 3.1 through 6.3 remain pending. WU3c owns replacement, deletion, tournamen
 ### Remaining Tasks
 
 Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament logo/banner upload, replacement, deletion, and visibility behavior.
+
+### Gatekeeper Correction
+
+- Revocation now detaches only when the captured avatar reference still matches; a concurrent winning replacement remains published and is not retired.
+- Publication compensation now ends at transaction commit: a later retirement/retry-enqueue failure cannot discard the newly attached object. Focused regression coverage proves both cases.

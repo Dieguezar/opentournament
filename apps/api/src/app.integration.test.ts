@@ -2482,8 +2482,34 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
         });
         expect(finalUpload.statusCode).toBe(201);
-        const finalId = finalUpload.json<{ media: { id: string } }>().media.id;
+        const previousId = finalUpload.json<{ media: { id: string } }>().media.id;
         const retirementStorage = await import('./services/storage.js');
+        const { db } = await import('./db.js');
+        const { jobs, publicMedia } = await import('@opentournament/database');
+        await pool.query(`
+          create function fail_media_retry_enqueue() returns trigger as $$
+          begin raise exception 'forced retry enqueue failure'; end;
+          $$ language plpgsql;
+          create trigger fail_media_retry_enqueue before insert on jobs
+          for each row execute function fail_media_retry_enqueue();
+        `);
+        const retirementFailure = vi
+          .spyOn(retirementStorage, 'deletePrivateObject')
+          .mockRejectedValueOnce(new Error('temporary storage failure'));
+        expect((await replaceAvatar()).statusCode).toBe(500);
+        retirementFailure.mockRestore();
+        await pool.query('drop trigger fail_media_retry_enqueue on jobs');
+        await pool.query('drop function fail_media_retry_enqueue()');
+        const [activeMedia] = await db
+          .select({ id: publicMedia.id })
+          .from(publicMedia)
+          .orderBy(desc(publicMedia.createdAt))
+          .limit(1);
+        const finalId = activeMedia!.id;
+        expect(finalId).not.toBe(previousId);
+        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${finalId}` })).toMatchObject({
+          statusCode: 200,
+        });
         const deleteFailure = vi
           .spyOn(retirementStorage, 'deletePrivateObject')
           .mockRejectedValueOnce(new Error('temporary storage failure'));
@@ -2493,8 +2519,6 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           statusCode: 204,
         });
         deleteFailure.mockRestore();
-        const { db } = await import('./db.js');
-        const { jobs, publicMedia } = await import('@opentournament/database');
         const [retry] = await db
           .select()
           .from(jobs)
@@ -2526,6 +2550,27 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           headers: { ...headers, 'content-type': `multipart/form-data; boundary=${boundary}` },
         });
         const cleanupId = cleanupUpload.json<{ media: { id: string } }>().media.id;
+        await pool.query(`
+          create function delay_profile_revocation() returns trigger as $$
+          begin if new.is_published = old.is_published then perform pg_sleep(0.2); end if; return new; end;
+          $$ language plpgsql;
+          create trigger delay_profile_revocation before update of avatar_media_id
+          on public_player_profiles for each row execute function delay_profile_revocation();
+        `);
+        const concurrentReplacement = replaceAvatar();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        const concurrentRevocation = await app.inject({
+          method: 'DELETE',
+          url: '/api/v1/profile/public',
+          headers,
+        });
+        const concurrentId = (await concurrentReplacement).json<{ media: { id: string } }>().media.id;
+        await pool.query('drop trigger delay_profile_revocation on public_player_profiles');
+        await pool.query('drop function delay_profile_revocation()');
+        expect(concurrentRevocation.statusCode).toBe(404);
+        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${concurrentId}` })).toMatchObject({
+          statusCode: 200,
+        });
         expect(
           await app.inject({ method: 'DELETE', url: '/api/v1/profile/public', headers }),
         ).toMatchObject({
