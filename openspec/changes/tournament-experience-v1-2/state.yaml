@@ -1,0 +1,117 @@
+dependsOn: []
+
+preproposal:
+  schema: gentle-ai.sdd-preproposal/v1
+  revision: 3
+  exploration:
+    outcome: done
+    reference: exploration.md
+  research:
+    status: selected
+    selectedAnswer: run_research
+    requestedClasses:
+      - documentation
+      - open-web
+    questions:
+      - What constraints and supported behavior of OBS Browser Source matter for transparent HTML/CSS overlays, automatic page updates, and local/self-hosted URLs?
+      - Is the existing SSE invalidation plus authoritative refetch pattern appropriate for one-way live tournament overlays, and what reconnection/caching behavior should the proposal require?
+      - What security and operational controls should a same-origin public-media proxy use for self-hosted S3/MinIO-backed logos, banners, and avatars?
+      - What privacy and identity boundaries should a public account profile use in a self-hosted deployment, especially for optional real names and participants without linked accounts?
+    admission:
+      schema: gentle-ai.sdd-research-capability/v1
+      requestedClasses:
+        - documentation
+        - open-web
+      observedGrants:
+        - documentation
+        - open-web
+      result: admitted
+    outcome: done
+    reference:
+      openspec: research.md
+      engram: null
+    allowedAnswers:
+      - run_research
+      - skip_research
+    options:
+      - answer: run_research
+        label: Run external research
+        effect: Produce a source-backed research artifact before proposal work begins.
+      - answer: skip_research
+        label: Skip external research
+        effect: Continue using the verified repository evidence already captured in exploration.md.
+  decisions:
+    status: confirmed
+    items:
+      - key: profile_ownership
+        status: confirmed
+        selectedAnswer: global_account_profile
+        allowedAnswers:
+          - global_account_profile
+          - tournament_scoped_profile
+        options:
+          - answer: global_account_profile
+            label: Global account profile
+            effect: Reuses player identity across tournaments but omits profile links when an account cannot be resolved.
+          - answer: tournament_scoped_profile
+            label: Tournament-scoped profile
+            effect: Simplifies tournament association but duplicates identity and limits future cross-tournament profiles.
+      - key: featured_match_selection
+        status: confirmed
+        selectedAnswer: automatic_match_selection
+        allowedAnswers:
+          - automatic_match_selection
+          - organizer_selected_match
+        options:
+          - answer: automatic_match_selection
+            label: Automatic match selection
+            effect: Requires no stream-runner action but can select a match different from the intended broadcast.
+          - answer: organizer_selected_match
+            label: Organizer-selected match
+            effect: Matches production intent but adds explicit selection and reset controls.
+      - key: unlisted_overlay_access
+        status: confirmed
+        selectedAnswer: public_only_overlays
+        allowedAnswers:
+          - public_only_overlays
+          - secret_url_overlays
+        options:
+          - answer: public_only_overlays
+            label: Public-only overlays
+            effect: Keeps OBS access simple and credential-free but excludes unlisted tournaments from V1.
+          - answer: secret_url_overlays
+            label: Secret URL overlays
+            effect: Supports unlisted tournaments but requires token generation, revocation, leakage, and cache-control handling.
+      - key: public_media_delivery
+        status: confirmed
+        selectedAnswer: same_origin_media_proxy
+        allowedAnswers:
+          - same_origin_media_proxy
+          - direct_object_storage_urls
+        options:
+          - answer: same_origin_media_proxy
+            label: Same-origin media proxy
+            effect: Works with the current CSP and self-hosted storage at the cost of application bandwidth.
+          - answer: direct_object_storage_urls
+            label: Direct object-storage URLs
+            effect: Reduces application bandwidth but requires configurable CSP and verified public bucket policy.
+  proposal_ready: true
+
+delivery:
+  strategy: ask-on-risk
+  status: confirmed
+  selectedAnswer: chained_prs
+  chainStrategy: feature-branch-chain
+  currentWorkUnit: 1
+  currentBoundary: schema-contracts
+  estimatedChangedLines: 2000-2600
+  reviewBudgetLines: 400
+  chainedPrsRecommended: true
+  allowedAnswers:
+    - chained_prs
+    - size_exception
+  chainStrategy:
+    status: pending
+    allowedAnswers:
+      - stacked-to-main
+      - feature-branch-chain
