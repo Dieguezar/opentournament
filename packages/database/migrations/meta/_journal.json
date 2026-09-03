@@ -57,6 +57,13 @@
       "when": 1787639267602,
       "tag": "0007_watery_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788407504934,
+      "tag": "0008_superb_otto_octavius",
+      "breakpoints": true
     }
   ]
 }

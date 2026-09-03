@@ -194,6 +194,54 @@ export const MATCH_STATUSES = [
 ] as const;
 export type MatchStatus = (typeof MATCH_STATUSES)[number];
 
+export const PUBLIC_MEDIA_KINDS = ['avatar', 'logo', 'banner'] as const;
+export type PublicMediaKind = (typeof PUBLIC_MEDIA_KINDS)[number];
+
+export const OVERLAY_MATCH_STATUS_ORDER = ['in_progress', 'scheduled'] as const;
+
+export interface PublicMedia {
+  id: string;
+  kind: PublicMediaKind;
+  url: string;
+  width: number;
+  height: number;
+}
+
+export interface TournamentAppearance {
+  logo: PublicMedia | null;
+  banner: PublicMedia | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  accentColor: string | null;
+}
+
+export const PUBLIC_PLAYER_PROFILE_FIELDS = [
+  'slug',
+  'gamertag',
+  'avatar',
+  'realName',
+  'biography',
+] as const;
+
+export interface PublicPlayerProfile {
+  slug: string;
+  gamertag: string;
+  avatar?: PublicMedia;
+  realName?: string;
+  biography?: string;
+}
+
+export interface PublicPlayerProfileSettings {
+  slug: string;
+  gamertag: string;
+  realName: string | null;
+  biography: string | null;
+  isPublished: boolean;
+  showAvatar: boolean;
+  showRealName: boolean;
+  showBiography: boolean;
+}
+
 export interface User {
   id: string;
   email: string | null;

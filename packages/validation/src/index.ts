@@ -65,6 +65,30 @@ export const updateProfileSchema = z.object({
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
+const hexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Use a six-digit hex color');
+const publicMediaIdSchema = z.string().uuid();
+
+export const tournamentAppearanceSchema = z.object({
+  logoMediaId: publicMediaIdSchema.nullable().optional(),
+  bannerMediaId: publicMediaIdSchema.nullable().optional(),
+  primaryColor: hexColorSchema.nullable().optional(),
+  secondaryColor: hexColorSchema.nullable().optional(),
+  accentColor: hexColorSchema.nullable().optional(),
+});
+export type TournamentAppearanceInput = z.infer<typeof tournamentAppearanceSchema>;
+
+export const publicProfileSettingsSchema = z.object({
+  slug: slugSchema.optional(),
+  gamertag: z.string().trim().min(1).max(32),
+  realName: z.string().trim().min(1).max(80).nullable().optional(),
+  biography: z.string().trim().max(1_000).nullable().optional(),
+  isPublished: z.boolean().default(false),
+  showAvatar: z.boolean().default(false),
+  showRealName: z.boolean().default(false),
+  showBiography: z.boolean().default(false),
+});
+export type PublicProfileSettingsInput = z.infer<typeof publicProfileSettingsSchema>;
+
 export const inviteMemberSchema = z.object({
   email: emailSchema,
   role: z.enum(['owner', 'admin', 'member']),

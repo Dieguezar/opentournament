@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { publicProfileSettingsSchema, tournamentAppearanceSchema } from './index.js';
 import {
   addTeamMemberSchema,
   assignTeamGameAdapterSchema,
@@ -556,5 +557,23 @@ describe('accountless access and result reporting', () => {
       token,
     });
     expect(exchangeParticipantAccessPassSchema.safeParse({ token: 'corto' }).success).toBe(false);
+  });
+});
+
+describe('public presentation validation', () => {
+  it('validates appearance colors and independent profile opt-ins', () => {
+    const mediaId = '00000000-0000-4000-8000-000000000001';
+
+    expect(
+      tournamentAppearanceSchema.safeParse({ primaryColor: '#123AbC', logoMediaId: mediaId })
+        .success,
+    ).toBe(true);
+    expect(tournamentAppearanceSchema.safeParse({ primaryColor: 'blue' }).success).toBe(false);
+    expect(publicProfileSettingsSchema.parse({ gamertag: 'Nox' })).toMatchObject({
+      isPublished: false,
+      showAvatar: false,
+      showRealName: false,
+      showBiography: false,
+    });
   });
 });

@@ -25,9 +25,9 @@ Chain strategy: pending
 
 ## Phase 1: Foundation
 
-- [ ] 1.1 **RED**: Test appearance, profile opt-ins/private DTO, media XOR, colors, and ordering in `packages/database/src/schema.test.ts`, `packages/shared-types/src/index.test.ts`, and `packages/validation/src/index.test.ts`.
-- [ ] 1.2 **GREEN**: Add schema/migration in `packages/database/src/schema.ts` and `packages/database/migrations/`; add DTO/validation in `packages/shared-types/src/index.ts` and `packages/validation/src/index.ts`.
-- [ ] 1.3 **REFACTOR**: Run database commands/tests; retain legacy URLs without backfill.
+- [x] 1.1 **RED**: Test appearance, profile opt-ins/private DTO, media XOR, colors, and ordering in `packages/database/src/schema.test.ts`, `packages/shared-types/src/index.test.ts`, and `packages/validation/src/index.test.ts`.
+- [x] 1.2 **GREEN**: Add schema/migration in `packages/database/src/schema.ts` and `packages/database/migrations/`; add DTO/validation in `packages/shared-types/src/index.ts` and `packages/validation/src/index.ts`.
+- [x] 1.3 **REFACTOR**: Run database commands/tests; retain legacy URLs without backfill.
 
 ## Phase 2: Profiles/Appearance
 

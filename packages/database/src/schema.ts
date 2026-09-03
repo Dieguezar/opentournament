@@ -1,6 +1,7 @@
 import {
   bigserial,
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -11,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const users = pgTable(
   'users',
@@ -341,6 +343,93 @@ export const tournaments = pgTable(
 );
 
 export type TournamentRow = typeof tournaments.$inferSelect;
+
+export const publicMedia = pgTable(
+  'public_media',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    tournamentId: uuid('tournament_id').references(() => tournaments.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    objectKey: text('object_key').notNull(),
+    mimeType: text('mime_type').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    width: integer('width').notNull(),
+    height: integer('height').notNull(),
+    checksum: text('checksum').notNull(),
+    state: text('state').notNull().default('active'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    retiredAt: timestamp('retired_at', { withTimezone: true }),
+  },
+  (table) => [
+    check(
+      'public_media_exactly_one_owner',
+      sql`(${table.userId} IS NOT NULL) <> (${table.tournamentId} IS NOT NULL)`,
+    ),
+    uniqueIndex('public_media_object_key_unique').on(table.objectKey),
+    index('public_media_user_id_idx').on(table.userId),
+    index('public_media_tournament_id_idx').on(table.tournamentId),
+  ],
+);
+
+export const publicPlayerProfiles = pgTable(
+  'public_player_profiles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    slug: text('slug').notNull(),
+    gamertag: text('gamertag').notNull(),
+    realName: text('real_name'),
+    biography: text('biography'),
+    avatarMediaId: uuid('avatar_media_id').references(() => publicMedia.id, {
+      onDelete: 'set null',
+    }),
+    isPublished: boolean('is_published').notNull().default(false),
+    showAvatar: boolean('show_avatar').notNull().default(false),
+    showRealName: boolean('show_real_name').notNull().default(false),
+    showBiography: boolean('show_biography').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('public_player_profiles_user_id_unique').on(table.userId),
+    uniqueIndex('public_player_profiles_slug_unique').on(table.slug),
+  ],
+);
+
+export const tournamentAppearances = pgTable(
+  'tournament_appearances',
+  {
+    tournamentId: uuid('tournament_id')
+      .primaryKey()
+      .references(() => tournaments.id, { onDelete: 'cascade' }),
+    logoMediaId: uuid('logo_media_id').references(() => publicMedia.id, { onDelete: 'set null' }),
+    bannerMediaId: uuid('banner_media_id').references(() => publicMedia.id, {
+      onDelete: 'set null',
+    }),
+    primaryColor: text('primary_color'),
+    secondaryColor: text('secondary_color'),
+    accentColor: text('accent_color'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check(
+      'tournament_appearances_primary_color_hex',
+      sql`${table.primaryColor} IS NULL OR ${table.primaryColor} ~ '^#[0-9A-Fa-f]{6}$'`,
+    ),
+    check(
+      'tournament_appearances_secondary_color_hex',
+      sql`${table.secondaryColor} IS NULL OR ${table.secondaryColor} ~ '^#[0-9A-Fa-f]{6}$'`,
+    ),
+    check(
+      'tournament_appearances_accent_color_hex',
+      sql`${table.accentColor} IS NULL OR ${table.accentColor} ~ '^#[0-9A-Fa-f]{6}$'`,
+    ),
+  ],
+);
 
 export const tournamentStaff = pgTable(
   'tournament_staff',
