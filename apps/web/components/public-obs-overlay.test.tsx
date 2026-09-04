@@ -1,0 +1,62 @@
+import { describe, expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+
+import PublicObsOverlayLayout from '../app/t/[slug]/overlay/layout';
+import { OverlayCanvas, isOverlayView } from './public-obs-overlay';
+
+const snapshot = {
+  tournament: {
+    name: 'Spring Major',
+    appearance: { logoMediaId: '11111111-1111-4111-8111-111111111111' },
+  },
+  scoreboard: {
+    home: { label: 'Alpha' },
+    away: { label: 'Bravo' },
+    homeScore: 2,
+    awayScore: 1,
+  },
+  upNext: { home: { label: 'Charlie' }, away: { label: 'Delta' } },
+  champion: { label: 'Alpha' },
+};
+
+describe('public OBS overlay canvas', () => {
+  it('accepts only the three deterministic public views', () => {
+    expect(['scoreboard', 'up-next', 'champion'].every(isOverlayView)).toBe(true);
+    expect(isOverlayView('private-admin')).toBe(false);
+  });
+
+  it('renders scoreboard state in a transparent 1920x1080 no-scroll canvas', () => {
+    const markup = renderToStaticMarkup(<OverlayCanvas snapshot={snapshot} view="scoreboard" />);
+    expect(markup).toContain('width:1920px');
+    expect(markup).toContain('height:1080px');
+    expect(markup).toContain('overflow:hidden');
+    expect(markup).toContain('background-color:transparent');
+    expect(markup).toContain('Alpha');
+    expect(markup).toContain('Bravo');
+    expect(markup).toContain('src="/api/v1/media/11111111-1111-4111-8111-111111111111"');
+  });
+
+  it('renders the named up-next and champion state without private fallbacks', () => {
+    expect(renderToStaticMarkup(<OverlayCanvas snapshot={snapshot} view="up-next" />)).toContain(
+      'Charlie',
+    );
+    expect(renderToStaticMarkup(<OverlayCanvas snapshot={snapshot} view="champion" />)).toContain(
+      'Champion: Alpha',
+    );
+    expect(
+      renderToStaticMarkup(
+        <OverlayCanvas
+          snapshot={{ ...snapshot, tournament: { ...snapshot.tournament, appearance: null } }}
+          view="champion"
+        />,
+      ),
+    ).not.toContain('/api/v1/media/');
+  });
+
+  it('removes the application chrome and document overflow for OBS routes', () => {
+    const markup = renderToStaticMarkup(<PublicObsOverlayLayout>overlay</PublicObsOverlayLayout>);
+    expect(markup).toContain('body:has([data-obs-route])');
+    expect(markup).toContain('overflow:hidden');
+    expect(markup).toContain('>header,body:has([data-obs-route])>.skip-link{display:none}');
+  });
+});

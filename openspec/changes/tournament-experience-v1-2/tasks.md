@@ -50,9 +50,9 @@ Chain strategy: pending
 
 ## Phase 5: Web Surfaces
 
-- [ ] 5.1 **RED**: Test branding, profile/privacy/links, canvas in `apps/web/app/t/[slug]/page.tsx`, `apps/web/app/players/[slug]/page.tsx`, and forms.
-- [ ] 5.2 **GREEN**: Add public pages, correction/hide/delete in `apps/web/app/dashboard/page.tsx`, appearance controls in `apps/web/app/tournaments/[id]/page.tsx`.
-- [ ] 5.3 **GREEN/REFACTOR**: Add `apps/web/app/t/[slug]/overlay/[view]/page.tsx` with three 1920×1080 transparent no-scroll views; use same-origin media.
+- [x] 5.1 **RED**: Test branding, profile/privacy/links, canvas in `apps/web/app/t/[slug]/page.tsx`, `apps/web/app/players/[slug]/page.tsx`, and forms.
+- [x] 5.2 **GREEN**: Add public pages, correction/hide/delete in `apps/web/app/dashboard/page.tsx`, appearance controls in `apps/web/app/tournaments/[id]/page.tsx`.
+- [x] 5.3 **GREEN/REFACTOR**: Add `apps/web/app/t/[slug]/overlay/[view]/page.tsx` with three 1920×1080 transparent no-scroll views; use same-origin media.
 
 ## Phase 6: Acceptance
 

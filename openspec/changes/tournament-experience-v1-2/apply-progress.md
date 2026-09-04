@@ -736,3 +736,24 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three existing stashes remain untouched.
 - **Verification manifest:** `wu5g5-verification-manifest.txt`, `sha256:45b8f9f177fea85b01bd1de108ae1b1079b9af2bbfc96621c50ee50650d26d35`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.
 - **Next:** WU5h is eligible only after this commit's final Prettier, control-byte/placeholder, and diff checks pass.
+
+## Work Unit WU5h-public-obs-overlay-views
+
+**Status:** Complete. The accumulated Phase 5 acceptance is satisfied; tasks 5.1, 5.2, and 5.3 are checked in `tasks.md`.
+
+### TDD Cycle Evidence
+
+- **RED:** the focused OBS overlay test first failed because neither the production presenter nor the route layout existed. A second focused RED established the required route-level document chrome/no-scroll contract before its layout was added.
+- **GREEN:** `pnpm --filter @opentournament/web exec vitest run components/public-obs-overlay.test.tsx components/overlay-live.test.tsx` passed 2 files / 9 tests. It proves exactly `scoreboard`, `up-next`, and `champion`; a 1920×1080 transparent overflow-hidden canvas; safe same-origin opaque logo media; named match/champion projections; route chrome removal; and the existing SSE authoritative-refresh controller.
+- **REFACTOR:** the public client presenter delegates all bootstrap, coalescing, stale-response rejection, 404 shutdown, and SSE invalidation handling to the existing `OverlayLive` contract. It adds no parallel read model or realtime transport.
+
+### Work Unit Evidence
+
+- `/t/[slug]/overlay/[view]` rejects any view outside `scoreboard`, `up-next`, and `champion` through `notFound()`. Public visibility stays API-authoritative: a private/unlisted/not-found overlay snapshot causes `OverlayLive` to clear state and close its EventSource.
+- The route layout makes the OBS document transparent, hides normal application chrome, and prevents document/main overflow before client hydration. The canvas remains fixed at 1920×1080 and only derives media from a validated opaque ID as `/api/v1/media/:id`.
+- **Phase 5 completion assessment:** WU5a–WU5g5 collectively provide the required public branding, profile privacy/links, owner correction/hide/delete/avatar controls, appearance palette/logo/banner controls, and their focused RED/GREEN coverage. This WU5h completes the remaining canvas/views requirement, so 5.1–5.3 are now checked; Phase 6 browser/OBS acceptance and deployment documentation remain pending.
+- Passed: focused overlay tests, API/web typechecks, exact `pnpm test` (10 Turbo tasks; web 25 files / 131 tests; API 63 passed / 14 skipped; configuration 31 tests), Next.js 16.3.2 production build, Prettier, and `git diff --check`.
+- Runtime harness: static server render validates the route's canvas and document CSS contract. Browser/OBS smoke and Playwright are intentionally deferred to Phase 6.
+- **Rollback boundary:** revert this WU5h child commit to remove the OBS route, transparent document layout, overlay presenter/tests, task completion update, manifest, and this evidence without altering the API overlay contract.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three existing stashes remain untouched; no Docker process or volume was used.
+- **Verification manifest:** `wu5h-verification-manifest.txt`, `sha256:5645619f5f969d8e487bda6c9bb9c5cfbf3ef5ed5ad7fb01c9cb798960716a6c`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.

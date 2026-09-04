@@ -1,0 +1,20 @@
+WU5h verification manifest
+Parent: c27323c7fe8c703d176aef0195866e6f79b475af
+Work unit: WU5h-public-obs-overlay-views
+
+Verification outcomes
+- RED: focused public overlay test initially failed because the production overlay component and route layout did not exist.
+- GREEN: pnpm --filter @opentournament/web exec vitest run components/public-obs-overlay.test.tsx components/overlay-live.test.tsx passed: 2 files, 9 tests.
+- API typecheck: pnpm --filter @opentournament/api run typecheck passed.
+- Web typecheck: pnpm --filter @opentournament/web run typecheck passed.
+- Workspace: pnpm test passed: 10 Turbo tasks, web 25 files / 131 tests, API 63 passed / 14 skipped, configuration 31 tests.
+- Build: pnpm --filter @opentournament/web build passed with Next.js 16.3.2.
+- Formatting: Prettier check passed for all WU5h source, test, route, layout, and task files.
+- Runtime: static render harness proves the canvas/document contract; browser/OBS E2E remains Phase 6.
+
+Source digests
+apps/web/components/public-obs-overlay.tsx  6ea938b8456f59f4b12771e7cd5d932568e82eebd1826bcedc1dfb6fb20e56be
+apps/web/components/public-obs-overlay.test.tsx  4e80a5c14e1a3e9f78dc8faa51f8f3298af5c500ecdf276702ca75809938b197
+apps/web/app/t/[slug]/overlay/[view]/page.tsx  afc116247a4302540aff70033274408b4bb35a73261633d682e5c26ac4e23976
+apps/web/app/t/[slug]/overlay/layout.tsx  560ed009659f461d3296b70ab8a9bfe807f7fe99f7c55661a1f220fa229e60ce
+openspec/changes/tournament-experience-v1-2/tasks.md  44c1e7e67c67d0146fdbe562f8dbb39884f842e12f09d1fa7d74584f0157d52a
