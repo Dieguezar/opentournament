@@ -9,6 +9,7 @@ export interface OwnerPublicProfile {
   showAvatar: boolean;
   showRealName: boolean;
   showBiography: boolean;
+  avatar: { id: string; url: string } | null;
 }
 
 export interface PublicProfileForm {
@@ -20,6 +21,7 @@ export interface PublicProfileForm {
   showAvatar: OwnerPublicProfile['showAvatar'];
   showRealName: OwnerPublicProfile['showRealName'];
   showBiography: OwnerPublicProfile['showBiography'];
+  avatar: OwnerPublicProfile['avatar'];
 }
 
 export type OwnerProfileClient = <T>(path: string, init?: RequestInit) => Promise<T>;
@@ -77,4 +79,19 @@ export async function deleteOwnerProfile(
     if (error instanceof ApiClientError && error.status === 404) return { state: 'deleted' };
     return { state: 'failed', error };
   }
+}
+
+export async function uploadOwnerAvatar(
+  client: OwnerProfileClient,
+  file: File,
+): Promise<PublicProfileForm> {
+  const body = new FormData();
+  body.set('file', file);
+  await client('/profile/public/avatar', { method: 'POST', body });
+  return loadOwnerProfile(client);
+}
+
+export async function clearOwnerAvatar(client: OwnerProfileClient): Promise<PublicProfileForm> {
+  await client('/profile/public/avatar', { method: 'DELETE' });
+  return loadOwnerProfile(client);
 }

@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import { ApiClientError } from '../lib/api';
+import { getDictionary } from '../lib/i18n';
+import { AvatarManagementControls } from './public-profile-settings';
 import {
+  clearOwnerAvatar,
   deleteOwnerProfile,
   loadOwnerProfile,
   saveOwnerProfile,
   type OwnerProfileClient,
   type PublicProfileForm,
+  uploadOwnerAvatar,
 } from '../lib/public-profile-workflow';
 
 const profile = {
@@ -18,6 +23,7 @@ const profile = {
   showAvatar: true,
   showRealName: false,
   showBiography: true,
+  avatar: null,
 };
 
 function clientFor(responses: Array<unknown>): { client: OwnerProfileClient; calls: string[] } {
@@ -117,4 +123,63 @@ describe('PublicProfileSettings workflow', () => {
     });
     expect(verificationFailed.calls).toEqual(['DELETE /profile/public', 'GET /profile/public']);
   });
+});
+
+it('uploads and clears avatar media through multipart endpoints before reloading authoritative profile state', async () => {
+  const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
+  const { client, calls } = clientFor([
+    undefined,
+    { profile: { ...profile, avatar: { id: 'media-id', url: '/api/v1/media/media-id' } } },
+    undefined,
+    { profile: { ...profile, avatar: null } },
+  ]);
+
+  await expect(uploadOwnerAvatar(client, file)).resolves.toMatchObject({
+    avatar: { id: 'media-id' },
+  });
+  await expect(clearOwnerAvatar(client)).resolves.toMatchObject({ avatar: null });
+  expect(calls).toEqual([
+    'POST /profile/public/avatar [object FormData]',
+    'GET /profile/public',
+    'DELETE /profile/public/avatar',
+    'GET /profile/public',
+  ]);
+});
+
+it('does not project an avatar change or success result when upload or clear fails', async () => {
+  const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
+  const uploadFailure = clientFor([
+    new ApiClientError(422, 'INVALID_IMAGE', 'Invalid image', 'Invalid image'),
+  ]);
+  const clearFailure = clientFor([
+    new ApiClientError(503, 'UNAVAILABLE', 'Try again', 'Try again'),
+  ]);
+
+  await expect(uploadOwnerAvatar(uploadFailure.client, file)).rejects.toMatchObject({
+    status: 422,
+  });
+  await expect(clearOwnerAvatar(clearFailure.client)).rejects.toMatchObject({ status: 503 });
+
+  expect(uploadFailure.calls).toEqual(['POST /profile/public/avatar [object FormData]']);
+  expect(clearFailure.calls).toEqual(['DELETE /profile/public/avatar']);
+});
+
+it('renders an announced disabled upload state and only a same-origin avatar preview', () => {
+  const markup = renderToStaticMarkup(
+    <AvatarManagementControls
+      avatar={{ id: 'media-id', url: 'https://storage.example/object-key' }}
+      busy="upload"
+      copy={getDictionary('en').publicProfileSettings}
+      onClear={() => undefined}
+      onUpload={() => undefined}
+    />,
+  );
+
+  expect(markup).toContain('role="status"');
+  expect(markup).toContain('aria-live="polite"');
+  expect(markup).toContain('Uploading avatar…');
+  expect(markup).toContain('disabled=""');
+  expect(markup).toContain('src="/api/v1/media/media-id"');
+  expect(markup).not.toContain('storage.example');
+  expect(markup).not.toContain('object-key');
 });

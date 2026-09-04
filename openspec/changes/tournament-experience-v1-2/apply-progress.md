@@ -295,7 +295,7 @@ Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE i
 | API typecheck     | `pnpm --filter @opentournament/api typecheck` passed.                                                                                                                                                                                                                                                                                                                                                                                  |
 | Workspace proof   | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests.                                                                                                                                                                                                                                                                                                                                                                   |
 | Formatting/diff   | Touched API source/test files passed Prettier check; `git diff --check` passed.                                                                                                                                                                                                                                                                                                                                                        |
-| Rollback boundary | Revert the snapshot transaction/no-store policy, compatible event lookup and dual public event delivery, realtime cleanup observability, adjudicated dispute-score persistence, finalized-match scoreboard fallback, focused integration assertions, and this correction evidence. Legacy named events and WU4.3 web scope remain otherwise untouched.                                                                               |
+| Rollback boundary | Revert the snapshot transaction/no-store policy, compatible event lookup and dual public event delivery, realtime cleanup observability, adjudicated dispute-score persistence, finalized-match scoreboard fallback, focused integration assertions, and this correction evidence. Legacy named events and WU4.3 web scope remain otherwise untouched.                                                                                 |
 
 ### Gatekeeper Correction: Route and SSE contract
 
@@ -324,20 +324,20 @@ Tasks 4.3 through 6.3 remain pending. WU4.3 owns the web client refetch/coalesci
 
 ### TDD Cycle Evidence
 
-| Task | Test file | Layer | Safety net | RED | GREEN | Triangulate | Refactor |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 4.3 | `apps/web/components/overlay-live.test.tsx` | Client-state unit | N/A (new component/test boundary) | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` exited 1 because `./overlay-live` did not exist. | Same focused command passed 3/3 after the minimum controller/component implementation. | Coalesced burst/reconnect, superseded stale response with abort, and 404 private/unavailable paths exercise distinct state transitions. | Removed the throwing network-error path so EventSource reconnect/open is the retry mechanism; focused test and typecheck remained green. |
+| Task | Test file                                   | Layer             | Safety net                        | RED                                                                                                                                   | GREEN                                                                                  | Triangulate                                                                                                                             | Refactor                                                                                                                                 |
+| ---- | ------------------------------------------- | ----------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| 4.3  | `apps/web/components/overlay-live.test.tsx` | Client-state unit | N/A (new component/test boundary) | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` exited 1 because `./overlay-live` did not exist. | Same focused command passed 3/3 after the minimum controller/component implementation. | Coalesced burst/reconnect, superseded stale response with abort, and 404 private/unavailable paths exercise distinct state transitions. | Removed the throwing network-error path so EventSource reconnect/open is the retry mechanism; focused test and typecheck remained green. |
 
 ### Work Unit Evidence
 
-| Evidence | Result |
-| --- | --- |
-| Focused test command | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed 1 file and 3 tests. |
-| Web typecheck | `pnpm --filter @opentournament/web typecheck` passed. |
-| Workspace proof | Exact `pnpm test` passed 10 Turbo tasks; web passed 17 files/93 tests and configuration checks passed 31/31. |
-| Runtime harness | N/A: this isolated client state machine uses mocked `fetch`, `EventSource`, and `AbortController`; Phase 6 explicitly owns browser/OBS E2E smoke coverage. The controller tests cover requests, reconnect invalidations, aborts, listener cleanup, and 404 stream closure without launching unrelated services. |
-| Formatting/diff | `pnpm exec prettier --check apps/web/components/overlay-live.tsx apps/web/components/overlay-live.test.tsx` and `git diff --check` passed. |
-| Rollback boundary | Revert `apps/web/components/overlay-live.tsx`, `apps/web/components/overlay-live.test.tsx`, task 4.3, and this evidence. API routes/SSE, overlay pages, and public UI remain untouched. |
+| Evidence             | Result                                                                                                                                                                                                                                                                                                          |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused test command | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed 1 file and 3 tests.                                                                                                                                                                                                 |
+| Web typecheck        | `pnpm --filter @opentournament/web typecheck` passed.                                                                                                                                                                                                                                                           |
+| Workspace proof      | Exact `pnpm test` passed 10 Turbo tasks; web passed 17 files/93 tests and configuration checks passed 31/31.                                                                                                                                                                                                    |
+| Runtime harness      | N/A: this isolated client state machine uses mocked `fetch`, `EventSource`, and `AbortController`; Phase 6 explicitly owns browser/OBS E2E smoke coverage. The controller tests cover requests, reconnect invalidations, aborts, listener cleanup, and 404 stream closure without launching unrelated services. |
+| Formatting/diff      | `pnpm exec prettier --check apps/web/components/overlay-live.tsx apps/web/components/overlay-live.test.tsx` and `git diff --check` passed.                                                                                                                                                                      |
+| Rollback boundary    | Revert `apps/web/components/overlay-live.tsx`, `apps/web/components/overlay-live.test.tsx`, task 4.3, and this evidence. API routes/SSE, overlay pages, and public UI remain untouched.                                                                                                                         |
 
 ### Workload / Delivery Boundary
 
@@ -357,10 +357,10 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 ### Correction Work Unit Evidence
 
-| Evidence | Result |
-| --- | --- |
-| Focused test command | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed: 1 file, 5 tests. |
-| Rollback boundary | Revert the route-keyed wrapper, component rerender coverage, and this correction evidence. Controller behavior, API/SSE contracts, and Phase 5 pages remain unchanged. |
+| Evidence             | Result                                                                                                                                                                 |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused test command | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed: 1 file, 5 tests.                                                          |
+| Rollback boundary    | Revert the route-keyed wrapper, component rerender coverage, and this correction evidence. Controller behavior, API/SSE contracts, and Phase 5 pages remain unchanged. |
 
 ## Work Unit 5a: Profile read contracts
 
@@ -368,19 +368,19 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 ### TDD Cycle Evidence
 
-| Slice | Safety net | RED | GREEN / triangulation | Refactor |
-| --- | --- | --- | --- | --- |
+| Slice         | Safety net                                                                                                                 | RED                                                                                                                      | GREEN / triangulation                                                                                                                                                                                                                 | Refactor                                                                             |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Profile reads | Pre-slice `pnpm test:integration` exited nonzero with four failures; the isolated profile contract had no prior assertion. | Fresh PostgreSQL test exited 1 before implementation: unauthenticated `GET /profile/public` returned 404 instead of 401. | Fresh PostgreSQL focused API test passed 1/1 after adding owner settings, publication-gated avatars, and linked/unlinked Smash response coverage. Private, published, revoked, linked, and unlinked paths exercise distinct branches. | Avoided a duplicate media projection when building public DTOs; no behavior changed. |
 
 ### Work Unit Evidence
 
-| Evidence | Result |
-| --- | --- |
-| Focused/runtime | Fresh PostgreSQL `opentournament-wu5a-final` passed `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "returns owner settings and published Smash profile links without leaking private participants"` (1/1; 11 skipped). Container stopped without deleting volumes. |
-| API/typecheck | `pnpm --filter @opentournament/api typecheck` passed. |
-| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks plus 31 configuration tests. |
-| Formatting/diff | Prettier check/write completed on touched files; `git diff --check` passed. |
-| Rollback boundary | Revert the profile/tournament read projections, focused integration case, and this WU5a evidence; profile mutations, media lifecycle, overlays, and Phase 5 UI remain intact. |
+| Evidence          | Result                                                                                                                                                                                                                                                                                                |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused/runtime   | Fresh PostgreSQL `opentournament-wu5a-final` passed `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "returns owner settings and published Smash profile links without leaking private participants"` (1/1; 11 skipped). Container stopped without deleting volumes. |
+| API/typecheck     | `pnpm --filter @opentournament/api typecheck` passed.                                                                                                                                                                                                                                                 |
+| Workspace proof   | Exact `pnpm test` passed: 10 Turbo tasks plus 31 configuration tests.                                                                                                                                                                                                                                 |
+| Formatting/diff   | Prettier check/write completed on touched files; `git diff --check` passed.                                                                                                                                                                                                                           |
+| Rollback boundary | Revert the profile/tournament read projections, focused integration case, and this WU5a evidence; profile mutations, media lifecycle, overlays, and Phase 5 UI remain intact.                                                                                                                         |
 
 ### Remaining Tasks
 
@@ -400,20 +400,20 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 ### TDD Cycle Evidence
 
-| Slice | Safety net | RED | GREEN / triangulation | Refactor |
-| --- | --- | --- | --- | --- |
+| Slice                      | Safety net                                             | RED                                                                                                                                                 | GREEN / triangulation                                                                                                                                                              | Refactor                                                                                                      |
+| -------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Public tournament branding | No existing presenter test covered this page boundary. | `pnpm --filter @opentournament/web exec vitest run components/tournament-branding.test.tsx` exited 1 because `./tournament-branding` did not exist. | The focused test passed 3/3 after the presenter was added: branded logo/banner/color rendering, default no-media rendering, and malformed-color rejection cover distinct branches. | Typed scoped CSS variables as custom properties, then reran focused tests and typecheck; no behavior changed. |
 
 ### Work Unit Evidence
 
-| Evidence | Result |
-| --- | --- |
-| Focused test | `pnpm --filter @opentournament/web exec vitest run components/tournament-branding.test.tsx` passed (1 file, 3 tests). |
-| Typecheck | `pnpm --filter @opentournament/web typecheck` passed. |
-| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks; web reported 18 files and 98 tests; configuration suite reported 31 tests. |
+| Evidence             | Result                                                                                                                                                                                                                                                                            |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused test         | `pnpm --filter @opentournament/web exec vitest run components/tournament-branding.test.tsx` passed (1 file, 3 tests).                                                                                                                                                             |
+| Typecheck            | `pnpm --filter @opentournament/web typecheck` passed.                                                                                                                                                                                                                             |
+| Workspace proof      | Exact `pnpm test` passed: 10 Turbo tasks; web reported 18 files and 98 tests; configuration suite reported 31 tests.                                                                                                                                                              |
 | Route/runtime wiring | `pnpm --filter @opentournament/web build` passed; Next.js 16.3.2 compiled and listed `/t/[slug]` as a dynamic route. No API-backed browser smoke was run because this bounded component consumes the existing public response and does not add a runtime route or API dependency. |
-| Formatting/diff | Prettier ran on all touched source/test/style files; `git diff --check` passed before commit. |
-| Rollback boundary | Revert the public page import, branding presenter, local CSS module, its test, and this WU5b evidence. Existing data fetches, 404 behavior, media API, profile work, and overlays remain unchanged. |
+| Formatting/diff      | Prettier ran on all touched source/test/style files; `git diff --check` passed before commit.                                                                                                                                                                                     |
+| Rollback boundary    | Revert the public page import, branding presenter, local CSS module, its test, and this WU5b evidence. Existing data fetches, 404 behavior, media API, profile work, and overlays remain unchanged.                                                                               |
 
 ### Remaining Tasks
 
@@ -427,20 +427,20 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 ### TDD Cycle Evidence
 
-| Slice | Safety net | RED | GREEN / triangulation | Refactor |
-| --- | --- | --- | --- | --- |
+| Slice                       | Safety net                                                                          | RED                                                                                                                                                     | GREEN / triangulation                                                                                                                                                                                                                    | Refactor                                                                                                                                     |
+| --------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | Public profile presentation | `pnpm --filter @opentournament/web test` passed 18 files and 98 tests before edits. | `pnpm --filter @opentournament/web exec vitest run components/public-player-profile.test.tsx` exited 1 because `./public-player-profile` did not exist. | Focused test passed 3/3 after adding the presenter and route: opted-in avatar/name/biography rendering, absent/private omission with a rejected external URL, and valid/invalid/unlinked participant navigation cover separate branches. | Added explicit participant DTO typing after typecheck caught fallback inference; reran focused tests, typecheck, workspace proof, and build. |
 
 ### Work Unit Evidence
 
-| Evidence | Result |
-| --- | --- |
-| Focused test | `pnpm --filter @opentournament/web exec vitest run components/public-player-profile.test.tsx` passed (1 file, 3 tests). |
-| Typecheck | `pnpm --filter @opentournament/web typecheck` passed. |
-| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks; web passed 19 files and 101 tests; configuration suite passed 31 tests. |
-| Route/runtime wiring | `pnpm --filter @opentournament/web build` passed; Next.js 16.3.2 listed `/players/[slug]` and `/t/[slug]` as dynamic routes. |
-| Formatting/diff | Prettier check passed on touched files; `git diff --check` passed. |
-| Rollback boundary | Revert the public profile presenter/style/test, `/players/[slug]`, tournament participant projection, and this WU5c evidence. Existing API publication gates, branding, forms, uploads, and overlays remain intact. |
+| Evidence             | Result                                                                                                                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused test         | `pnpm --filter @opentournament/web exec vitest run components/public-player-profile.test.tsx` passed (1 file, 3 tests).                                                                                             |
+| Typecheck            | `pnpm --filter @opentournament/web typecheck` passed.                                                                                                                                                               |
+| Workspace proof      | Exact `pnpm test` passed: 10 Turbo tasks; web passed 19 files and 101 tests; configuration suite passed 31 tests.                                                                                                   |
+| Route/runtime wiring | `pnpm --filter @opentournament/web build` passed; Next.js 16.3.2 listed `/players/[slug]` and `/t/[slug]` as dynamic routes.                                                                                        |
+| Formatting/diff      | Prettier check passed on touched files; `git diff --check` passed.                                                                                                                                                  |
+| Rollback boundary    | Revert the public profile presenter/style/test, `/players/[slug]`, tournament participant projection, and this WU5c evidence. Existing API publication gates, branding, forms, uploads, and overlays remain intact. |
 
 ### Remaining Tasks
 
@@ -536,6 +536,7 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 - The production workflow now requires the same explicit confirmation boolean used by the destructive button; its regression proves an unconfirmed attempt performs no DELETE call. Focused web workflow proof now passes 21 files / 107 tests.
 - The final line-count and rerun verification evidence supersede the preliminary count above.
+
 ## Work Unit WU5d-concurrency-safe-delete-correction
 
 **Status:** Code correction complete with an external PostgreSQL-runtime verification blocker; tasks 5.1, 5.2, and 5.3 remain unchecked.
@@ -591,3 +592,53 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three existing stashes remain untouched.
 - **Container cleanup:** stopped `opentournament-wu5d-remed-pg`, `opentournament-wu5d-remed-pg-green`, and `opentournament-wu5d-remed-minio` without removing volumes.
 - **Final measured owned diff:** 50 changed lines (40 additions, 10 deletions) across two files, within the 400-line cap.
+
+## Work Unit 5e: Owner avatar management
+
+**Status:** Partial Phase 5 slice complete; umbrella tasks 5.1–5.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+| Slice                 | RED                                                                           | GREEN / triangulation                                                                                                                                                                                     | Refactor                                                                                                                                                     |
+| --------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Owner avatar controls | Focused workflow test failed first because `uploadOwnerAvatar` did not exist. | Focused Vitest passed 7/7 after multipart upload/clear wiring; its assertions cover FormData, authoritative reload after both mutations, same-origin owner avatar data, and errors via the shared client. | The shared client now recognizes `FormData` and does not attach JSON content type, preserving CSRF/session behavior for multipart without a parallel client. |
+
+### Work Unit Evidence
+
+| Evidence          | Result                                                                                                                                                                                                                                                                                                               |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused test      | `pnpm --filter @opentournament/web exec vitest run components/public-profile-settings.test.tsx` passed: 1 file, 7 tests.                                                                                                                                                                                             |
+| Typecheck         | `pnpm --filter @opentournament/web typecheck` passed.                                                                                                                                                                                                                                                                |
+| Workspace proof   | Exact `pnpm test` passed: 10 Turbo tasks; web passed 21 files and 109 tests; configuration checks passed 31 tests.                                                                                                                                                                                                   |
+| Build             | `pnpm --filter @opentournament/web build` passed; Next.js emitted dynamic `/profile`.                                                                                                                                                                                                                                |
+| Runtime harness   | N/A: this slice changes only the authenticated browser client boundary over pre-existing multipart/API routes. The focused production workflow asserts the actual `FormData` request body, routes, and authoritative reloads; Phase 6 owns browser E2E and the existing API/media runtime coverage remains separate. |
+| Formatting/diff   | Prettier ran on each touched source/test file; `git diff --check` passed.                                                                                                                                                                                                                                            |
+| Rollback boundary | Revert the avatar client control/workflow, FormData header guard, translations, focused test, and this evidence. Existing hard-delete, API media lifecycle, publication flags, and public profile pages remain unchanged.                                                                                            |
+
+### Delivery and Protected State
+
+- Branch: `codex/tournament-experience-v1-2-wu5e-avatar-management`, from `c19f23faac907658499b1b417751f3e4f3e64cd0`.
+- Owned source/test diff before this evidence: 114 additions and 2 deletions; within the 400-line slice cap.
+- `.gitignore`, `artifacts/a11y-audit/`, and all three existing stashes were preserved.
+- Evidence content SHA-256: $sha256:6ab3a7eb2631eb65ba456a44ce0fb0fd67aff35c93189d3ee3adb46e3b0d5514.
+
+## Gatekeeper Correction: WU5e owner avatar management
+
+**Status:** Corrective rerun complete; tasks 5.1–5.3 remain unchecked.
+
+### Corrected TDD Evidence
+
+- **RED:** with the explicit production-client `same-origin` credential default temporarily removed, `pnpm --filter @opentournament/web exec vitest run lib/api.test.ts` failed 2/2 assertions because the multipart and JSON requests exposed `credentials: undefined`.
+- **GREEN:** restoring the default and running `pnpm --filter @opentournament/web exec vitest run components/public-profile-settings.test.tsx lib/api.test.ts` passed 2 files / 11 tests. The direct `apiClient` fetch mock proves CSRF is included, multipart omits an explicit `Content-Type`, JSON retains `application/json`, and both use same-origin credentials.
+- **Workflow failures:** focused upload and clear failure cases reject before their authoritative GET reloads. They make no local avatar projection or success result; the client component only announces success after those workflow promises resolve.
+- **Accessible pending state:** the rendered `AvatarManagementControls` production presenter exposes a visible polite `role=status` upload message, relates it to the file input, disables mutations during upload, and renders only `/api/v1/media/:id` even when the DTO carries an external storage URL.
+- **REFACTOR:** extracted the synchronous avatar controls presenter so Node Vitest can test the rendered accessibility/media boundary while the async settings page remains the production owner of state transitions.
+
+### Corrected Verification and Delivery Evidence
+
+- The earlier WU5e statement that its 7 workflow tests covered production-client transport and mutation-error UI behavior was incomplete; this correction adds focused transport/failure/pending assertions. Runtime harness remains N/A for this client-only slice: direct fetch transport is covered in-process, existing API/media runtime coverage is unchanged, and Phase 6 owns browser E2E.
+- Final checks passed: focused 2 files/11 tests, web typecheck, exact `pnpm test` (10 Turbo tasks; web 22 files/113 tests; API 63 passed/14 skipped; configuration 31 tests), and Next.js 16.3.2 production build (dynamic `/profile`). Prettier write/check and `git diff --check` passed.
+- Final owned diff: 400 changed lines across six implementation/test files plus cumulative evidence, at the 400-line cap.
+- Fresh evidence revision: `sha256:1bcaff454f9b0ae5b92151a75575c6ff1b718e1e3ad2039c616f07d07d304462` (SHA-256 of the standalone final verification manifest, excluding this pointer).
+- **Rollback boundary:** revert the final WU5e commit to remove the avatar controls, workflow, transport guard, tests, translations, and this correction evidence without affecting the existing hard-delete or API media lifecycle.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.

@@ -10,11 +10,66 @@ import {
   loadOwnerProfile,
   saveOwnerProfile,
   deleteOwnerProfile,
+  clearOwnerAvatar,
+  uploadOwnerAvatar,
   type PublicProfileForm,
 } from '../lib/public-profile-workflow';
 
 function requestMessage(error: unknown, fallback: string): string {
   return error instanceof ApiClientError ? error.message : fallback;
+}
+
+type AvatarBusyState = 'upload' | 'clear' | null;
+
+interface AvatarManagementControlsProps {
+  avatar: PublicProfileForm['avatar'];
+  busy: AvatarBusyState;
+  copy: ReturnType<typeof useI18n>['dictionary']['publicProfileSettings'];
+  onClear: () => void;
+  onUpload: (file: File) => void;
+}
+
+export function AvatarManagementControls({
+  avatar,
+  busy,
+  copy,
+  onClear,
+  onUpload,
+}: AvatarManagementControlsProps) {
+  const isUploading = busy === 'upload';
+
+  return (
+    <section aria-labelledby="avatar-title">
+      <h2 id="avatar-title">{copy.avatar}</h2>
+      {avatar && <img alt={copy.avatarPreview} src={`/api/v1/media/${avatar.id}`} />}
+      <label htmlFor="avatar-file">{copy.avatarFile}</label>
+      <input
+        accept="image/png,image/jpeg,image/webp"
+        aria-describedby={isUploading ? 'avatar-upload-status' : undefined}
+        disabled={busy !== null}
+        id="avatar-file"
+        type="file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) onUpload(file);
+          event.currentTarget.value = '';
+        }}
+      />
+      {isUploading && (
+        <p id="avatar-upload-status" role="status" aria-live="polite">
+          {copy.uploadingAvatar}
+        </p>
+      )}
+      <button
+        type="button"
+        className="button-secondary"
+        disabled={busy !== null || !avatar}
+        onClick={onClear}
+      >
+        {busy === 'clear' ? copy.clearingAvatar : copy.clearAvatar}
+      </button>
+    </section>
+  );
 }
 
 export function PublicProfileSettings() {
@@ -27,7 +82,7 @@ export function PublicProfileSettings() {
   );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'save' | 'hide' | 'delete' | null>(null);
+  const [busy, setBusy] = useState<'save' | 'hide' | 'delete' | 'upload' | 'clear' | null>(null);
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 
   const loadProfile = useCallback(async () => {
@@ -54,6 +109,36 @@ export function PublicProfileSettings() {
     try {
       setForm(await saveOwnerProfile(apiClient, form, isHiding));
       setSuccess(isHiding ? copy.hidden : copy.saved);
+      router.refresh();
+    } catch (requestError) {
+      setError(requestMessage(requestError, copy.actionError));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function upload(file: File) {
+    setBusy('upload');
+    setError(null);
+    setSuccess(null);
+    try {
+      setForm(await uploadOwnerAvatar(apiClient, file));
+      setSuccess(copy.avatarUpdated);
+      router.refresh();
+    } catch (requestError) {
+      setError(requestMessage(requestError, copy.actionError));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function clearAvatar() {
+    setBusy('clear');
+    setError(null);
+    setSuccess(null);
+    try {
+      setForm(await clearOwnerAvatar(apiClient));
+      setSuccess(copy.avatarCleared);
       router.refresh();
     } catch (requestError) {
       setError(requestMessage(requestError, copy.actionError));
@@ -167,6 +252,13 @@ export function PublicProfileSettings() {
           maxLength={1000}
           value={form.biography}
           onChange={(event) => setText('biography', event.target.value)}
+        />
+        <AvatarManagementControls
+          avatar={form.avatar}
+          busy={busy === 'upload' || busy === 'clear' ? busy : null}
+          copy={copy}
+          onClear={() => void clearAvatar()}
+          onUpload={(file) => void upload(file)}
         />
         <fieldset>
           <legend>{copy.privacy}</legend>

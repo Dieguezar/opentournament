@@ -27,7 +27,7 @@ export async function apiClient<T>(path: string, init?: RequestInit): Promise<T>
   const headers = new Headers(init?.headers);
   const method = (init?.method ?? 'GET').toUpperCase();
 
-  if (init?.body && !headers.has('Content-Type')) {
+  if (init?.body && !(init.body instanceof FormData) && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
 
@@ -39,7 +39,11 @@ export async function apiClient<T>(path: string, init?: RequestInit): Promise<T>
     }
   }
 
-  const res = await fetch(`/api/v1${path}`, { ...init, headers });
+  const res = await fetch(`/api/v1${path}`, {
+    ...init,
+    credentials: init?.credentials ?? 'same-origin',
+    headers,
+  });
   if (!res.ok) {
     const payload = (await res.json().catch(() => ({}))) as ApiErrorPayload;
     const code = payload.error?.code ?? 'UNKNOWN';
