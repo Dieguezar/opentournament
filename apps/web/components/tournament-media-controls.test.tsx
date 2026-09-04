@@ -128,8 +128,12 @@ describe('rendered tournament media controls', () => {
     );
     expect(busy).toContain('role="status"');
     expect(busy).toContain(copy.uploadingLogo);
-    expect(busy.match(/disabled=""/g)).toHaveLength(4);
-    expect(busy).not.toMatch(/id="banner-file"[^>]*disabled/);
+    const inputs = busy.match(/<input[^>]*>/g) ?? [];
+    expect(inputs).toHaveLength(2);
+    expect(inputs.every((input) => input.includes('disabled'))).toBe(true);
+    const buttons = busy.match(/<button[^>]*>/g) ?? [];
+    expect(buttons).toHaveLength(2);
+    expect(buttons.every((button) => button.includes('disabled'))).toBe(true);
 
     const error = renderToStaticMarkup(
       <TournamentMediaForm
@@ -167,6 +171,29 @@ it('queues logo and banner workflows through ordered authoritative reloads', asy
   expect(calls).toEqual([
     'POST /tournaments/t1/appearance/logo [object FormData]',
     'GET /tournaments/t1',
+    'POST /tournaments/t1/appearance/banner [object FormData]',
+    'GET /tournaments/t1',
+  ]);
+});
+
+it('continues after a failed workflow and drains after the queued retry', async () => {
+  const { client, calls } = clientFor([
+    new ApiClientError(503, 'UNAVAILABLE', 'Unavailable', 'Unavailable'),
+    undefined,
+    { appearance: { logoMediaId: null, bannerMediaId: 'banner' } },
+  ]);
+  const queue = createTournamentMediaMutationQueue();
+  const first = queue.run(() =>
+    uploadTournamentMedia(client, 't1', 'logo', new File(['x'], 'logo.png')),
+  );
+  const second = queue.run(() =>
+    uploadTournamentMedia(client, 't1', 'banner', new File(['x'], 'banner.png')),
+  );
+
+  await expect(first).rejects.toMatchObject({ status: 503 });
+  await expect(second).resolves.toEqual({ logoMediaId: null, bannerMediaId: 'banner' });
+  expect(calls).toEqual([
+    'POST /tournaments/t1/appearance/logo [object FormData]',
     'POST /tournaments/t1/appearance/banner [object FormData]',
     'GET /tournaments/t1',
   ]);

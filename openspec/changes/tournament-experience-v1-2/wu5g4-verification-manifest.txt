@@ -1,0 +1,6 @@
+WU5g4 verification manifest v1
+encoding: UTF-8 without BOM; LF; trailing LF
+parent: 80800c231e68a43b34e08c032b9cbe1621b90b11
+focused: media controls => passed; 1 file; 7 tests
+typecheck/workspace/build/format/diff => passed
+apps/web/components/tournament-media-controls.test.tsx sha256:467aa3d0e7e6933a9a6e1fd9691b914bfa6427abfc9476e6d83bb51b502079fa
