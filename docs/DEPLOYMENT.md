@@ -118,20 +118,22 @@ The API permits credentialed CORS only from `APP_URL` outside development. Confi
 
 Use `S3_ENDPOINT_DOCKER` for the API-to-object-store address and `S3_ENDPOINT` for host tooling; retain `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, and `S3_FORCE_PATH_STYLE` consistently. Back up both `pgdata` and `miniodata`: PostgreSQL holds media metadata and publication state, while MinIO holds the bytes. API startup applies Drizzle migrations before traffic; do not run more than one migration authority at a time.
 
-Public pages must use same-origin opaque media URLs only: `/api/v1/media/:id`. Do not expose object keys, bucket URLs, MinIO console URLs, or presigned storage URLs in HTML, CSS, OBS scenes, or logs. The API authorizes the media proxy from the current publication state. Revoking/deleting a tournament or profile makes related public routes/media unavailable; restore publication only through the owner/admin APIs, never by making the bucket public.
+Public pages must use same-origin opaque media URLs only: `/api/v1/media/:id`. Do not expose object keys, bucket URLs, MinIO console URLs, or presigned storage URLs in HTML, CSS, OBS scenes, or logs. The API authorizes the media proxy from the current publication state. Revoke tournament/profile public delivery through their supported publication and visibility controls; never make the bucket public.
+
+Media responses use `Cache-Control: public, max-age=31536000, immutable`. A revocation can return `404` from a fresh origin request or cache bypass while an already-cached browser/proxy copy continues to serve its immutable bytes. When immediate removal of cached bytes is required, purge the relevant operational cache; no application setting can retroactively erase copies already cached by clients.
 
 Verify public delivery after a migration or deploy:
 
 1. Sign in as the owner, create or update the profile/tournament appearance, and confirm owner routes still require the session.
 2. Publish a tournament and verify `/t/:slug`, `/players/:slug`, and `/api/v1/media/:id` through the public origin.
-3. Revoke or delete the public resource and verify the same public URLs return `404` and no cached proxy response serves prior media.
+3. Revoke public publication/visibility and verify fresh origin requests or a cache bypass return `404`; purge operational caches when immediate cached-byte removal is required.
 4. Confirm object storage remains private and that application traffic reaches it only through the API.
 
 ### Overlay and SSE proxy behavior
 
-OBS browser sources use the public web views `/t/:slug/overlay/:view`; use the documented supported view name from the tournament UI. Set the browser-source canvas to **1920x1080** and preserve transparency: do not add a proxy background, HTML background, or cache transformation that flattens alpha. This task documents deployment behavior only; task 6.3 owns OBS/CEF smoke recording.
+OBS browser sources use `/t/:slug/overlay/:view` with `scoreboard`, `up-next`, or `champion` as `:view`. Set the browser-source canvas to **1920x1080** and preserve transparency: do not add a proxy background, HTML background, or cache transformation that flattens alpha. This task documents deployment behavior only; task 6.3 owns OBS/CEF smoke recording.
 
-Overlay updates stream from `/api/v1/events/public?tournament=:id`. Keep the stream on one API instance unless a shared fan-out/replay design is introduced. Proxy it as SSE: disable buffering and response caching, allow long-lived connections, preserve `text/event-stream`, `Cache-Control: no-cache, no-store, must-revalidate, no-transform`, and `Last-Event-ID`, and do not gzip/buffer the stream. Clients reconnect and refetch authoritative state after disconnects; a proxy timeout or restart must therefore permit reconnect rather than returning a cached event snapshot.
+Overlay updates stream from `/api/v1/events/public?tournament=:id`. Realtime channels are process-local: all tournament/media mutations and SSE clients must share exactly one API process unless shared fan-out/replay is added; sticky SSE alone is insufficient. Proxy it as SSE: disable buffering and response caching, allow long-lived connections, preserve `text/event-stream`, `Cache-Control: no-cache, no-store, must-revalidate, no-transform`, and `Last-Event-ID`, and do not gzip/buffer the stream. Clients reconnect and refetch authoritative state after disconnects; a proxy timeout or restart must therefore permit reconnect rather than returning a cached event snapshot.
 
 ### Bounded operational verification and troubleshooting
 

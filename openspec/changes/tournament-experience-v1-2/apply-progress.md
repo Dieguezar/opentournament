@@ -852,7 +852,7 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 ### Work Unit Evidence
 
-- Structural checks: Prettier, `git diff --check`, task-state readback, and a control-byte/placeholder scan are recorded in the standalone canonical manifest.
+- Structural checks: Prettier, `git diff --check`, task-state readback, and a control-byte/placeholder scan are recorded in the standalone canonical manifest. WU6b digest: `sha256:e8d2a1fe7ac1de4712000df5367b92f3589301a348f51593ca97d6941f2d3d54`.
 - Runtime harness: N/A for this passive documentation slice; no deployment state, containers, volumes, or external services were changed. The documented runtime validation is bounded to existing health/public/revocation/SSE checks.
 - Rollback boundary: revert this commit to remove only the deployment operations appendix, task 6.2 completion, manifest, and this evidence; task 6.3 and application behavior remain unchanged.
 - Protected state: `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
