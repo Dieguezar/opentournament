@@ -22,6 +22,7 @@ interface OverlayLiveControllerOptions {
 
 interface OverlayLiveProps {
   slug: string;
+  view: string;
   children(snapshot: OverlaySnapshot): ReactNode;
 }
 
@@ -115,20 +116,23 @@ export class OverlayLiveController {
   }
 }
 
-export function OverlayLive({ slug, children }: OverlayLiveProps) {
-  const [snapshot, setSnapshot] = useState<OverlaySnapshot | null>(null);
+export function OverlayLive({ slug, view, children }: OverlayLiveProps) {
+  const routeKey = `${slug}\u0000${view}`;
+  const [snapshot, setSnapshot] = useState<{ routeKey: string; value: OverlaySnapshot } | null>(
+    null,
+  );
 
   useEffect(() => {
     const controller = new OverlayLiveController({
       slug,
       fetchImpl: fetch,
       eventSourceFactory: (url) => new EventSource(url),
-      onSnapshot: setSnapshot,
+      onSnapshot: (value) => setSnapshot({ routeKey, value }),
       onUnavailable: () => setSnapshot(null),
     });
     controller.start();
     return () => controller.dispose();
-  }, [slug]);
+  }, [routeKey]);
 
-  return snapshot ? children(snapshot) : null;
+  return snapshot?.routeKey === routeKey ? children(snapshot.value) : null;
 }

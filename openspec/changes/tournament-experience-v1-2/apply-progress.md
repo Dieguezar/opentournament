@@ -348,3 +348,16 @@ Tasks 4.3 through 6.3 remain pending. WU4.3 owns the web client refetch/coalesci
 ### Remaining Tasks
 
 Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transparent overlay pages around this shared live client.
+
+### Gatekeeper Correction: Route supersession
+
+- **RED:** After the 3/3 safety-net pass, `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` exited 1 with two component-level failures: a slug rerender rendered the accepted `old-state`, and a same-slug view rerender left its prior request active.
+- **GREEN:** The same focused command passed 1 file and 5 tests after route-tagging accepted snapshots and keying the lifecycle by `slug + view`. The mounted/rerendered harness proves synchronous old-state suppression, abort/listener cleanup, a non-404 replacement failure staying empty, and newer-view protection from an old late response.
+- **REFACTOR:** Kept controller coalescing, reconnect, and 404 behavior unchanged; the wrapper now only owns route identity and lifecycle scope.
+
+### Correction Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused test command | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed: 1 file, 5 tests. |
+| Rollback boundary | Revert the route-keyed wrapper, component rerender coverage, and this correction evidence. Controller behavior, API/SSE contracts, and Phase 5 pages remain unchanged. |
