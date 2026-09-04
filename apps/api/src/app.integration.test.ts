@@ -2485,7 +2485,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         const previousId = finalUpload.json<{ media: { id: string } }>().media.id;
         const retirementStorage = await import('./services/storage.js');
         const { db } = await import('./db.js');
-        const { jobs, publicMedia } = await import('@opentournament/database');
+        const { jobs, publicMedia, tournaments } = await import('@opentournament/database');
         await pool.query(`
           create function fail_media_retry_enqueue() returns trigger as $$
           begin raise exception 'forced retry enqueue failure'; end;
@@ -2564,11 +2564,14 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           url: '/api/v1/profile/public',
           headers,
         });
-        const concurrentId = (await concurrentReplacement).json<{ media: { id: string } }>().media.id;
+        const concurrentId = (await concurrentReplacement).json<{ media: { id: string } }>().media
+          .id;
         await pool.query('drop trigger delay_profile_revocation on public_player_profiles');
         await pool.query('drop function delay_profile_revocation()');
         expect(concurrentRevocation.statusCode).toBe(404);
-        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${concurrentId}` })).toMatchObject({
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/media/${concurrentId}` }),
+        ).toMatchObject({
           statusCode: 200,
         });
         expect(
@@ -2576,7 +2579,9 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         ).toMatchObject({
           statusCode: 204,
         });
-        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${concurrentId}` })).toMatchObject({
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/media/${concurrentId}` }),
+        ).toMatchObject({
           statusCode: 404,
         });
         const [concurrentMedia] = await db
@@ -2616,6 +2621,118 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         expect(await app.inject({ method: 'GET', url: `/api/v1/media/${mediaId}` })).toMatchObject({
           statusCode: 404,
         });
+        const suffix = Date.now();
+        expect(
+          (
+            await app.inject({
+              method: 'POST',
+              url: '/api/v1/organizations',
+              payload: { name: 'Tournament Media Org', slug: `tournament-media-${suffix}` },
+              headers,
+            })
+          ).statusCode,
+        ).toBe(201);
+        const organizationId = (
+          await app.inject({ method: 'GET', url: '/api/v1/auth/me', headers })
+        ).json<{ user: { organizations: Array<{ id: string }> } }>().user.organizations[0]!.id;
+        const createdTournament = await app.inject({
+          method: 'POST',
+          url: '/api/v1/tournaments',
+          payload: {
+            organizationId,
+            name: 'Tournament Media Cup',
+            slug: `tournament-media-cup-${suffix}`,
+            rules: 'Rules',
+          },
+          headers,
+        });
+        const tournamentId = createdTournament.json<{ tournament: { id: string } }>().tournament.id;
+        const outsiderRegistration = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register',
+          payload: {
+            displayName: 'Tournament Media Outsider',
+            email: `tournament-outsider-${suffix}@example.com`,
+            password: 'password-123',
+          },
+          headers: { 'x-csrf-token': csrfCookie.value, cookie: `csrf=${csrfCookie.value}` },
+        });
+        const outsiderSession = outsiderRegistration.cookies.find(
+          (cookie) => cookie.name === 'session',
+        )!;
+        const outsiderHeaders = {
+          'x-csrf-token': csrfCookie.value,
+          cookie: `session=${outsiderSession.value}; csrf=${csrfCookie.value}`,
+        };
+        const uploadTournamentMedia = (slot: string, uploadHeaders = headers) =>
+          app.inject({
+            method: 'POST',
+            url: `/api/v1/tournaments/${tournamentId}/appearance/${slot}`,
+            payload: multipart,
+            headers: {
+              ...uploadHeaders,
+              'content-type': `multipart/form-data; boundary=${boundary}`,
+            },
+          });
+        expect((await uploadTournamentMedia('logo', outsiderHeaders)).statusCode).toBe(403);
+        expect((await uploadTournamentMedia('invalid')).statusCode).toBe(404);
+        const logo = await uploadTournamentMedia('logo');
+        const logoId = logo.json<{ media: { id: string } }>().media.id;
+        expect(logo.statusCode).toBe(201);
+        expect(
+          (await app.inject({ method: 'GET', url: `/api/v1/media/${logoId}` })).statusCode,
+        ).toBe(404);
+        expect(
+          (
+            await app.inject({
+              method: 'POST',
+              url: `/api/v1/tournaments/${tournamentId}/publish`,
+              headers,
+            })
+          ).statusCode,
+        ).toBe(200);
+        expect(
+          (await app.inject({ method: 'GET', url: `/api/v1/media/${logoId}` })).statusCode,
+        ).toBe(200);
+        const banner = await uploadTournamentMedia('banner');
+        const bannerId = banner.json<{ media: { id: string } }>().media.id;
+        expect(
+          (await app.inject({ method: 'GET', url: `/api/v1/media/${bannerId}` })).statusCode,
+        ).toBe(200);
+        const tournamentReplacement = await uploadTournamentMedia('logo');
+        const tournamentReplacementId = tournamentReplacement.json<{ media: { id: string } }>()
+          .media.id;
+        expect(tournamentReplacement.statusCode).toBe(201);
+        expect(
+          (await app.inject({ method: 'GET', url: `/api/v1/media/${tournamentReplacementId}` }))
+            .statusCode,
+        ).toBe(200);
+        expect(
+          (await app.inject({ method: 'GET', url: `/api/v1/media/${logoId}` })).statusCode,
+        ).toBe(404);
+        expect(
+          (
+            await app.inject({
+              method: 'DELETE',
+              url: `/api/v1/tournaments/${tournamentId}/appearance/banner`,
+              headers,
+            })
+          ).statusCode,
+        ).toBe(204);
+        const [deletedBanner] = await db
+          .select({ state: publicMedia.state, objectKey: publicMedia.objectKey })
+          .from(publicMedia)
+          .where(eq(publicMedia.id, bannerId));
+        expect(deletedBanner).toMatchObject({ state: 'deleted' });
+        expect(await retirementStorage.objectExists(deletedBanner!.objectKey)).toBe(false);
+        await db
+          .update(tournaments)
+          .set({ visibility: 'private' })
+          .where(eq(tournaments.id, tournamentId));
+        expect(
+          (await app.inject({ method: 'GET', url: `/api/v1/media/${tournamentReplacementId}` }))
+            .statusCode,
+        ).toBe(404);
       } finally {
         await app.close();
       }

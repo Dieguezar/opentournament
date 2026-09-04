@@ -208,3 +208,20 @@ Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament l
 
 - Revocation now detaches only when the captured avatar reference still matches; a concurrent winning replacement remains published and is not retired.
 - Publication compensation now ends at transaction commit: a later retirement/retry-enqueue failure cannot discard the newly attached object. Focused regression coverage proves both cases.
+
+## Work Unit 3d: Tournament media lifecycle
+
+**Status:** Complete. Tasks 3.1–3.3 are complete; logo/banner now reuse the WU3c staged image, CAS retirement, and retry worker path.
+
+### TDD Cycle Evidence
+
+| Task | RED | GREEN / refactor |
+| --- | --- | --- |
+| 3.1–3.3 | Fresh PostgreSQL + MinIO focused integration exited 1 with `404` for the new tournament-media route before it existed. | Focused avatar/tournament lifecycle integration passed 1/1: admin logo/banner upload, outsider 403, invalid slot 404, draft/private 404, replacement new-before-old retirement, explicit banner removal, and object/row terminal deletion. Prettier, API typecheck, and workspace tests pass. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused/runtime | Fresh `wu3d_tournament_media_green` PostgreSQL on 55432 and MinIO on 59000/59001; real multipart, private S3, DB, public proxy, and retirement flows passed. WU3b's trigger-forced staged-byte compensation proof remains shared evidence because WU3d calls the same `stagePublicImage` discard path on transaction failure. |
+| Rollback boundary | Revert tournament-media service/routes and appended integration coverage; WU3a–WU3c profile ingest, proxy, replacement, retirement worker, and compensation remain intact. |

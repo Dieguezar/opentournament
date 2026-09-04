@@ -38,9 +38,9 @@ Chain strategy: pending
 
 ## Phase 3: Media Lifecycle
 
-- [ ] 3.1 **RED**: Test `apps/api/src/app.integration.test.ts` for image limits, SVG, opaque keys, 404, headers/cache, and lifecycle cleanup.
-- [ ] 3.2 **GREEN**: Add Sharp/multipart; implement private-S3 upload/delete, proxy, replacement, audit, cleanup in `apps/api/package.json`, `apps/api/src/app.ts`, `apps/api/src/services/public-media.ts`, `apps/api/src/routes/public-media.ts`, and `apps/api/src/worker.ts`.
-- [ ] 3.3 **REFACTOR**: Add timeout/backpressure, detected headers/cache, 503, and MinIO lifecycle testing.
+- [x] 3.1 **RED**: Test `apps/api/src/app.integration.test.ts` for image limits, SVG, opaque keys, 404, headers/cache, and lifecycle cleanup.
+- [x] 3.2 **GREEN**: Add Sharp/multipart; implement private-S3 upload/delete, proxy, replacement, audit, cleanup in `apps/api/package.json`, `apps/api/src/app.ts`, `apps/api/src/services/public-media.ts`, `apps/api/src/routes/public-media.ts`, and `apps/api/src/worker.ts`.
+- [x] 3.3 **REFACTOR**: Add timeout/backpressure, detected headers/cache, 503, and MinIO lifecycle testing.
 
 ## Phase 4: Presentation and Convergence
 
