@@ -20,6 +20,7 @@ import { registerEventRoutes } from './routes/events.js';
 import { registerParticipantAccessPassRoutes } from './routes/participant-access-passes.js';
 import { registerProfileRoutes } from './routes/profiles.js';
 import { registerPublicMediaRoutes } from './routes/public-media.js';
+import { registerOverlayRoutes } from './routes/overlays.js';
 
 export function buildServer(options: { logger?: boolean } = {}) {
   const app = Fastify({
@@ -42,6 +43,7 @@ export async function initServer(logger = true) {
       await registerAuthRoutes(api);
       await registerProfileRoutes(api);
       await registerPublicMediaRoutes(api);
+      await registerOverlayRoutes(api);
       await registerOrganizationRoutes(api);
       await registerTeamRoutes(api);
       await registerTournamentRoutes(api);

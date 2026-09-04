@@ -251,7 +251,7 @@ Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament l
 | --- | --- |
 | Focused test command | `pnpm --filter @opentournament/api exec vitest run src/services/overlay-presentation.test.ts` passed: 1 test file and 9 tests. This is the isolated file command; the prior `test --` invocation ran the broader API suite and is not retained as focused proof. |
 | Runtime harness | N/A: this work unit is a pure deterministic projection with no database, HTTP, SSE, process, storage, or external runtime boundary. WU4a2 owns the route/SSE integration harness. |
-| API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |
+| API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |`n| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests. |`n| Formatting/diff | Touched API source/test files passed Prettier check; `git diff --check` passed. |
 | Workspace proof | Exact `pnpm test` passed: 10 Turbo test tasks and 31 configuration tests. |
 | Rollback boundary | Revert `overlay-presentation.ts`, its focused tests, task checkbox, and this WU4a1 evidence. No routes, SSE, realtime, media, web, or database behavior is included. |
 
@@ -269,3 +269,34 @@ Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament l
 ### Remaining Tasks
 
 Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE invalidation; WU4b owns client convergence.
+## Work Unit 4a2: Public overlay routes and SSE invalidation
+
+**Status:** Complete.
+
+### Completed Tasks
+
+- [x] 4.2 GREEN: Add the public presentation route and visibility-gated SSE invalidations.
+
+### TDD Cycle Evidence
+
+| Task | Safety net | RED | GREEN / triangulation | Refactor |
+| --- | --- | --- | --- | --- |
+| 4.2 | `pnpm --filter @opentournament/api exec vitest run src/services/overlay-presentation.test.ts` passed 9/9 before edits. | Fresh PostgreSQL `pnpm --filter @opentournament/api exec vitest run src/routes/overlays.integration.test.ts` exited 1: expected the absent overlay route to return 200 but received 404. | The same focused command on fresh PostgreSQL passed 1/1: public authoritative bootstrap, no-cache headers, bounded SSE bootstrap/retry, sanitized invalidation, result-correction refetch, and private/unlisted 404 gates. | A final fresh PostgreSQL rerun passed 1/1 after awaiting the snapshot assertion and adding the unlisted gate case. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused runtime | A real Fastify listener with bounded `fetch`/SSE reader and `AbortController` cleanup ran against fresh PostgreSQL. After a persisted result correction, the public stream emitted only `overlay.invalidated`, then the authoritative route returned scores 2–1. Containers were stopped without deleting volumes. |
+| API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |`n| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests. |`n| Formatting/diff | Touched API source/test files passed Prettier check; `git diff --check` passed. |
+| Rollback boundary | Revert the overlay route/registration, public event gate and sanitized SSE option, focused integration coverage, task checkbox, and this WU4a2 evidence. Existing tournament events and WU4a1 presentation projection remain. |
+
+### Workload / Delivery Boundary
+
+- Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
+- Current slice: `wu4a2-overlay-routes-sse`, based exactly on `bfab47fc3ec8e0ceccc9ffd030939ee072d57d47`.
+- This commit contains the public HTTP/SSE boundary and runtime proof only; WU4.3 web convergence remains out of scope.
+
+### Remaining Tasks
+
+Tasks 4.3 through 6.3 remain pending. WU4.3 owns the web client refetch/coalescing/stale-response behavior.

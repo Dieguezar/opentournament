@@ -1,4 +1,7 @@
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
+import { tournaments } from '@opentournament/database';
+import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { sseReply } from '../services/realtime.js';
 
@@ -10,7 +13,24 @@ export async function registerEventRoutes(app: FastifyInstance): Promise<void> {
         error: { code: 'MISSING_TOURNAMENT', message: 'The tournament parameter is required' },
       });
     }
-    sseReply(reply, [`tournament:${tournament}`]);
+    const [publicTournament] = await db
+      .select({ id: tournaments.id })
+      .from(tournaments)
+      .where(
+        and(
+          eq(tournaments.slug, tournament),
+          eq(tournaments.visibility, 'public'),
+          isNotNull(tournaments.publishedAt),
+          isNull(tournaments.deletedAt),
+        ),
+      )
+      .limit(1);
+    if (!publicTournament) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
+      });
+    }
+    sseReply(reply, [`tournament:${publicTournament.id}`], { publicInvalidations: true });
   });
 
   app.get('/events', async (request, reply) => {

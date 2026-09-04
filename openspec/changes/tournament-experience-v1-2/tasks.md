@@ -45,7 +45,7 @@ Chain strategy: pending
 ## Phase 4: Presentation and Convergence
 
 - [x] 4.1 **RED**: Test `apps/api/src/services/overlay-presentation.ts` for public state, ranking/ties, Up Next, champion.
-- [ ] 4.2 **GREEN**: Add `apps/api/src/routes/overlays.ts`; extend `apps/api/src/routes/events.ts` and `apps/api/src/services/realtime.ts` for gates, no-cache SSE, comments, retry, invalidations.
+- [x] 4.2 **GREEN**: Add `apps/api/src/routes/overlays.ts`; extend `apps/api/src/routes/events.ts` and `apps/api/src/services/realtime.ts` for gates, no-cache SSE, comments, retry, invalidations.
 - [ ] 4.3 **RED/GREEN/REFACTOR**: Create `apps/web/components/overlay-live.test.tsx` and `apps/web/components/overlay-live.tsx` for refetch, coalescing, stale rejection, abort, 404.
 
 ## Phase 5: Web Surfaces
