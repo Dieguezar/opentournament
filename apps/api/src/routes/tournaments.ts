@@ -353,6 +353,7 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .limit(1);
     const participants = await db
       .select({
+        teamId: teams.id,
         label: teams.name,
         profile: publicPlayerProfiles,
         avatar: publicMedia,
@@ -379,6 +380,7 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       tournament,
       organization: org ?? null,
       participants: participants.map((participant) => ({
+        teamId: participant.teamId,
         label: participant.label,
         ...(participant.profile
           ? { profile: publicProfile(participant.profile, participant.avatar) }

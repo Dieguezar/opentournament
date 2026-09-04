@@ -7,6 +7,8 @@ import {
   PublicPlayerProfile,
   type PublicPlayerProfileData,
 } from '@/components/public-player-profile';
+import { getDictionary } from '@/lib/i18n';
+import { getRequestLocale } from '@/lib/i18n-server';
 import { serverFetch } from '@/lib/server-api';
 
 export const dynamic = 'force-dynamic';
@@ -25,13 +27,15 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  if (!isPublicProfileSlug(slug)) return { title: 'Player unavailable' };
+  const copy = getDictionary(await getRequestLocale()).publicPlayer;
+  if (!isPublicProfileSlug(slug)) return { title: copy.unavailableMetadata };
   const player = (await getPublicPlayer(slug)).data.player;
-  return { title: player?.gamertag ?? 'Player unavailable' };
+  return { title: player?.gamertag ?? copy.unavailableMetadata };
 }
 
 export default async function PublicPlayerPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const copy = getDictionary(await getRequestLocale()).publicPlayer;
   if (!isPublicProfileSlug(slug)) notFound();
 
   const playerRes = await getPublicPlayer(slug);
@@ -39,8 +43,8 @@ export default async function PublicPlayerPage({ params }: { params: Promise<{ s
     return (
       <main className="container narrow">
         <div className="service-state" role="status">
-          <h1>Player profile unavailable</h1>
-          <p>Please try again shortly.</p>
+          <h1>{copy.unavailableTitle}</h1>
+          <p>{copy.unavailableDescription}</p>
         </div>
       </main>
     );
@@ -49,7 +53,7 @@ export default async function PublicPlayerPage({ params }: { params: Promise<{ s
 
   return (
     <main className="container narrow">
-      <PublicPlayerProfile profile={playerRes.data.player} />
+      <PublicPlayerProfile copy={copy} profile={playerRes.data.player} />
     </main>
   );
 }

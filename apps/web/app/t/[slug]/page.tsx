@@ -15,9 +15,9 @@ import { RegisterPanel } from '@/components/register-panel';
 import { ReportPanel } from '@/components/report-panel';
 import { RulesetSummary } from '@/components/ruleset-summary';
 import {
-  PublicParticipantName,
-  type PublicPlayerProfileData,
-} from '@/components/public-player-profile';
+  PublicTournamentRegistrationList,
+  type PublicTournamentParticipant,
+} from '@/components/public-tournament-registration-list';
 import { formatMessage, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
 import { getRequestLocale } from '@/lib/i18n-server';
 import {
@@ -71,11 +71,9 @@ interface BracketView {
 interface TeamEntryView {
   teamId: string;
   teamName: string;
-}
-
-interface PublicParticipantView {
-  label: string;
-  profile?: Pick<PublicPlayerProfileData, 'slug'>;
+  teamTag: string | null;
+  registrationStatus: string;
+  checkedIn: boolean | null;
 }
 
 interface PublicTournamentResponse {
@@ -94,7 +92,7 @@ interface PublicTournamentResponse {
   };
   organization: { name: string } | null;
   appearance: TournamentBrandingAppearance | null;
-  participants?: PublicParticipantView[];
+  participants?: PublicTournamentParticipant[];
 }
 
 const getPublicTournament = cache((slug: string) =>
@@ -400,8 +398,7 @@ export default async function PublicTournamentPage({
     serverFetch<{ brackets: BracketView[] }>(`/tournaments/${tournament.id}/bracket`),
   ]);
   const teams = teamsRes.data?.teams ?? [];
-  const participants: PublicParticipantView[] =
-    tournamentRes.data?.participants ?? teams.map((team) => ({ label: team.teamName }));
+  const participants = tournamentRes.data?.participants ?? [];
   const brackets = bracketRes.data?.brackets ?? [];
   const status = getTournamentStatus(tournament.status, locale);
   const isSmash = tournament.gameAdapterKey === 'smash_ultimate';
@@ -537,23 +534,19 @@ export default async function PublicTournamentPage({
               </h2>
             </div>
           </div>
-          {participants.length === 0 ? (
+          {teams.length === 0 ? (
             <p className={styles.emptyCopy}>
               {isSmash ? copy.noPlayersRegistered : copy.noTeamsRegistered}
             </p>
           ) : (
-            <ul className={styles.teamList}>
-              {participants.map((participant, index) => (
-                <li key={`${participant.label}-${index}`}>
-                  <strong>
-                    <PublicParticipantName
-                      label={participant.label}
-                      profile={participant.profile}
-                    />
-                  </strong>
-                </li>
-              ))}
-            </ul>
+            <PublicTournamentRegistrationList
+              copy={copy}
+              listClassName={styles.teamList}
+              locale={locale}
+              metaClassName={styles.teamMeta}
+              participants={participants}
+              registrations={teams}
+            />
           )}
         </section>
 

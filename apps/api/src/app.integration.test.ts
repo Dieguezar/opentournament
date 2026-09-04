@@ -2536,6 +2536,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         expect(publicParticipants).toEqual(
           expect.arrayContaining([
             {
+              teamId: linkedTeamId,
               label: 'Linked Smash Label',
               profile: expect.objectContaining({
                 slug,
@@ -2543,7 +2544,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
                 avatar: expect.objectContaining({ url: `/api/v1/media/${avatar!.id}` }),
               }),
             },
-            { label: 'Unlinked Smash Label' },
+            { teamId: unlinkedTeam!.id, label: 'Unlinked Smash Label' },
           ]),
         );
         const unlinkedParticipant = publicParticipants.find(

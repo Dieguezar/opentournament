@@ -223,6 +223,13 @@ const es = {
     starterStages: 'Escenarios iniciales',
     counterpicks: 'Counterpicks',
   },
+  publicPlayer: {
+    eyebrow: 'Perfil de jugador',
+    avatarAlt: 'Avatar de {gamertag}',
+    unavailableMetadata: 'Jugador no disponible',
+    unavailableTitle: 'El perfil del jugador no está disponible',
+    unavailableDescription: 'Intentá nuevamente en unos instantes.',
+  },
   registrationPanel: {
     actionError: 'No se pudo completar la acción. Intentá de nuevo.',
     loadServiceError:
@@ -930,6 +937,13 @@ const en: Dictionary = {
     stageSelection: 'Stage selection',
     starterStages: 'Starter stages',
     counterpicks: 'Counterpicks',
+  },
+  publicPlayer: {
+    eyebrow: 'Player profile',
+    avatarAlt: '{gamertag} avatar',
+    unavailableMetadata: 'Player unavailable',
+    unavailableTitle: 'Player profile unavailable',
+    unavailableDescription: 'Please try again shortly.',
   },
   registrationPanel: {
     actionError: 'The action could not be completed. Try again.',

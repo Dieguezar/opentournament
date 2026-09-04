@@ -3,10 +3,19 @@ import { describe, expect, it } from 'vitest';
 
 import { PublicParticipantName, PublicPlayerProfile } from './public-player-profile';
 
+const copy = {
+  eyebrow: 'Player profile',
+  avatarAlt: '{gamertag} avatar',
+  unavailableMetadata: 'Player unavailable',
+  unavailableTitle: 'Player profile unavailable',
+  unavailableDescription: 'Please try again shortly.',
+};
+
 describe('public player profile presenters', () => {
   it('renders only the published optional profile fields and same-origin avatar media', () => {
     const markup = renderToStaticMarkup(
       <PublicPlayerProfile
+        copy={copy}
         profile={{
           slug: 'nox-player',
           gamertag: 'Nox',
@@ -33,6 +42,7 @@ describe('public player profile presenters', () => {
   it('omits absent optional fields and ignores a non-proxy avatar URL', () => {
     const markup = renderToStaticMarkup(
       <PublicPlayerProfile
+        copy={copy}
         profile={{
           slug: 'private-fields',
           gamertag: 'PrivateTag',

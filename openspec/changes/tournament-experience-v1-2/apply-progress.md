@@ -447,3 +447,35 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - [ ] 5.1 remains pending for the unsliced branding/privacy/forms/canvas coverage.
 - [ ] 5.2 remains pending for owner/admin profile and appearance controls.
 - [ ] 5.3 and all Phase 6 work remain pending.
+
+## Work Unit WU5c-registration-preservation-correction
+
+**Status:** Complete partial correction; umbrella tasks 5.1, 5.2, and 5.3 remain unchecked.
+
+### Correction Scope
+
+- Restored `/t/[slug]` to render the complete existing registrations response and its original count, team tag, registration-status, and check-in presentation.
+- Added the existing public team registration identity to the narrow published participant projection, then joined player links only by that exact `teamId`; labels, positions, and duplicate-sensitive values are never used for linking.
+- Localized public-player presentation and unavailable-state copy through the Spanish/English dictionary convention without broadening localization scope.
+
+### TDD Cycle Evidence
+
+- **RED:** New synchronous `public-tournament-registration-list.test.tsx` failed with `Cannot find module './public-tournament-registration-list'`; the presenter did not exist before the correction.
+- **GREEN:** `pnpm --filter @opentournament/web test -- public-tournament-registration-list.test.tsx public-player-profile.test.tsx` passed: 20 files, 102 tests. The new regression proves one stable-ID link with four duplicate labels, plain unlinked/private/revoked labels, tags, pending/waitlisted status, approved checked-in/out badges, and all four list entries.
+- **API proof:** Fresh isolated PostgreSQL container `opentournament-wu5c-correction-pg3` ran the targeted `returns owner settings and published Smash profile links without leaking private participants` integration test: 1 passed, 11 skipped. It asserts `teamId` for linked and unlinked public participants and stops the container without removing it or volumes.
+- **REFACTOR:** Extracted the registration presenter so the page retains its original registration source/metadata while the identity map is isolated and directly testable.
+
+### Verification Evidence
+
+- `pnpm --filter @opentournament/web typecheck` — passed.
+- `pnpm --filter @opentournament/api typecheck` — passed.
+- Exact workspace command `pnpm test` — passed (web 102 tests; API 63 passed / 14 expected integration-dependent skips; config 31 passed).
+- `pnpm --filter @opentournament/web build` — passed; Next.js 16.3.2 emitted dynamic `/players/[slug]` and `/t/[slug]` routes.
+- Initial package-script API attempt passed `-t` as a positional argument and ran the file concurrently; its unrelated migration races/MinIO failures were not used as proof. The corrected `pnpm exec vitest ... --testNamePattern` isolated the target and passed.
+- Prettier check passed for source/test files and `git diff --check` passed. The cumulative progress file retains pre-existing Markdown formatting and was appended without reformatting prior evidence.
+
+### Work Unit Evidence
+
+- **Rollback boundary:** revert the correction commit to restore the immediately preceding WU5c player-page implementation; no migration or persistent-data change was introduced.
+- **Protected state:** `.gitignore` and `artifacts/a11y-audit/` remain unstaged/unmodified by this work; all three pre-existing stashes remain, including `e269057a0ab90f7efb533f5195e15d0ec3dfa96a`.
+- **Final owned diff:** `268` changed lines, within the 400-line correction cap.

@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
+import { formatMessage, type Dictionary } from '../lib/i18n';
 import styles from './public-player-profile.module.css';
 
 export interface PublicProfileAvatar {
@@ -41,7 +42,13 @@ export function PublicParticipantName({ label, profile }: PublicParticipantNameP
   return <Link href={`/players/${encodeURIComponent(profile.slug)}`}>{label}</Link>;
 }
 
-export function PublicPlayerProfile({ profile }: { profile: PublicPlayerProfileData }) {
+export function PublicPlayerProfile({
+  profile,
+  copy,
+}: {
+  profile: PublicPlayerProfileData;
+  copy: Dictionary['publicPlayer'];
+}) {
   const avatarPath = sameOriginAvatarPath(profile.avatar);
 
   return (
@@ -49,7 +56,7 @@ export function PublicPlayerProfile({ profile }: { profile: PublicPlayerProfileD
       <div className={styles.header}>
         {avatarPath && (
           <Image
-            alt={`${profile.gamertag} avatar`}
+            alt={formatMessage(copy.avatarAlt, { gamertag: profile.gamertag })}
             className={styles.avatar}
             height={profile.avatar!.height}
             src={avatarPath}
@@ -58,7 +65,7 @@ export function PublicPlayerProfile({ profile }: { profile: PublicPlayerProfileD
           />
         )}
         <div>
-          <p className={styles.eyebrow}>Player profile</p>
+          <p className={styles.eyebrow}>{copy.eyebrow}</p>
           <h1>{profile.gamertag}</h1>
           {profile.realName && <p className={styles.realName}>{profile.realName}</p>}
         </div>
