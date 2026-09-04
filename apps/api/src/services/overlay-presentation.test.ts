@@ -81,6 +81,19 @@ describe('overlay presentation', () => {
     });
   });
 
+  it('falls back to TBD for blank participant labels', () => {
+    const presentation = buildTournamentPresentation({
+      tournament: publicTournament,
+      participants: [
+        { id: 'participant-a', label: '   ', status: 'active' },
+        { id: 'participant-b', label: '', status: 'active' },
+      ],
+      matches: [match()],
+    });
+
+    expect(presentation?.scoreboard?.home).toEqual({ id: 'participant-a', label: 'TBD' });
+    expect(presentation?.scoreboard?.away).toEqual({ id: 'participant-b', label: 'TBD' });
+  });
   it('uses an active match for the scoreboard and the next ready match for Up Next', () => {
     const presentation = buildTournamentPresentation({
       tournament: publicTournament,
@@ -101,20 +114,48 @@ describe('overlay presentation', () => {
     expect(presentation?.upNext).toMatchObject({ id: 'ready-match' });
   });
 
-  it('orders ready matches by scheduled start, stage, bracket, round, and position', () => {
+  it('orders scheduled matches by time before unscheduled matches', () => {
     const presentation = buildTournamentPresentation({
       tournament: publicTournament,
       participants,
       matches: [
-        match({ id: 'no-schedule', scheduledAt: null }),
-        match({ id: 'later-stage', stagePosition: 1 }),
-        match({ id: 'losers-bracket', bracketType: 'losers' }),
-        match({ id: 'earlier-schedule', scheduledAt: new Date('2026-09-02T09:00:00.000Z') }),
+        match({ id: 'unscheduled', scheduledAt: null }),
+        match({ id: 'later', scheduledAt: new Date('2026-09-02T11:00:00.000Z') }),
+        match({ id: 'earlier', scheduledAt: new Date('2026-09-02T09:00:00.000Z') }),
       ],
     });
 
-    expect(presentation?.scoreboard?.id).toBe('earlier-schedule');
-    expect(presentation?.upNext?.id).toBe('losers-bracket');
+    expect(presentation?.scoreboard?.id).toBe('earlier');
+    expect(presentation?.upNext?.id).toBe('later');
+  });
+
+  it('orders matching schedules by bracket rank', () => {
+    const presentation = buildTournamentPresentation({
+      tournament: publicTournament,
+      participants,
+      matches: [
+        match({ id: 'final', bracketType: 'final' }),
+        match({ id: 'losers', bracketType: 'losers' }),
+        match({ id: 'winners', bracketType: 'winners' }),
+      ],
+    });
+
+    expect(presentation?.scoreboard?.id).toBe('winners');
+    expect(presentation?.upNext?.id).toBe('losers');
+  });
+
+  it('orders matching brackets by round number', () => {
+    const presentation = buildTournamentPresentation({
+      tournament: publicTournament,
+      participants,
+      matches: [
+        match({ id: 'later-round', roundNumber: 2 }),
+        match({ id: 'earlier-round', roundNumber: 1 }),
+      ],
+    });
+
+    expect(presentation?.scoreboard?.id).toBe('earlier-round');
+    expect(presentation?.upNext?.id).toBe('later-round');
   });
   it('uses persisted order and identifiers to resolve ready-match ties deterministically', () => {
     const presentation = buildTournamentPresentation({

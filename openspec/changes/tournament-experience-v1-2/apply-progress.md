@@ -243,18 +243,23 @@ Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament l
 
 | Task | Safety net | RED | GREEN / triangulation | Refactor |
 | --- | --- | --- | --- | --- |
-| 4.1 | New service and focused test had no existing baseline. | `pnpm --filter @opentournament/api test -- src/services/overlay-presentation.test.ts` exited 1 because the test referenced the absent `./overlay-presentation.js` module. | The same command passed after the minimal pure projection. Six cases cover non-public denial, unavailable-participant omission, active-match precedence, scheduled/stage/bracket ordering, stable ID ties, Up Next exclusion, and a `winner` participant only when the tournament is finalized. | Prettier completed; focused test, API typecheck, workspace `pnpm test`, and `git diff --check` passed. |
+| 4.1 | New service and focused test had no existing baseline. | `pnpm --filter @opentournament/api test -- src/services/overlay-presentation.test.ts` exited 1 because the test referenced the absent `./overlay-presentation.js` module. | The original focused cases covered public gating, unavailable participants, active-match precedence, Up Next exclusion, and finalized champions. Ordering coverage was corrected below with independently varied scheduled/null, bracket, round, position, and ID assertions. | Prettier completed; focused test, API typecheck, workspace `pnpm test`, and `git diff --check` passed. |
 
 ### Work Unit Evidence
 
 | Evidence | Result |
 | --- | --- |
-| Focused test command | `pnpm --filter @opentournament/api test -- src/services/overlay-presentation.test.ts` passed: 60 tests, 12 skipped across the API suite; the new focused file has 6 passing tests. |
+| Focused test command | `pnpm --filter @opentournament/api exec vitest run src/services/overlay-presentation.test.ts` passed: 1 test file and 9 tests. This is the isolated file command; the prior `test --` invocation ran the broader API suite and is not retained as focused proof. |
 | Runtime harness | N/A: this work unit is a pure deterministic projection with no database, HTTP, SSE, process, storage, or external runtime boundary. WU4a2 owns the route/SSE integration harness. |
 | API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |
 | Workspace proof | Exact `pnpm test` passed: 10 Turbo test tasks and 31 configuration tests. |
 | Rollback boundary | Revert `overlay-presentation.ts`, its focused tests, task checkbox, and this WU4a1 evidence. No routes, SSE, realtime, media, web, or database behavior is included. |
 
+### Gatekeeper Correction: Ordering and label proof
+
+- **Coverage correction:** Added isolated assertions for scheduled-time precedence over null schedules, winners/losers/final bracket ranking, round-number ordering, persisted position plus stable-ID ties, and whitespace-only labels mapping to `TBD`.
+- **RED classification:** The assertions were added before any production edit. The isolated run passed 9/9 because `compareMatches` and `trim() || 'TBD'` already implement the required behavior; this is a missing-coverage correction, not a fabricated production-defect RED.
+- **GREEN/refactor:** No production files changed. `pnpm exec prettier --check apps/api/src/services/overlay-presentation.test.ts`, `pnpm --filter @opentournament/api typecheck`, exact `pnpm test` (10 Turbo tasks and 31 configuration checks), and `git diff --check` all passed after the test/evidence update.
 ### Workload / Delivery Boundary
 
 - Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
