@@ -675,8 +675,8 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 ### TDD Cycle Evidence
 
-| RED | GREEN | REFACTOR |
-| --- | --- | --- |
+| RED                                                                                                     | GREEN                                                                                                                                           | REFACTOR                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | New production workflow/presenter tests first failed because `tournament-media-controls` did not exist. | `pnpm --filter @opentournament/web exec vitest run components/tournament-media-controls.test.tsx` passed 1 file / 5 tests after implementation. | Kept media state local to each slot, reusing the shared CSRF/session-aware JSON client and its browser-managed multipart boundaries. |
 
 ### Work Unit Evidence
@@ -690,6 +690,7 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert this work-unit commit to remove tournament media controls, the additive opaque management projection, translations, test, manifest, and this evidence; existing palette, profile, overlay, and media API behavior remains intact.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
 - **Final measured owned diff:** 400 changed lines against `e29d95a04aaca81f2744346e5836a5a7a2c32562`, at the work-unit cap.
+
 ## Work Unit WU5g2-cross-slot-concurrency-evidence-correction
 
 **Status:** Maintainer-authorized successor correction; tasks 5.1–5.3 remain unchecked.
@@ -700,6 +701,7 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Verification:** API/web typechecks, exact `pnpm test` (web 24 files / 125 tests; API 63 passed / 14 skipped), Next 16.3.2 build, Prettier, and `git diff --check` passed. Runtime is N/A: existing routes are unchanged and Phase 6 owns browser E2E.
 - **Canonical correction manifest:** `wu5g2-verification-manifest.txt`; `sha256:14158227b75cf974e1d4ee0b5d1be7dd318774c403162fee8d1cf2340cc4de2e` is reproducible, covers listed source digests, excludes itself, and is the native evidence revision.
 - **Rollback/protected state:** revert this successor commit to restore the part-1 behavior; `.gitignore`, `artifacts/a11y-audit/`, and all three stashes are untouched.
+
 ## Work Unit WU5g3-true-queue-production-overlap-correction
 
 **Status:** Maintainer-authorized successor correction; tasks 5.1–5.3 remain unchecked.
@@ -708,6 +710,29 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **RED/GREEN:** a production-workflow overlap test failed when the banner request resolved `null`; it now proves `logo POST -> logo GET -> banner POST -> banner GET` and final `{ logoMediaId: 'logo', bannerMediaId: 'banner' }` state.
 - **Verification:** focused 1 file / 6 tests, API/web typechecks, exact `pnpm test`, Next build, Prettier, and diff check passed; runtime N/A because Phase 6 owns browser E2E.
 - **Manifest:** `wu5g3-verification-manifest.txt`, `sha256:1852a78d733209440a4b06fc3e0975a79b3e07ead02feec29eac60cde5acfa06`; standalone, LF/UTF-8, excludes itself, and is the native evidence revision. Rollback is this successor commit; protected state remains untouched.
+
 ## Work Unit WU5g4-semantic-queue-state-proof
 
 **Status:** Semantic test/evidence correction; tasks 5.1–5.3 remain unchecked. Gate baseline showed the former banner assertion could pass from attribute order. The presenter proof now finds each input/button tag and verifies all four controls are disabled while busy. Queue workflow tests retain successful logo→GET→banner→GET ordering and add failure continuation: a failed logo does not poison the banner mutation→GET path. Focused 1 file / 7 tests, typechecks, exact `pnpm test`, build, Prettier, and diff check passed. Next bounded Phase 5 slice: WU5h. Manifest `wu5g4-verification-manifest.txt` sha256:99733a5921f13bdfa362e95eafe8bbc165b014c881a5d6debf0dfe759b70f936; rollback this test/evidence commit; protected state untouched.
+
+## Work Unit WU5g5-production-media-controller-proof
+
+**Status:** Maintainer-authorized successor correction complete; tasks 5.1–5.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+- **RED:** `pnpm --filter @opentournament/web exec vitest run components/tournament-media-controls.test.tsx` failed on parent `9b32c096` because `createTournamentMediaController` was unavailable and the exact remove controls had no stable IDs for semantic disabled assertions.
+- **GREEN:** the focused command passed 1 file / 8 tests. The live component now consumes the tested controller, which owns the FIFO queue, pending count, request → authoritative GET → state application, and errors.
+- **REFACTOR:** controller state is observable through one production seam and subscribed by `TournamentMediaControls`; no parallel test-only queue or UI workflow was added.
+
+### Work Unit Evidence
+
+- Controlled success proves `logo POST → logo GET → banner POST → banner GET`, the first completed operation leaves `busy` true while the second awaits, and the final authoritative state is `{ logoMediaId: 'logo', bannerMediaId: 'banner' }` with `busy: false`.
+- Controlled failure proves a failed first mutation is caught without an unhandled rejection; the queued banner mutation still performs POST → GET, applies its authoritative projection, and drains `busy`.
+- The presenter test resolves the exact `logo-file`, `banner-file`, `logo-remove`, and `banner-remove` native tags and requires their boolean `disabled` token while rejecting `aria-disabled`/`data-disabled` substitutes and attribute-order artifacts.
+- Passed: focused media test (1 file / 8 tests); API and web typechecks; exact `pnpm test` (10 Turbo tasks; web 24 files / 127 tests; API 63 passed / 14 skipped; configuration 31 tests); Next.js 16.3.2 production build; source Prettier write/check.
+- Runtime harness: N/A. The correction refactors the existing authenticated client workflow without changing routes; controller tests execute the actual production workflow and Phase 6 owns browser E2E.
+- **Rollback boundary:** revert the WU5g5 successor commit to restore the prior component-local controller state while retaining all WU5g1–WU5g4 changes.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three existing stashes remain untouched.
+- **Verification manifest:** `wu5g5-verification-manifest.txt`, `sha256:45b8f9f177fea85b01bd1de108ae1b1079b9af2bbfc96621c50ee50650d26d35`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.
+- **Next:** WU5h is eligible only after this commit's final Prettier, control-byte/placeholder, and diff checks pass.

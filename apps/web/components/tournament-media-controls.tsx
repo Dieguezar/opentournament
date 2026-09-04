@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useI18n } from './i18n-provider';
 import { ApiClientError, apiClient } from '../lib/api';
@@ -27,6 +27,20 @@ export function createTournamentMediaMutationQueue() {
       return result;
     },
   };
+}
+
+export interface TournamentMediaControllerState {
+  busy: boolean;
+  error: string | null;
+  media: TournamentMedia;
+  success: string | null;
+}
+
+export interface TournamentMediaController {
+  readonly state: TournamentMediaControllerState;
+  remove(slot: TournamentMediaSlot): Promise<void>;
+  subscribe(listener: (state: TournamentMediaControllerState) => void): () => void;
+  upload(slot: TournamentMediaSlot, file: File): Promise<void>;
 }
 
 const mediaIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -67,6 +81,62 @@ export async function deleteTournamentMedia(
 ): Promise<TournamentMedia> {
   await client(`/tournaments/${tournamentId}/appearance/${slot}`, { method: 'DELETE' });
   return loadTournamentMedia(client, tournamentId);
+}
+
+export function createTournamentMediaController(
+  client: TournamentMediaClient,
+  tournamentId: string,
+  initialMedia: TournamentMedia,
+  getCopy: () => Pick<Dictionary['tournamentAdmin'], 'mediaError' | 'mediaSaved'>,
+): TournamentMediaController {
+  const queue = createTournamentMediaMutationQueue();
+  const listeners = new Set<(state: TournamentMediaControllerState) => void>();
+  let pending = 0;
+  let state: TournamentMediaControllerState = {
+    busy: false,
+    error: null,
+    media: initialMedia,
+    success: null,
+  };
+  const publish = () => listeners.forEach((listener) => listener(state));
+
+  const mutate = (slot: TournamentMediaSlot, file?: File) => {
+    pending += 1;
+    state = { ...state, busy: true };
+    publish();
+    return queue.run(async () => {
+      state = { ...state, error: null, success: null };
+      publish();
+      try {
+        const media = file
+          ? await uploadTournamentMedia(client, tournamentId, slot, file)
+          : await deleteTournamentMedia(client, tournamentId, slot);
+        state = { ...state, media, success: getCopy().mediaSaved };
+      } catch (requestError) {
+        state = {
+          ...state,
+          error:
+            requestError instanceof ApiClientError ? requestError.message : getCopy().mediaError,
+        };
+      } finally {
+        pending -= 1;
+        state = { ...state, busy: pending > 0 };
+        publish();
+      }
+    });
+  };
+
+  return {
+    get state() {
+      return state;
+    },
+    remove: (slot) => mutate(slot),
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    upload: (slot, file) => mutate(slot, file),
+  };
 }
 
 interface TournamentMediaFormProps {
@@ -127,7 +197,12 @@ export function TournamentMediaForm({
                 {slot === 'logo' ? copy.uploadingLogo : copy.uploadingBanner}
               </p>
             )}
-            <button type="button" disabled={pending || !preview} onClick={() => onDelete(slot)}>
+            <button
+              id={`${slot}-remove`}
+              type="button"
+              disabled={pending || !preview}
+              onClick={() => onDelete(slot)}
+            >
               {copy.deleteMedia}
             </button>
           </fieldset>
@@ -148,48 +223,34 @@ export function TournamentMediaControls({
 }) {
   const { dictionary } = useI18n();
   const copy = dictionary.tournamentAdmin;
-  const [media, setMedia] = useState(() => ({
-    logoMediaId: initialMedia?.logoMediaId ?? null,
-    bannerMediaId: initialMedia?.bannerMediaId ?? null,
-  }));
-  const [busy, setBusy] = useState(false);
-  const queue = useRef(createTournamentMediaMutationQueue());
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
-  const queued = useRef(0);
-
-  async function mutate(slot: TournamentMediaSlot, file?: File) {
-    queued.current += 1;
-    setBusy(true);
-    await queue.current.run(async () => {
-      setError(null);
-      setSuccess(null);
-      try {
-        setMedia(
-          file
-            ? await uploadTournamentMedia(apiClient, tournamentId, slot, file)
-            : await deleteTournamentMedia(apiClient, tournamentId, slot),
-        );
-        setSuccess(copy.mediaSaved);
-      } catch (requestError) {
-        setError(requestError instanceof ApiClientError ? requestError.message : copy.mediaError);
-      } finally {
-        queued.current -= 1;
-        if (!queued.current) setBusy(false);
-      }
-    });
+  const copyRef = useRef(copy);
+  copyRef.current = copy;
+  const controllerRef = useRef<TournamentMediaController | null>(null);
+  if (!controllerRef.current) {
+    controllerRef.current = createTournamentMediaController(
+      apiClient,
+      tournamentId,
+      {
+        logoMediaId: initialMedia?.logoMediaId ?? null,
+        bannerMediaId: initialMedia?.bannerMediaId ?? null,
+      },
+      () => copyRef.current,
+    );
   }
+  const controller = controllerRef.current;
+  const [state, setState] = useState<TournamentMediaControllerState>(() => controller.state);
+
+  useEffect(() => controller.subscribe(setState), [controller]);
 
   return (
     <TournamentMediaForm
-      busy={busy}
+      busy={state.busy}
       copy={copy}
-      error={error}
-      media={media}
-      success={success}
-      onDelete={(slot) => void mutate(slot)}
-      onUpload={(slot, file) => void mutate(slot, file)}
+      error={state.error}
+      media={state.media}
+      success={state.success}
+      onDelete={(slot) => void controller.remove(slot)}
+      onUpload={(slot, file) => void controller.upload(slot, file)}
     />
   );
 }

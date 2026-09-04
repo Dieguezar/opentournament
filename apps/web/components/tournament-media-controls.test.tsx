@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ApiClientError } from '../lib/api';
 import { getDictionary } from '../lib/i18n';
 import {
+  createTournamentMediaController,
   createTournamentMediaMutationQueue,
   deleteTournamentMedia,
   TournamentMediaForm,
@@ -29,6 +30,14 @@ function clientFor(responses: unknown[]): {
       return response as T;
     },
   };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((next) => {
+    resolve = next;
+  });
+  return { promise, resolve };
 }
 
 describe('tournament media controls workflow', () => {
@@ -128,12 +137,18 @@ describe('rendered tournament media controls', () => {
     );
     expect(busy).toContain('role="status"');
     expect(busy).toContain(copy.uploadingLogo);
-    const inputs = busy.match(/<input[^>]*>/g) ?? [];
-    expect(inputs).toHaveLength(2);
-    expect(inputs.every((input) => input.includes('disabled'))).toBe(true);
-    const buttons = busy.match(/<button[^>]*>/g) ?? [];
-    expect(buttons).toHaveLength(2);
-    expect(buttons.every((button) => button.includes('disabled'))).toBe(true);
+    for (const [tag, id] of [
+      ['input', 'logo-file'],
+      ['input', 'banner-file'],
+      ['button', 'logo-remove'],
+      ['button', 'banner-remove'],
+    ]) {
+      const element = (busy.match(new RegExp(`<${tag}\\b[^>]*>`, 'g')) ?? []).find((candidate) =>
+        new RegExp(`\\bid="${id}"`).test(candidate),
+      );
+      expect(element).toMatch(/\sdisabled(?:=""|(?=\s|>))/);
+      expect(element).not.toMatch(/\s(?:aria-disabled|data-disabled)=/);
+    }
 
     const error = renderToStaticMarkup(
       <TournamentMediaForm
@@ -176,25 +191,83 @@ it('queues logo and banner workflows through ordered authoritative reloads', asy
   ]);
 });
 
-it('continues after a failed workflow and drains after the queued retry', async () => {
-  const { client, calls } = clientFor([
-    new ApiClientError(503, 'UNAVAILABLE', 'Unavailable', 'Unavailable'),
-    undefined,
-    { appearance: { logoMediaId: null, bannerMediaId: 'banner' } },
-  ]);
-  const queue = createTournamentMediaMutationQueue();
-  const first = queue.run(() =>
-    uploadTournamentMedia(client, 't1', 'logo', new File(['x'], 'logo.png')),
+it('keeps the production controller queue alive after a failed mutation', async () => {
+  const secondMutation = deferred<undefined>();
+  const calls: string[] = [];
+  const client: TournamentMediaClient = async (path, init) => {
+    calls.push(`${init?.method ?? 'GET'} ${path}`);
+    if (calls.length === 1) {
+      throw new ApiClientError(503, 'UNAVAILABLE', 'Unavailable', 'Unavailable');
+    }
+    if (calls.length === 2) return secondMutation.promise as never;
+    return { appearance: { logoMediaId: null, bannerMediaId: 'banner' } } as never;
+  };
+  const controller = createTournamentMediaController(
+    client,
+    't1',
+    { logoMediaId: null, bannerMediaId: null },
+    () => getDictionary('en').tournamentAdmin,
   );
-  const second = queue.run(() =>
-    uploadTournamentMedia(client, 't1', 'banner', new File(['x'], 'banner.png')),
-  );
+  const first = controller.upload('logo', new File(['x'], 'logo.png'));
+  const second = controller.upload('banner', new File(['x'], 'banner.png'));
 
-  await expect(first).rejects.toMatchObject({ status: 503 });
-  await expect(second).resolves.toEqual({ logoMediaId: null, bannerMediaId: 'banner' });
+  await expect(first).resolves.toBeUndefined();
+  expect(controller.state).toMatchObject({ busy: true, error: null });
+  secondMutation.resolve(undefined);
+  await expect(second).resolves.toBeUndefined();
   expect(calls).toEqual([
-    'POST /tournaments/t1/appearance/logo [object FormData]',
-    'POST /tournaments/t1/appearance/banner [object FormData]',
+    'POST /tournaments/t1/appearance/logo',
+    'POST /tournaments/t1/appearance/banner',
     'GET /tournaments/t1',
   ]);
+  expect(controller.state).toMatchObject({
+    busy: false,
+    error: null,
+    media: { logoMediaId: null, bannerMediaId: 'banner' },
+  });
+});
+
+it('exposes the production controller lifecycle through queued authoritative mutations', async () => {
+  const firstMutation = deferred<undefined>();
+  const firstReload = deferred<{ appearance: { logoMediaId: string; bannerMediaId: null } }>();
+  const secondMutation = deferred<undefined>();
+  const secondReload = deferred<{ appearance: { logoMediaId: string; bannerMediaId: string } }>();
+  const calls: string[] = [];
+  const client: TournamentMediaClient = async (path, init) => {
+    calls.push(`${init?.method ?? 'GET'} ${path}`);
+    if (calls.length === 1) return firstMutation.promise as never;
+    if (calls.length === 2) return firstReload.promise as never;
+    if (calls.length === 3) return secondMutation.promise as never;
+    return secondReload.promise as never;
+  };
+  const controller = createTournamentMediaController(
+    client,
+    't1',
+    { logoMediaId: null, bannerMediaId: null },
+    () => getDictionary('en').tournamentAdmin,
+  );
+  const logo = controller.upload('logo', new File(['x'], 'logo.png'));
+  const banner = controller.upload('banner', new File(['x'], 'banner.png'));
+  expect(controller.state.busy).toBe(true);
+
+  firstMutation.resolve(undefined);
+  await Promise.resolve();
+  firstReload.resolve({ appearance: { logoMediaId: 'logo', bannerMediaId: null } });
+  await logo;
+  expect(controller.state).toMatchObject({ busy: true, media: { logoMediaId: 'logo' } });
+
+  secondMutation.resolve(undefined);
+  await Promise.resolve();
+  secondReload.resolve({ appearance: { logoMediaId: 'logo', bannerMediaId: 'banner' } });
+  await banner;
+  expect(calls).toEqual([
+    'POST /tournaments/t1/appearance/logo',
+    'GET /tournaments/t1',
+    'POST /tournaments/t1/appearance/banner',
+    'GET /tournaments/t1',
+  ]);
+  expect(controller.state).toMatchObject({
+    busy: false,
+    media: { logoMediaId: 'logo', bannerMediaId: 'banner' },
+  });
 });

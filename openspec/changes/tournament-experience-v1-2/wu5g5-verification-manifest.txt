@@ -1,0 +1,17 @@
+WU5g5 verification manifest
+Parent: 9b32c0969b6561d4fa18c3e4841545793d1366ac
+Work unit: WU5g5-production-media-controller-proof
+
+Verification outcomes
+- RED: focused media test failed on the parent because createTournamentMediaController was not exported and exact remove control IDs were absent.
+- GREEN: pnpm --filter @opentournament/web exec vitest run components/tournament-media-controls.test.tsx passed: 1 file, 8 tests.
+- API typecheck: pnpm --filter @opentournament/api run typecheck passed.
+- Web typecheck: pnpm --filter @opentournament/web run typecheck passed.
+- Workspace: pnpm test passed: 10 Turbo tasks, web 24 files / 127 tests, API 63 passed / 14 skipped, configuration 31 tests.
+- Build: pnpm --filter @opentournament/web build passed with Next.js 16.3.2.
+- Formatting: pnpm exec prettier --check apps/web/components/tournament-media-controls.tsx apps/web/components/tournament-media-controls.test.tsx passed.
+- Runtime: N/A; this is a client controller seam over existing API routes and Phase 6 owns browser E2E.
+
+Source digests
+apps/web/components/tournament-media-controls.tsx  506d638d7868702f443f00c4027e8a2f4635ca50d504db52f52021a182875137
+apps/web/components/tournament-media-controls.test.tsx  5ca6e60704da6d298b015d8c886574f6debdfd1d8b97ffb1d118f8bd6fb30eb6
