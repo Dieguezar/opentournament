@@ -16,13 +16,15 @@ export interface TournamentMedia {
 export type TournamentMediaClient = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export function createTournamentMediaMutationQueue() {
-  let pending: Promise<unknown> | null = null;
+  let tail = Promise.resolve();
   return {
-    run<T>(mutation: () => Promise<T>): Promise<T | null> {
-      if (pending) return Promise.resolve(null);
-      const result = mutation();
-      pending = result;
-      return result.finally(() => (pending = null));
+    run<T>(mutation: () => Promise<T>): Promise<T> {
+      const result = tail.then(mutation);
+      tail = result.then(
+        () => undefined,
+        () => undefined,
+      );
+      return result;
     },
   };
 }
@@ -155,9 +157,12 @@ export function TournamentMediaControls({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  const queued = useRef(0);
+
   async function mutate(slot: TournamentMediaSlot, file?: File) {
+    queued.current += 1;
+    setBusy(true);
     await queue.current.run(async () => {
-      setBusy(true);
       setError(null);
       setSuccess(null);
       try {
@@ -170,7 +175,8 @@ export function TournamentMediaControls({
       } catch (requestError) {
         setError(requestError instanceof ApiClientError ? requestError.message : copy.mediaError);
       } finally {
-        setBusy(false);
+        queued.current -= 1;
+        if (!queued.current) setBusy(false);
       }
     });
   }

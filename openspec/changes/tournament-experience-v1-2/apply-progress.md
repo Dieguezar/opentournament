@@ -700,3 +700,11 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Verification:** API/web typechecks, exact `pnpm test` (web 24 files / 125 tests; API 63 passed / 14 skipped), Next 16.3.2 build, Prettier, and `git diff --check` passed. Runtime is N/A: existing routes are unchanged and Phase 6 owns browser E2E.
 - **Canonical correction manifest:** `wu5g2-verification-manifest.txt`; `sha256:14158227b75cf974e1d4ee0b5d1be7dd318774c403162fee8d1cf2340cc4de2e` is reproducible, covers listed source digests, excludes itself, and is the native evidence revision.
 - **Rollback/protected state:** revert this successor commit to restore the part-1 behavior; `.gitignore`, `artifacts/a11y-audit/`, and all three stashes are untouched.
+## Work Unit WU5g3-true-queue-production-overlap-correction
+
+**Status:** Maintainer-authorized successor correction; tasks 5.1–5.3 remain unchecked.
+
+- **Supersedes WU5g2:** WU5g2 rejected the second queued request. WU5g3 uses a true promise tail: every logo/banner request runs in FIFO order through mutation, authoritative GET, and state application; controls stay disabled until the queue drains.
+- **RED/GREEN:** a production-workflow overlap test failed when the banner request resolved `null`; it now proves `logo POST -> logo GET -> banner POST -> banner GET` and final `{ logoMediaId: 'logo', bannerMediaId: 'banner' }` state.
+- **Verification:** focused 1 file / 6 tests, API/web typechecks, exact `pnpm test`, Next build, Prettier, and diff check passed; runtime N/A because Phase 6 owns browser E2E.
+- **Manifest:** `wu5g3-verification-manifest.txt`, `sha256:1852a78d733209440a4b06fc3e0975a79b3e07ead02feec29eac60cde5acfa06`; standalone, LF/UTF-8, excludes itself, and is the native evidence revision. Rollback is this successor commit; protected state remains untouched.

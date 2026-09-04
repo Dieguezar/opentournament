@@ -147,18 +147,27 @@ describe('rendered tournament media controls', () => {
   });
 });
 
-it('serializes overlapping slot mutations until the first authoritative projection resolves', async () => {
-  let resolveFirst!: (value: { logoMediaId: string | null; bannerMediaId: string | null }) => void;
-  const first = new Promise<{ logoMediaId: string | null; bannerMediaId: string | null }>(
-    (resolve) => {
-      resolveFirst = resolve;
-    },
-  );
+it('queues logo and banner workflows through ordered authoritative reloads', async () => {
+  const { client, calls } = clientFor([
+    undefined,
+    { appearance: { logoMediaId: 'logo', bannerMediaId: null } },
+    undefined,
+    { appearance: { logoMediaId: 'logo', bannerMediaId: 'banner' } },
+  ]);
   const queue = createTournamentMediaMutationQueue();
-  const firstRun = queue.run(() => first);
-  await expect(
-    queue.run(() => Promise.resolve({ logoMediaId: null, bannerMediaId: 'late' })),
-  ).resolves.toBeNull();
-  resolveFirst({ logoMediaId: 'new-logo', bannerMediaId: null });
-  await expect(firstRun).resolves.toEqual({ logoMediaId: 'new-logo', bannerMediaId: null });
+  const logo = queue.run(() =>
+    uploadTournamentMedia(client, 't1', 'logo', new File(['x'], 'logo.png')),
+  );
+  const banner = queue.run(() =>
+    uploadTournamentMedia(client, 't1', 'banner', new File(['x'], 'banner.png')),
+  );
+
+  await expect(logo).resolves.toEqual({ logoMediaId: 'logo', bannerMediaId: null });
+  await expect(banner).resolves.toEqual({ logoMediaId: 'logo', bannerMediaId: 'banner' });
+  expect(calls).toEqual([
+    'POST /tournaments/t1/appearance/logo [object FormData]',
+    'GET /tournaments/t1',
+    'POST /tournaments/t1/appearance/banner [object FormData]',
+    'GET /tournaments/t1',
+  ]);
 });

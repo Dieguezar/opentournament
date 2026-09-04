@@ -1,0 +1,11 @@
+WU5g3 verification manifest v1
+encoding: UTF-8 without BOM; LF; trailing LF
+parent: bf343d84a6fd3dfbe22e9897218a8bebefb2a056
+focused: media controls => passed; 1 file; 6 tests
+typecheck: API and web => passed
+workspace: pnpm test => passed; web 24 files/125 tests; API 63 passed/14 skipped
+build: Next.js 16.3.2 => passed
+format/diff => passed
+file-sha256:
+apps/web/components/tournament-media-controls.tsx sha256:606947501b6ca3076712fe350b81eef46d21016c62713b0a3492db3843c40937
+apps/web/components/tournament-media-controls.test.tsx sha256:f20c3841760096a4f0de154ea061bc6dbfd6309a251c430c50295d9823cc578e
