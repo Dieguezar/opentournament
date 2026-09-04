@@ -757,3 +757,23 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert this WU5h child commit to remove the OBS route, transparent document layout, overlay presenter/tests, task completion update, manifest, and this evidence without altering the API overlay contract.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three existing stashes remain untouched; no Docker process or volume was used.
 - **Verification manifest:** `wu5h-verification-manifest.txt`, `sha256:5645619f5f969d8e487bda6c9bb9c5cfbf3ef5ed5ad7fb01c9cb798960716a6c`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.
+
+## Work Unit WU5h-pre-hydration-canvas-correction
+
+**Status:** Corrective successor complete. Tasks 5.1–5.3 remain checked.
+
+### TDD Cycle Evidence
+
+- **RED:** actual page/layout SSR for a valid `scoreboard` route produced only the document style wrapper because `OverlayLive` correctly has no snapshot before hydration. The focused production route test failed because no `data-overlay-view` canvas shell existed.
+- **GREEN:** `PublicObsOverlay` now renders one fixed transparent 1920×1080 shell before delegating live content to `OverlayLive`. The focused overlay/live suite passed 2 files / 11 tests, including the actual page + layout composition and invalid-route boundary.
+- **REFACTOR:** `OverlayCanvasShell` owns the stable document canvas; `OverlayLive` still solely owns bootstrap fetch, SSE invalidation, coalescing, stale rejection, 404 closure, and snapshot content. No duplicate live state machine was introduced.
+
+### Work Unit Evidence
+
+- The prior WU5h isolated-canvas proof is superseded. The route-level SSR test renders `PublicObsOverlayPage` nested in `PublicObsOverlayLayout`, verifies the shell before hydration, verifies no fetched tournament content is invented, and retains deterministic valid/invalid view handling.
+- Valid public snapshots continue to render named scoreboard, up-next, and champion content only inside that shell. The UUID-only logo projection remains `/api/v1/media/:id`; arbitrary storage URLs never render.
+- Passed: focused production overlay/live tests; API and web typechecks; exact `pnpm test` (10 Turbo tasks; web 25 files / 133 tests; API 63 passed / 14 skipped; configuration 31 tests); Next.js 16.3.2 build with dynamic `/t/[slug]/overlay/[view]`; Prettier and `git diff --check`.
+- Runtime harness: server render is applicable and executed. Browser/OBS E2E and smoke remain Phase 6, with no Docker started.
+- **Rollback boundary:** revert this correction commit to remove the pre-hydration shell and direct route-test seam while retaining the original WU5h live overlay implementation.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
+- **Verification manifest:** `wu5h-correction-verification-manifest.txt`, `sha256:7127a3941f7480d6ad574559e9c9b036ea0bd1156c241b01d76d6c4a05d25c6c`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.

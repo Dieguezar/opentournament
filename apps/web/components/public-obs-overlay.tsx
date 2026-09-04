@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { OverlayLive, type OverlaySnapshot } from './overlay-live';
 
 export const overlayViews = ['scoreboard', 'up-next', 'champion'] as const;
@@ -34,19 +35,13 @@ function mediaPath(snapshot: OverlaySnapshot): string | null {
     : null;
 }
 
-export function OverlayCanvas({
-  snapshot,
+export function OverlayCanvasShell({
+  children,
   view,
 }: {
-  snapshot: OverlaySnapshot;
+  children?: ReactNode;
   view: OverlayViewName;
 }) {
-  const tournament = record(snapshot.tournament);
-  const title = typeof tournament?.name === 'string' ? tournament.name : 'Tournament';
-  const logo = mediaPath(snapshot);
-  const match = record(view === 'scoreboard' ? snapshot.scoreboard : snapshot.upNext);
-  const champion = label(snapshot.champion);
-
   return (
     <main
       aria-label={`OBS ${view}`}
@@ -61,26 +56,54 @@ export function OverlayCanvas({
         width: 1920,
       }}
     >
-      <section aria-live="polite">
-        {logo && <img alt="" src={logo} />}
-        <h1>{title}</h1>
-        {view === 'champion' ? (
-          <p>Champion: {champion}</p>
-        ) : (
-          <p>
-            {label(match?.home)} {view === 'scoreboard' && score(match?.homeScore)} —{' '}
-            {view === 'scoreboard' && score(match?.awayScore)} {label(match?.away)}
-          </p>
-        )}
-      </section>
+      {children}
     </main>
+  );
+}
+
+function OverlayContent({ snapshot, view }: { snapshot: OverlaySnapshot; view: OverlayViewName }) {
+  const tournament = record(snapshot.tournament);
+  const title = typeof tournament?.name === 'string' ? tournament.name : 'Tournament';
+  const logo = mediaPath(snapshot);
+  const match = record(view === 'scoreboard' ? snapshot.scoreboard : snapshot.upNext);
+  const champion = label(snapshot.champion);
+
+  return (
+    <section aria-live="polite">
+      {logo && <img alt="" src={logo} />}
+      <h1>{title}</h1>
+      {view === 'champion' ? (
+        <p>Champion: {champion}</p>
+      ) : (
+        <p>
+          {label(match?.home)} {view === 'scoreboard' && score(match?.homeScore)} —{' '}
+          {view === 'scoreboard' && score(match?.awayScore)} {label(match?.away)}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export function OverlayCanvas({
+  snapshot,
+  view,
+}: {
+  snapshot: OverlaySnapshot;
+  view: OverlayViewName;
+}) {
+  return (
+    <OverlayCanvasShell view={view}>
+      <OverlayContent snapshot={snapshot} view={view} />
+    </OverlayCanvasShell>
   );
 }
 
 export function PublicObsOverlay({ slug, view }: { slug: string; view: OverlayViewName }) {
   return (
-    <OverlayLive slug={slug} view={view}>
-      {(snapshot) => <OverlayCanvas snapshot={snapshot} view={view} />}
-    </OverlayLive>
+    <OverlayCanvasShell view={view}>
+      <OverlayLive slug={slug} view={view}>
+        {(snapshot) => <OverlayContent snapshot={snapshot} view={view} />}
+      </OverlayLive>
+    </OverlayCanvasShell>
   );
 }

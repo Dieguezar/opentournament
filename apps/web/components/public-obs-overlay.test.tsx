@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 import PublicObsOverlayLayout from '../app/t/[slug]/overlay/layout';
-import { OverlayCanvas, isOverlayView } from './public-obs-overlay';
+import PublicObsOverlayPage from '../app/t/[slug]/overlay/[view]/page';
+import { OverlayCanvas, isOverlayView, PublicObsOverlay } from './public-obs-overlay';
 
 const snapshot = {
   tournament: {
@@ -58,5 +59,25 @@ describe('public OBS overlay canvas', () => {
     expect(markup).toContain('body:has([data-obs-route])');
     expect(markup).toContain('overflow:hidden');
     expect(markup).toContain('>header,body:has([data-obs-route])>.skip-link{display:none}');
+  });
+
+  it('server-renders the actual route canvas before live hydration', async () => {
+    const page = await PublicObsOverlayPage({
+      params: Promise.resolve({ slug: 'spring-major', view: 'scoreboard' }),
+    });
+    const markup = renderToStaticMarkup(<PublicObsOverlayLayout>{page}</PublicObsOverlayLayout>);
+    expect(markup).toContain('data-overlay-view="scoreboard"');
+    expect(markup).toContain('width:1920px');
+    expect(markup).toContain('background-color:transparent');
+    expect(markup).not.toContain('Spring Major');
+  });
+
+  it('keeps invalid view handling at the route boundary', async () => {
+    await expect(
+      PublicObsOverlayPage({ params: Promise.resolve({ slug: 'spring-major', view: 'private' }) }),
+    ).rejects.toThrow();
+    expect(
+      renderToStaticMarkup(<PublicObsOverlay slug="spring-major" view="champion" />),
+    ).toContain('data-overlay-view="champion"');
   });
 });

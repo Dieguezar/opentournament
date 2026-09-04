@@ -1,0 +1,19 @@
+WU5h pre-hydration canvas correction verification manifest
+Parent: 80b3005a0b55ad10c4da76f4606e682f998695c6
+Work unit: WU5h-pre-hydration-canvas-correction
+
+Verification outcomes
+- RED: actual valid route SSR lacked data-overlay-view and the 1920x1080 shell before OverlayLive fetched a snapshot.
+- GREEN: pnpm --filter @opentournament/web exec vitest run components/public-obs-overlay.test.tsx components/overlay-live.test.tsx passed: 2 files, 11 tests.
+- API typecheck: pnpm --filter @opentournament/api run typecheck passed.
+- Web typecheck: pnpm --filter @opentournament/web run typecheck passed.
+- Workspace: pnpm test passed: 10 Turbo tasks, web 25 files / 133 tests, API 63 passed / 14 skipped, configuration 31 tests.
+- Build: pnpm --filter @opentournament/web build passed with dynamic /t/[slug]/overlay/[view].
+- Formatting: Prettier check passed for route, layout, overlay production source, and tests.
+- Runtime: actual SSR page/layout composition test covers pre-hydration shell; browser/OBS E2E remains Phase 6.
+
+Source digests
+apps/web/components/public-obs-overlay.tsx  1973c54e8a94f98c6b62ff5c5b755ec6e05de933e7153c2487632b041572f43e
+apps/web/components/public-obs-overlay.test.tsx  2c8ea7bbf75d9ff000736ebd6942a6d2ee93c72b5cfe335853bfec6e8d64a67a
+apps/web/app/t/[slug]/overlay/[view]/page.tsx  f7491a0ab6ce8b3d1343c56d4a7f567decf651a3833ffc98cdaaf23a7b7dabc2
+apps/web/app/t/[slug]/overlay/layout.tsx  560ed009659f461d3296b70ab8a9bfe807f7fe99f7c55661a1f220fa229e60ce
