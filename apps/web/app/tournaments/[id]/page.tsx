@@ -11,6 +11,7 @@ import { RegistrationActions, type RegistrationView } from '@/components/registr
 import { RulesetSummary } from '@/components/ruleset-summary';
 import { TournamentActions } from '@/components/tournament-actions';
 import { TournamentAppearanceControls } from '@/components/tournament-appearance-controls';
+import { TournamentMediaControls } from '@/components/tournament-media-controls';
 import { ParticipantAccessManager } from '@/components/participant-access-manager';
 import { ReportPanel } from '@/components/report-panel';
 import { formatMessage, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
@@ -39,6 +40,8 @@ interface TournamentView {
 }
 
 interface AppearanceView {
+  logoMediaId: string | null;
+  bannerMediaId: string | null;
   primaryColor: string | null;
   accentColor: string | null;
 }
@@ -404,6 +407,10 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
           <TournamentAppearanceControls
             tournamentId={id}
             initialAppearance={tournamentRes.data?.appearance ?? null}
+          />
+          <TournamentMediaControls
+            tournamentId={id}
+            initialMedia={tournamentRes.data?.appearance ?? null}
           />
           <ParticipantAccessManager
             tournamentId={id}

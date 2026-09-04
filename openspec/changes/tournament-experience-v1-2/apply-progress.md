@@ -668,3 +668,25 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - Runtime harness: N/A. This is a client presentation seam over existing authorized GET/PATCH routes; executable rendered component tests and the production build cover the bounded UI behavior, while Phase 6 owns browser E2E.
 - Rollback/protected state: revert the amended WU5f commit to remove palette controls, translations, appearance projection, manifest, and evidence; existing authorization, server validation, logo/banner media, overlays, and other Phase 5 controls remain unchanged. `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
 - Final amended WU5f diff: 400 changed lines against `1c492fc78c010b8ea8c87f4984c8943df7ec12f5`, within the cap.
+
+## Work Unit WU5g-admin-logo-banner-controls
+
+**Status:** Partial Phase 5 slice complete; tasks 5.1, 5.2, and 5.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+| RED | GREEN | REFACTOR |
+| --- | --- | --- |
+| New production workflow/presenter tests first failed because `tournament-media-controls` did not exist. | `pnpm --filter @opentournament/web exec vitest run components/tournament-media-controls.test.tsx` passed 1 file / 5 tests after implementation. | Kept media state local to each slot, reusing the shared CSRF/session-aware JSON client and its browser-managed multipart boundaries. |
+
+### Work Unit Evidence
+
+- Both `logo` and `banner` use the existing authorized `POST`/`DELETE /tournaments/:id/appearance/:slot` routes, followed by authoritative `GET /tournaments/:id` convergence. The management read exposes only opaque `logoMediaId`/`bannerMediaId` values.
+- Workflow/presenter coverage asserts multipart `FormData`, endpoint methods, reload ordering, independent slot state, bilingual labels, live/error feedback, pending-slot-only disabling, and `/api/v1/media/:id` previews while rejecting an external URL.
+- API and web typechecks passed. Exact `pnpm test` passed: 10 Turbo tasks; web 24 files / 124 tests; API 63 passed / 14 integration-dependent skips; configuration 31 tests. Next.js 16.3.2 production build passed with dynamic `/tournaments/[id]`.
+- Runtime harness: N/A. This slice is an authenticated browser client boundary over existing WU3d media routes; production component/workflow tests and build cover it proportionally, and Phase 6 owns browser E2E.
+- Prettier normalization/check and `git diff --check` passed.
+- **Verification manifest:** `openspec/changes/tournament-experience-v1-2/wu5g-verification-manifest.txt`; `sha256:84ffcb5c1fc2faba32b339a00a4c169d6671249acaf089888ab863be7a1fb808` is its standalone digest and excludes this pointer.
+- **Rollback boundary:** revert this work-unit commit to remove tournament media controls, the additive opaque management projection, translations, test, manifest, and this evidence; existing palette, profile, overlay, and media API behavior remains intact.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
+- **Final measured owned diff:** 400 changed lines against `e29d95a04aaca81f2744346e5836a5a7a2c32562`, at the work-unit cap.

@@ -121,6 +121,8 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .limit(1);
     const [appearance] = await db
       .select({
+        logoMediaId: tournamentAppearances.logoMediaId,
+        bannerMediaId: tournamentAppearances.bannerMediaId,
         primaryColor: tournamentAppearances.primaryColor,
         accentColor: tournamentAppearances.accentColor,
       })

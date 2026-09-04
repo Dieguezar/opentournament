@@ -1,0 +1,17 @@
+WU5g verification manifest v1
+encoding: UTF-8 without BOM; LF; trailing LF
+parent: e29d95a04aaca81f2744346e5836a5a7a2c32562
+focused: pnpm --filter @opentournament/web exec vitest run components/tournament-media-controls.test.tsx => passed; 1 file; 5 tests
+typecheck: pnpm --filter @opentournament/api typecheck => passed
+typecheck: pnpm --filter @opentournament/web typecheck => passed
+workspace: pnpm test => passed; 10 Turbo tasks; web 24 files/124 tests; API 63 passed/14 skipped; configuration 31 tests
+build: pnpm --filter @opentournament/web build => passed; Next.js 16.3.2; dynamic /tournaments/[id]
+format: pnpm exec prettier --check touched files => passed
+runtime: N/A; browser E2E is Phase 6 and this client slice uses existing authorized media routes
+diff: git diff --check => passed
+file-sha256:
+apps/api/src/routes/tournaments.ts sha256:78b55b2bacf8d4ff48f25a846ca466cbb01538e758b649f2c0a15866260e9b38
+apps/web/app/tournaments/[id]/page.tsx sha256:68aabeb317988c85c1a4e6b98ede740e105552413858859654ecf64419bbb139
+apps/web/components/tournament-media-controls.tsx sha256:f69b9e5f325a702a775d8a6c651e8b0a4dd166e0674cdb34ff07dde03334c800
+apps/web/components/tournament-media-controls.test.tsx sha256:e7a92a9a4260688f47d4d34b6a27b091fbb25d53cad1607a8f7823874ead4c74
+apps/web/lib/i18n.ts sha256:a3e2ab8574bddc369ce2c7a348115443a303c98822f22081f334d922d50b3648
