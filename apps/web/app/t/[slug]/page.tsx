@@ -14,13 +14,16 @@ import {
 import { RegisterPanel } from '@/components/register-panel';
 import { ReportPanel } from '@/components/report-panel';
 import { RulesetSummary } from '@/components/ruleset-summary';
+import {
+  PublicParticipantName,
+  type PublicPlayerProfileData,
+} from '@/components/public-player-profile';
 import { formatMessage, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
 import { getRequestLocale } from '@/lib/i18n-server';
 import {
   formatBracketType,
   formatGameAdapter,
   formatMatchStatus,
-  formatRegistrationStatus,
   getPublicRegistrationMessage,
   getTournamentStatus,
 } from '@/lib/presentation';
@@ -68,9 +71,11 @@ interface BracketView {
 interface TeamEntryView {
   teamId: string;
   teamName: string;
-  teamTag: string | null;
-  registrationStatus: string;
-  checkedIn: boolean | null;
+}
+
+interface PublicParticipantView {
+  label: string;
+  profile?: Pick<PublicPlayerProfileData, 'slug'>;
 }
 
 interface PublicTournamentResponse {
@@ -89,6 +94,7 @@ interface PublicTournamentResponse {
   };
   organization: { name: string } | null;
   appearance: TournamentBrandingAppearance | null;
+  participants?: PublicParticipantView[];
 }
 
 const getPublicTournament = cache((slug: string) =>
@@ -394,6 +400,8 @@ export default async function PublicTournamentPage({
     serverFetch<{ brackets: BracketView[] }>(`/tournaments/${tournament.id}/bracket`),
   ]);
   const teams = teamsRes.data?.teams ?? [];
+  const participants: PublicParticipantView[] =
+    tournamentRes.data?.participants ?? teams.map((team) => ({ label: team.teamName }));
   const brackets = bracketRes.data?.brackets ?? [];
   const status = getTournamentStatus(tournament.status, locale);
   const isSmash = tournament.gameAdapterKey === 'smash_ultimate';
@@ -529,29 +537,20 @@ export default async function PublicTournamentPage({
               </h2>
             </div>
           </div>
-          {teams.length === 0 ? (
+          {participants.length === 0 ? (
             <p className={styles.emptyCopy}>
               {isSmash ? copy.noPlayersRegistered : copy.noTeamsRegistered}
             </p>
           ) : (
             <ul className={styles.teamList}>
-              {teams.map((team) => (
-                <li key={team.teamId}>
-                  <span>
-                    <strong>{team.teamName}</strong>
-                    <small className={styles.teamMeta}>
-                      {team.teamTag ? formatMessage(copy.tag, { tag: team.teamTag }) : copy.noTag}
-                    </small>
-                  </span>
-                  {team.registrationStatus === 'approved' ? (
-                    <span className={`badge ${team.checkedIn ? 'badge-success' : 'badge-warn'}`}>
-                      {team.checkedIn ? copy.checkedIn : copy.notCheckedIn}
-                    </span>
-                  ) : (
-                    <span className="badge">
-                      {formatRegistrationStatus(team.registrationStatus, locale)}
-                    </span>
-                  )}
+              {participants.map((participant, index) => (
+                <li key={`${participant.label}-${index}`}>
+                  <strong>
+                    <PublicParticipantName
+                      label={participant.label}
+                      profile={participant.profile}
+                    />
+                  </strong>
                 </li>
               ))}
             </ul>

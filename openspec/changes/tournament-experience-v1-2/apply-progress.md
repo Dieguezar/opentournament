@@ -420,3 +420,30 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - [ ] 5.1 remains pending for the unsliced profile/privacy/links and canvas RED coverage.
 - [ ] 5.2 remains pending for owner/admin appearance controls and remaining public surfaces.
 - [ ] 5.3 and all Phase 6 work remain pending.
+
+## Work Unit 5c: Public player page and navigation
+
+**Status:** Partial slice complete; Tasks 5.1, 5.2, and 5.3 remain unchecked because their broader web/form/overlay scope is unfinished.
+
+### TDD Cycle Evidence
+
+| Slice | Safety net | RED | GREEN / triangulation | Refactor |
+| --- | --- | --- | --- | --- |
+| Public profile presentation | `pnpm --filter @opentournament/web test` passed 18 files and 98 tests before edits. | `pnpm --filter @opentournament/web exec vitest run components/public-player-profile.test.tsx` exited 1 because `./public-player-profile` did not exist. | Focused test passed 3/3 after adding the presenter and route: opted-in avatar/name/biography rendering, absent/private omission with a rejected external URL, and valid/invalid/unlinked participant navigation cover separate branches. | Added explicit participant DTO typing after typecheck caught fallback inference; reran focused tests, typecheck, workspace proof, and build. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused test | `pnpm --filter @opentournament/web exec vitest run components/public-player-profile.test.tsx` passed (1 file, 3 tests). |
+| Typecheck | `pnpm --filter @opentournament/web typecheck` passed. |
+| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks; web passed 19 files and 101 tests; configuration suite passed 31 tests. |
+| Route/runtime wiring | `pnpm --filter @opentournament/web build` passed; Next.js 16.3.2 listed `/players/[slug]` and `/t/[slug]` as dynamic routes. |
+| Formatting/diff | Prettier check passed on touched files; `git diff --check` passed. |
+| Rollback boundary | Revert the public profile presenter/style/test, `/players/[slug]`, tournament participant projection, and this WU5c evidence. Existing API publication gates, branding, forms, uploads, and overlays remain intact. |
+
+### Remaining Tasks
+
+- [ ] 5.1 remains pending for the unsliced branding/privacy/forms/canvas coverage.
+- [ ] 5.2 remains pending for owner/admin profile and appearance controls.
+- [ ] 5.3 and all Phase 6 work remain pending.
