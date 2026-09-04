@@ -2,10 +2,10 @@
 
 ## Review Workload Forecast
 
-| Field | Value |
-|---|---|
+| Field                   | Value       |
+| ----------------------- | ----------- |
 | Estimated changed lines | 2,000–2,600 |
-| Delivery strategy | ask-on-risk |
+| Delivery strategy       | ask-on-risk |
 
 Decision needed before apply: Yes
 Chained PRs recommended: Yes
@@ -14,14 +14,14 @@ Chain strategy: pending
 
 ### Suggested Work Units
 
-| Unit | Goal | PR | Focused test command | Runtime harness | Rollback boundary |
-|---|---|---|---|---|---|
-| 1 | Schema/contracts | 1 | `pnpm test:unit` | `pnpm db:migrate` | migration/contracts |
-| 2 | Profile/appearance API | 2 | `pnpm --filter @opentournament/api test` | owner/admin flow | routes |
-| 3 | Private media | 3 | `pnpm --filter @opentournament/api test` | MinIO lifecycle | proxy |
-| 4 | Overlay/SSE | 4 | `pnpm --filter @opentournament/api test` | result refresh | live state |
-| 5 | Web surfaces | 5 | `pnpm --filter @opentournament/web test` | browser flow | pages |
-| 6 | Acceptance/docs | 6 | `pnpm test:integration` + `pnpm test:e2e` | OBS smoke | E2E/docs |
+| Unit | Goal                   | PR  | Focused test command                      | Runtime harness   | Rollback boundary   |
+| ---- | ---------------------- | --- | ----------------------------------------- | ----------------- | ------------------- |
+| 1    | Schema/contracts       | 1   | `pnpm test:unit`                          | `pnpm db:migrate` | migration/contracts |
+| 2    | Profile/appearance API | 2   | `pnpm --filter @opentournament/api test`  | owner/admin flow  | routes              |
+| 3    | Private media          | 3   | `pnpm --filter @opentournament/api test`  | MinIO lifecycle   | proxy               |
+| 4    | Overlay/SSE            | 4   | `pnpm --filter @opentournament/api test`  | result refresh    | live state          |
+| 5    | Web surfaces           | 5   | `pnpm --filter @opentournament/web test`  | browser flow      | pages               |
+| 6    | Acceptance/docs        | 6   | `pnpm test:integration` + `pnpm test:e2e` | OBS smoke         | E2E/docs            |
 
 ## Phase 1: Foundation
 
@@ -57,7 +57,7 @@ Chain strategy: pending
 ## Phase 6: Acceptance
 
 - [x] 6.1 **RED/GREEN**: Add `tests/e2e/tournament-experience.spec.ts` for branding, overlays, revocation, denial, headers, convergence, reconnect; run tests.
-- [ ] 6.2 **REFACTOR/DOCS**: Document storage/proxy lifecycle, SSE cache/proxy, and one API instance in `docs/DEPLOYMENT.md`.
+- [x] 6.2 **REFACTOR/DOCS**: Document storage/proxy lifecycle, SSE cache/proxy, and one API instance in `docs/DEPLOYMENT.md`.
 - [ ] 6.3 **Smoke**: On supported OBS/CEF builds, record transparency, bootstrap, refresh, reconnect, reload in `docs/DEPLOYMENT.md`.
 
 ## Deferred Scope

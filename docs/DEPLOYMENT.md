@@ -105,3 +105,38 @@ GHCR packages used for public releases must have public visibility.
 ## Low-cost deployment direction
 
 A future managed instance may run on a small VPS or low-cost container provider with R2-compatible storage. The project remains provider-independent and relies on commodity PostgreSQL and S3-compatible infrastructure.
+
+## Tournament experience operations
+
+### Public origins and reverse proxy
+
+Set `APP_URL` to the canonical HTTPS web origin and `API_URL` to the canonical API origin. In the supplied Compose topology, the reverse proxy is the only public entry point; keep PostgreSQL and MinIO bound to the private network. The web app uses its `/api/v1` rewrite, so terminate TLS at the proxy and forward `/api/v1/*` to the API without rewriting paths or stripping `Cookie`, `Set-Cookie`, `Origin`, `X-CSRF-Token`, or `Last-Event-ID` headers. Do not cache authenticated responses.
+
+The API permits credentialed CORS only from `APP_URL` outside development. Configure the proxy's host and forwarded-protocol headers consistently with those two variables; a mismatched public origin causes browser session and CORS failures. Keep `SESSION_SECRET`, PostgreSQL passwords, `S3_SECRET_KEY`, SMTP credentials, and Discord secrets outside Git and rotate defaults before exposure.
+
+### Media, profiles, and publication lifecycle
+
+Use `S3_ENDPOINT_DOCKER` for the API-to-object-store address and `S3_ENDPOINT` for host tooling; retain `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, and `S3_FORCE_PATH_STYLE` consistently. Back up both `pgdata` and `miniodata`: PostgreSQL holds media metadata and publication state, while MinIO holds the bytes. API startup applies Drizzle migrations before traffic; do not run more than one migration authority at a time.
+
+Public pages must use same-origin opaque media URLs only: `/api/v1/media/:id`. Do not expose object keys, bucket URLs, MinIO console URLs, or presigned storage URLs in HTML, CSS, OBS scenes, or logs. The API authorizes the media proxy from the current publication state. Revoking/deleting a tournament or profile makes related public routes/media unavailable; restore publication only through the owner/admin APIs, never by making the bucket public.
+
+Verify public delivery after a migration or deploy:
+
+1. Sign in as the owner, create or update the profile/tournament appearance, and confirm owner routes still require the session.
+2. Publish a tournament and verify `/t/:slug`, `/players/:slug`, and `/api/v1/media/:id` through the public origin.
+3. Revoke or delete the public resource and verify the same public URLs return `404` and no cached proxy response serves prior media.
+4. Confirm object storage remains private and that application traffic reaches it only through the API.
+
+### Overlay and SSE proxy behavior
+
+OBS browser sources use the public web views `/t/:slug/overlay/:view`; use the documented supported view name from the tournament UI. Set the browser-source canvas to **1920x1080** and preserve transparency: do not add a proxy background, HTML background, or cache transformation that flattens alpha. This task documents deployment behavior only; task 6.3 owns OBS/CEF smoke recording.
+
+Overlay updates stream from `/api/v1/events/public?tournament=:id`. Keep the stream on one API instance unless a shared fan-out/replay design is introduced. Proxy it as SSE: disable buffering and response caching, allow long-lived connections, preserve `text/event-stream`, `Cache-Control: no-cache, no-store, must-revalidate, no-transform`, and `Last-Event-ID`, and do not gzip/buffer the stream. Clients reconnect and refetch authoritative state after disconnects; a proxy timeout or restart must therefore permit reconnect rather than returning a cached event snapshot.
+
+### Bounded operational verification and troubleshooting
+
+- Run `docker compose up -d`, then check `GET /healthz`, `GET /`, and a published public tournament route through the proxy.
+- Check API logs for migration, S3, CORS, or session-origin errors; check proxy logs for stripped cookies/CSRF headers, upstream timeouts, or buffered SSE.
+- For unexpected public media access, verify publication/revocation state first, then confirm the requested URL is `/api/v1/media/:id` and MinIO is not publicly exposed.
+- For stale overlays, verify the API instance count, SSE response headers, proxy buffering/timeout settings, and reconnect/refetch behavior before clearing browser caches.
+- Roll back application images only with matching database compatibility, keep backups, and verify revocation behavior again after rollback.

@@ -839,3 +839,20 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
 - **Verification manifest:** `wu6a2-overlay-convergence-reconnect-verification-manifest.txt`, `sha256:5d40e96c37a4752a70126556718134b53b381f71c9c6fb65cfa55bed25bd4a6d`; standalone UTF-8/LF and self-excluding.
 - **Next:** WU6b (task 6.2 deployment documentation) is the next bounded Phase 6 slice.
+
+## Work Unit WU6b-deployment-docs
+
+**Status:** Task 6.2 complete; task 6.3 remains unchecked.
+
+### TDD / Documentation Evidence
+
+- **RED:** the prior deployment guide had no feature-specific operational guidance for same-origin media, publication revocation, or SSE proxy behavior.
+- **GREEN:** `docs/DEPLOYMENT.md` now derives its origin, storage, proxy, public URL, SSE, and verification guidance from Compose, environment configuration, API routes, and Phase 5/6 behavior.
+- **REFACTOR:** grouped operator actions by proxy, lifecycle, overlay/SSE, and troubleshooting so the document is scannable without broad deployment rewrites.
+
+### Work Unit Evidence
+
+- Structural checks: Prettier, `git diff --check`, task-state readback, and a control-byte/placeholder scan are recorded in the standalone canonical manifest.
+- Runtime harness: N/A for this passive documentation slice; no deployment state, containers, volumes, or external services were changed. The documented runtime validation is bounded to existing health/public/revocation/SSE checks.
+- Rollback boundary: revert this commit to remove only the deployment operations appendix, task 6.2 completion, manifest, and this evidence; task 6.3 and application behavior remain unchanged.
+- Protected state: `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.

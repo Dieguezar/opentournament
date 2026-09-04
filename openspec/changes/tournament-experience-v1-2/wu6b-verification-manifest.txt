@@ -1,0 +1,10 @@
+WU6b deployment documentation manifest v1
+encoding: Git blob canonical LF
+parent: 993793c8ce4db3bdbc712bd075218828630cb8e9
+check: pnpm exec prettier --check docs/DEPLOYMENT.md openspec/changes/tournament-experience-v1-2/tasks.md openspec/changes/tournament-experience-v1-2/apply-progress.md => passed
+check: git diff --check => passed
+runtime: N/A; passive documentation only; no containers or volumes changed
+git-blob-sha1:
+docs/DEPLOYMENT.md 5f2c81e4c289f8fa6dfcff444bbe4bd9093b2013
+openspec/changes/tournament-experience-v1-2/tasks.md 196ca7545c8c1e942d7b90b7c0d0f8b9a550f0a8
+openspec/changes/tournament-experience-v1-2/apply-progress.md c26110156d3c7048837119b01479515e355a3cc3
