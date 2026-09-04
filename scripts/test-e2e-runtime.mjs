@@ -5,6 +5,10 @@ import { createServer } from 'node:net';
 const suffix = `${process.pid}-${randomUUID().replaceAll('-', '').slice(0, 8)}`;
 const postgres = `opentournament-e2e-postgres-${suffix}`;
 const minio = `opentournament-e2e-minio-${suffix}`;
+const POSTGRES_IMAGE =
+  'postgres@sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416';
+const MINIO_IMAGE =
+  'minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e';
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -23,8 +27,37 @@ function pnpm() {
   return process.platform === 'win32' ? ['cmd.exe', ['/d', '/s', '/c', 'pnpm']] : ['pnpm', []];
 }
 
-function stop(name) {
-  spawnSync('docker', ['stop', name], { shell: false, stdio: 'ignore', windowsHide: true });
+async function stop(name) {
+  const result = await run('docker', ['stop', name]);
+  if (result.code) throw new Error(`Could not stop ${name}: ${result.stderr.trim()}`);
+}
+
+function stopOnExit(name) {
+  const result = spawnSync('docker', ['stop', name], {
+    encoding: 'utf8',
+    shell: false,
+    windowsHide: true,
+  });
+  if (result.status !== 0) process.stderr.write(`Could not stop ${name} during process exit.\n`);
+}
+
+async function requireLocalImage(image) {
+  const result = await run('docker', ['image', 'inspect', image]);
+  if (result.code) {
+    throw new Error(
+      `Required pinned image is unavailable locally: ${image}. Load it before E2E; pulls are disabled.`,
+    );
+  }
+}
+
+async function namedVolumes() {
+  const result = await run('docker', ['volume', 'ls', '--format', '{{.Name}}']);
+  if (result.code) throw new Error(`Could not list named Docker volumes: ${result.stderr.trim()}`);
+  return result.stdout.trim().split(/\r?\n/u).filter(Boolean).sort();
+}
+
+function sameVolumes(before, after) {
+  return before.length === after.length && before.every((name, index) => name === after[index]);
 }
 
 async function port(name, containerPort) {
@@ -75,17 +108,30 @@ async function freePort() {
 export async function main() {
   const docker = await run('docker', ['version', '--format', '{{.Server.Version}}']);
   if (docker.code) throw new Error(`Docker is unavailable: ${docker.stderr.trim()}`);
+  await Promise.all([requireLocalImage(POSTGRES_IMAGE), requireLocalImage(MINIO_IMAGE)]);
+  const volumesBefore = await namedVolumes();
   let postgresStarted = false;
   let minioStarted = false;
-  const cleanup = () => {
-    if (minioStarted) stop(minio);
-    if (postgresStarted) stop(postgres);
+  const cleanupOnExit = () => {
+    if (minioStarted) stopOnExit(minio);
+    if (postgresStarted) stopOnExit(postgres);
   };
-  process.once('exit', cleanup);
+  const cleanup = async () => {
+    if (minioStarted) {
+      await stop(minio);
+      minioStarted = false;
+    }
+    if (postgresStarted) {
+      await stop(postgres);
+      postgresStarted = false;
+    }
+  };
+  process.once('exit', cleanupOnExit);
 
   try {
     const pgStart = await run('docker', [
       'run',
+      '--pull=never',
       '--rm',
       '--detach',
       '--name',
@@ -98,12 +144,13 @@ export async function main() {
       'POSTGRES_DB=opentournament_e2e',
       '--publish',
       '127.0.0.1::5432',
-      'postgres:16-alpine',
+      POSTGRES_IMAGE,
     ]);
     if (pgStart.code) throw new Error(`PostgreSQL could not start: ${pgStart.stderr.trim()}`);
     postgresStarted = true;
     const minioStart = await run('docker', [
       'run',
+      '--pull=never',
       '--rm',
       '--detach',
       '--name',
@@ -114,7 +161,7 @@ export async function main() {
       'MINIO_ROOT_PASSWORD=minioadmin',
       '--publish',
       '127.0.0.1::9000',
-      'minio/minio:latest',
+      MINIO_IMAGE,
       'server',
       '/data',
     ]);
@@ -157,8 +204,22 @@ export async function main() {
     });
     return code;
   } finally {
-    cleanup();
-    process.removeListener('exit', cleanup);
+    let cleanupError;
+    try {
+      await cleanup();
+    } catch (error) {
+      cleanupError = error;
+    }
+    process.removeListener('exit', cleanupOnExit);
+    try {
+      const volumesAfter = await namedVolumes();
+      if (!sameVolumes(volumesBefore, volumesAfter)) {
+        cleanupError ??= new Error('Named Docker volumes changed during the E2E runtime.');
+      }
+    } catch (error) {
+      cleanupError ??= error;
+    }
+    if (cleanupError) throw cleanupError;
   }
 }
 

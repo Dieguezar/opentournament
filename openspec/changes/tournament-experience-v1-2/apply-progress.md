@@ -795,4 +795,25 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Runtime cleanup:** no user service, named volume, or Docker volume was deleted; `docker ps` was empty after the focused run. The script only stops its randomly named temporary containers.
 - **Rollback boundary:** revert the WU6a1 commit to remove the E2E runtime harness, configuration forwarding, test, manifest, and this evidence while retaining WU5h.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
-- **Verification manifest:** `wu6a1-verification-manifest.txt`, `sha256:e3f54a454767aabfc540606c6614d07be6438089f691afea6e959a805f050b60`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.
+- **Original manifest superseded:** WU6a1 correction relocates and replaces the root manifest with the canonical OpenSpec manifest below.
+
+## Work Unit WU6a1-publication-cleanup-provenance-correction
+
+**Status:** Corrective successor complete. Task 6.1 remains unchecked pending WU6a2; tasks 6.2–6.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+- **RED:** a focused acceptance scan failed on `852e128` because canonical-manifest provenance, `--pull=never`, local pinned-image preflight, cleanup-result propagation, and the new draft/byte/browser assertions were absent.
+- **GREEN:** the isolated Chromium run passed after adding draft API/route/media 404 assertions, exact media bytes/length verification, and browser-route 404 after revocation.
+- **REFACTOR:** the harness owns immutable image verification, random loopback services, awaited cleanup, and before/after named-volume inventory equality; temporary `--rm` containers use no mounted volume.
+
+### Work Unit Evidence
+
+- Before publication the E2E test verifies public tournament API, real `/t/:slug`, and opaque logo media return 404. After publication it verifies immutable/nosniff headers, exact Content-Length, and Sharp-normalized PNG bytes.
+- After unpublication it revisits `/players/:slug` in the browser and verifies 404/not-found UI as well as public player/media API 404 responses.
+- PostgreSQL and MinIO are pinned to locally verified immutable digests and launched with `--pull=never`; a missing local image produces an actionable prerequisite error without network fetch.
+- Cleanup awaits and propagates `docker stop` outcomes. The harness records before/after named-volume inventory equality (13 entries in this run), while `--rm` may remove only anonymous temporary container storage.
+- Passed: focused runtime E2E, API/web typechecks, exact `pnpm test`, Next production build, Prettier/check, digest/control scan, and diff check.
+- **Rollback boundary:** revert this correction commit to restore the prior WU6a1 runtime/test behavior and root-manifest location.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
+- **Canonical verification manifest:** `openspec/changes/tournament-experience-v1-2/wu6a1-publication-cleanup-verification-manifest.txt`, `sha256:25b565f08c1fe01e95a01a78a2815d6cac4f268cd24b8c238990fc47d63fb5ab`; standalone UTF-8/LF and self-excluding.

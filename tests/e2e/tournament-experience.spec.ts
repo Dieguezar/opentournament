@@ -85,6 +85,12 @@ test('publishes branded public media, then revokes a public profile safely', asy
     expect(logoResponse.status()).toBe(201);
     const logoId = ((await logoResponse.json()) as { media: { id: string } }).media.id;
     expect(
+      (await owner.api.get(`/api/v1/tournaments/by-slug/${tournament.tournament.slug}`)).status(),
+    ).toBe(404);
+    expect((await owner.api.get(`/api/v1/media/${logoId}`)).status()).toBe(404);
+    expect((await page.goto(`/t/${tournament.tournament.slug}`))?.status()).toBe(404);
+    await expect(page.locator('body')).toContainText(/could not be found/u);
+    expect(
       (
         await owner.api.post(`/api/v1/tournaments/${tournament.tournament.id}/publish`, {
           headers: mutationHeaders(owner),
@@ -112,6 +118,9 @@ test('publishes branded public media, then revokes a public profile safely', asy
       'x-content-type-options': 'nosniff',
     });
     expect(mediaResponse.headers().etag).toMatch(/^"[0-9a-f]{64}"$/u);
+    const mediaBytes = await mediaResponse.body();
+    expect(mediaResponse.headers()['content-length']).toBe(String(mediaBytes.byteLength));
+    expect(mediaBytes).toEqual(await sharp(png).rotate().png().toBuffer());
 
     await page.goto(`/t/${tournament.tournament.slug}`);
     await expect(page.getByRole('heading', { name: `Brand ${suffix}` })).toBeVisible();
@@ -167,6 +176,8 @@ test('publishes branded public media, then revokes a public profile safely', asy
     ).toBe(200);
     expect((await owner.api.get(`/api/v1/players/${profileSlug}`)).status()).toBe(404);
     expect((await owner.api.get(`/api/v1/media/${avatarId}`)).status()).toBe(404);
+    expect((await page.goto(`/players/${profileSlug}`))?.status()).toBe(404);
+    await expect(page.locator('body')).toContainText(/could not be found/u);
   } finally {
     await owner.api.dispose();
     await outsider.api.dispose();

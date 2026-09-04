@@ -1,0 +1,18 @@
+WU6a1 publication, cleanup, and provenance correction; parent 852e1281952dedcd9a98472d5805fa11df9e6231
+Commands
+- node scripts/test-e2e-runtime.mjs: passed (1 Chromium scenario)
+- pnpm --filter @opentournament/api typecheck: passed
+- pnpm --filter @opentournament/web typecheck: passed
+- pnpm test: passed
+- pnpm --filter @opentournament/web build: passed (Next.js 16.3.2)
+Pinned offline images
+- postgres@sha256:20edbde7749f822887a1a022ad526fde0a47d6b2be9a8364433605cf65099416
+- minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+- docker image inspect verifies both before run; docker run uses --pull=never.
+Source SHA-256
+- playwright.config.ts a686cb16c08130c25705f51d42cb6a13796c5af51455b68ae657369662958b5b
+- scripts/test-e2e-runtime.mjs 543edecaa35b2c51a96fa3513c720679d018591cff123ba605a266d968e9d710
+- tests/e2e/tournament-experience.spec.ts a87ceb49090e1938bccb4c39484ae4cd0864fb9386f58148d9d7b7551ef9206c
+Cleanup
+- docker stop results are awaited and propagated; temporary containers use --rm and no --volume option.
+- Named-volume inventory was equal before and after the run (13 entries); no named/user volume was mounted or deleted.
