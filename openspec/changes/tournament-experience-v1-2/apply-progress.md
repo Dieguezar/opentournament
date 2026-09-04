@@ -230,3 +230,37 @@ Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament l
 - **RED:** On fresh PostgreSQL `wu3d_post_commit_boundary` plus MinIO, the tournament logo replacement test forced the prior-object delete and retry-job insert to fail after commit. Current code discarded the active replacement; the exact focused command exited 1 at `expect(objectExists(newObjectKey)).toBe(true)` with received `false`.
 - **GREEN:** The transaction remains the only staged-upload compensation boundary. Post-commit retirement failures are contained, so the replacement returns 201, its exact response ID matches the active database row, its MinIO object remains present, and its public proxy returns 200; the old logo remains `retired` with bytes present because forced cleanup did not succeed.
 - **Runtime/verification:** Fresh real PostgreSQL + MinIO focused command passed 1/1 (10 skipped); API typecheck and Prettier passed. The shared worker, slot/delete behavior, authorization, visibility, CAS, and entity retention are unchanged.
+
+## Work Unit 4a1: Overlay presentation service
+
+**Status:** Complete.
+
+### Completed Tasks
+
+- [x] 4.1 RED: Add focused unit coverage for public presentation gating, labels, automatic selection, deterministic ties, Up Next, and persisted champions.
+
+### TDD Cycle Evidence
+
+| Task | Safety net | RED | GREEN / triangulation | Refactor |
+| --- | --- | --- | --- | --- |
+| 4.1 | New service and focused test had no existing baseline. | `pnpm --filter @opentournament/api test -- src/services/overlay-presentation.test.ts` exited 1 because the test referenced the absent `./overlay-presentation.js` module. | The same command passed after the minimal pure projection. Six cases cover non-public denial, unavailable-participant omission, active-match precedence, scheduled/stage/bracket ordering, stable ID ties, Up Next exclusion, and a `winner` participant only when the tournament is finalized. | Prettier completed; focused test, API typecheck, workspace `pnpm test`, and `git diff --check` passed. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused test command | `pnpm --filter @opentournament/api test -- src/services/overlay-presentation.test.ts` passed: 60 tests, 12 skipped across the API suite; the new focused file has 6 passing tests. |
+| Runtime harness | N/A: this work unit is a pure deterministic projection with no database, HTTP, SSE, process, storage, or external runtime boundary. WU4a2 owns the route/SSE integration harness. |
+| API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |
+| Workspace proof | Exact `pnpm test` passed: 10 Turbo test tasks and 31 configuration tests. |
+| Rollback boundary | Revert `overlay-presentation.ts`, its focused tests, task checkbox, and this WU4a1 evidence. No routes, SSE, realtime, media, web, or database behavior is included. |
+
+### Workload / Delivery Boundary
+
+- Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
+- Current slice: `wu4a1-overlay-presentation`, based exactly on `cf042e1f4e83f5c8ec6d6f8b7695704df8586fc5`.
+- Authored code, tests, and OpenSpec evidence total 361 changed lines from the parent, within the 400-line review budget.
+
+### Remaining Tasks
+
+Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE invalidation; WU4b owns client convergence.
