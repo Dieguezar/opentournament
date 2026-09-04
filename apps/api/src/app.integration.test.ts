@@ -2576,6 +2576,15 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         ).toMatchObject({
           statusCode: 204,
         });
+        expect(await app.inject({ method: 'GET', url: `/api/v1/media/${concurrentId}` })).toMatchObject({
+          statusCode: 404,
+        });
+        const [concurrentMedia] = await db
+          .select({ state: publicMedia.state, objectKey: publicMedia.objectKey })
+          .from(publicMedia)
+          .where(eq(publicMedia.id, concurrentId));
+        expect(concurrentMedia).toMatchObject({ state: 'deleted' });
+        expect(await retirementStorage.objectExists(concurrentMedia!.objectKey)).toBe(false);
         expect(
           await app.inject({ method: 'GET', url: `/api/v1/media/${cleanupId}` }),
         ).toMatchObject({
