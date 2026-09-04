@@ -6,56 +6,12 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import { useI18n } from './i18n-provider';
 import { ApiClientError, apiClient } from '../lib/api';
-
-export interface OwnerPublicProfile {
-  slug: string;
-  gamertag: string;
-  realName: string | null;
-  biography: string | null;
-  isPublished: boolean;
-  showAvatar: boolean;
-  showRealName: boolean;
-  showBiography: boolean;
-}
-
-export interface PublicProfileForm {
-  slug: OwnerPublicProfile['slug'];
-  gamertag: OwnerPublicProfile['gamertag'];
-  realName: string;
-  biography: string;
-  isPublished: OwnerPublicProfile['isPublished'];
-  showAvatar: OwnerPublicProfile['showAvatar'];
-  showRealName: OwnerPublicProfile['showRealName'];
-  showBiography: OwnerPublicProfile['showBiography'];
-}
-
-export function projectOwnerProfile(profile: OwnerPublicProfile): PublicProfileForm {
-  return { ...profile, realName: profile.realName ?? '', biography: profile.biography ?? '' };
-}
-
-export function buildProfilePayload(form: PublicProfileForm, isPublished = form.isPublished) {
-  return {
-    gamertag: form.gamertag,
-    realName: form.realName || null,
-    biography: form.biography || null,
-    isPublished,
-    showAvatar: form.showAvatar,
-    showRealName: form.showRealName,
-    showBiography: form.showBiography,
-  };
-}
-
-export function canDeleteProfile(confirmed: boolean): boolean {
-  return confirmed;
-}
-
-export function getProfileLoadState(status: number): 'anonymous' | 'error' {
-  return status === 401 ? 'anonymous' : 'error';
-}
-
-export function getMutationState(failed: boolean, complete: boolean): 'idle' | 'error' | 'success' {
-  return failed ? 'error' : complete ? 'success' : 'idle';
-}
+import {
+  loadOwnerProfile,
+  saveOwnerProfile,
+  deleteOwnerProfile,
+  type PublicProfileForm,
+} from '../lib/public-profile-workflow';
 
 function requestMessage(error: unknown, fallback: string): string {
   return error instanceof ApiClientError ? error.message : fallback;
@@ -75,15 +31,17 @@ export function PublicProfileSettings() {
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    const response = await apiClient<{ profile: OwnerPublicProfile }>('/profile/public');
-    setForm(projectOwnerProfile(response.profile));
+    setForm(await loadOwnerProfile(apiClient));
     setLoadState('ready');
   }, []);
 
   useEffect(() => {
     void loadProfile().catch((requestError: unknown) => {
-      const status = requestError instanceof ApiClientError ? requestError.status : 500;
-      setLoadState(getProfileLoadState(status));
+      setLoadState(
+        requestError instanceof ApiClientError && requestError.status === 401
+          ? 'anonymous'
+          : 'error',
+      );
       setError(requestMessage(requestError, copy.actionError));
     });
   }, [copy.actionError, loadProfile]);
@@ -94,11 +52,7 @@ export function PublicProfileSettings() {
     setError(null);
     setSuccess(null);
     try {
-      await apiClient('/profile/public', {
-        method: 'PUT',
-        body: JSON.stringify(buildProfilePayload(form, isHiding ? false : form.isPublished)),
-      });
-      await loadProfile();
+      setForm(await saveOwnerProfile(apiClient, form, isHiding));
       setSuccess(isHiding ? copy.hidden : copy.saved);
       router.refresh();
     } catch (requestError) {
@@ -109,12 +63,17 @@ export function PublicProfileSettings() {
   }
 
   async function remove() {
-    if (!form || !canDeleteProfile(deleteConfirmed)) return;
+    if (!form) return;
     setBusy('delete');
     setError(null);
     setSuccess(null);
     try {
-      await apiClient<void>('/profile/public', { method: 'DELETE' });
+      if ((await deleteOwnerProfile(apiClient, deleteConfirmed)) !== 'deleted') {
+        setForm(null);
+        setLoadState('error');
+        setError(copy.actionError);
+        return;
+      }
       setForm(null);
       setSuccess(copy.deleted);
       router.refresh();
@@ -134,7 +93,7 @@ export function PublicProfileSettings() {
         </p>
       </main>
     );
-  if (!form && getMutationState(error !== null, success !== null) === 'success') {
+  if (!form && success) {
     return (
       <main className="container narrow">
         <p role="status">{success}</p>
@@ -244,7 +203,7 @@ export function PublicProfileSettings() {
         <button
           type="button"
           className="button-danger"
-          disabled={busy !== null || !canDeleteProfile(deleteConfirmed)}
+          disabled={busy !== null || !deleteConfirmed}
           onClick={() => void remove()}
         >
           {busy === 'delete' ? copy.deleting : copy.delete}

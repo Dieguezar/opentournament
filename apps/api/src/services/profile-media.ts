@@ -133,27 +133,22 @@ export async function removeProfileAvatar(userId: string): Promise<boolean> {
 }
 
 export async function revokeProfileAndAvatar(userId: string): Promise<string | null> {
-  const [profile] = await db
-    .select({ id: publicPlayerProfiles.id, avatarMediaId: publicPlayerProfiles.avatarMediaId })
-    .from(publicPlayerProfiles)
-    .where(eq(publicPlayerProfiles.userId, userId))
-    .limit(1);
+  const profile = await db.transaction(async (transaction) => {
+    const [existing] = await transaction
+      .select({ id: publicPlayerProfiles.id, avatarMediaId: publicPlayerProfiles.avatarMediaId })
+      .from(publicPlayerProfiles)
+      .where(eq(publicPlayerProfiles.userId, userId))
+      .limit(1);
+    if (!existing) return null;
+    const [deleted] = await transaction
+      .delete(publicPlayerProfiles)
+      .where(eq(publicPlayerProfiles.id, existing.id))
+      .returning({ id: publicPlayerProfiles.id });
+    return deleted ? existing : null;
+  });
   if (!profile) return null;
-  const [revoked] = await db
-    .update(publicPlayerProfiles)
-    .set({ isPublished: false, avatarMediaId: null, updatedAt: new Date() })
-    .where(
-      and(
-        eq(publicPlayerProfiles.id, profile.id),
-        profile.avatarMediaId
-          ? eq(publicPlayerProfiles.avatarMediaId, profile.avatarMediaId)
-          : isNull(publicPlayerProfiles.avatarMediaId),
-      ),
-    )
-    .returning({ id: publicPlayerProfiles.id });
-  if (!revoked) return null;
   await retirePublicMedia(db, profile.avatarMediaId);
-  return revoked.id;
+  return profile.id;
 }
 
 export async function readPublishedAvatar(mediaId: string): Promise<{

@@ -2312,6 +2312,13 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         });
         expect(revocationRes.statusCode).toBe(204);
         expect(
+          await app.inject({
+            method: 'GET',
+            url: '/api/v1/profile/public',
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 404 });
+        expect(
           await app.inject({ method: 'GET', url: `/api/v1/players/${profileSlug}` }),
         ).toMatchObject({ statusCode: 404 });
       } finally {
@@ -2568,6 +2575,27 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           .json<{ participants: Array<Record<string, unknown>> }>()
           .participants.find((participant) => participant.label === 'Linked Smash Label');
         expect(revokedLinked).not.toHaveProperty('profile');
+
+        expect(
+          await app.inject({
+            method: 'DELETE',
+            url: '/api/v1/profile/public',
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 204 });
+        expect(
+          await app.inject({
+            method: 'GET',
+            url: '/api/v1/profile/public',
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 404 });
+        await expect(
+          db
+            .select({ state: publicMedia.state })
+            .from(publicMedia)
+            .where(eq(publicMedia.id, avatar!.id)),
+        ).resolves.toEqual([{ state: 'retired' }]);
       } finally {
         await app.close();
       }

@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import { ApiClientError } from '../lib/api';
 import {
-  buildProfilePayload,
-  canDeleteProfile,
-  getMutationState,
-  getProfileLoadState,
-  projectOwnerProfile,
-} from './public-profile-settings';
+  deleteOwnerProfile,
+  loadOwnerProfile,
+  saveOwnerProfile,
+  type OwnerProfileClient,
+  type PublicProfileForm,
+} from '../lib/public-profile-workflow';
 
 const profile = {
   slug: 'nox-player',
@@ -19,41 +20,78 @@ const profile = {
   showBiography: true,
 };
 
-describe('public profile settings contracts', () => {
-  it('projects private owner settings into editable state without exposing a public response', () => {
-    expect(projectOwnerProfile({ ...profile, realName: null, biography: null })).toMatchObject({
+function clientFor(responses: Array<unknown>): { client: OwnerProfileClient; calls: string[] } {
+  const calls: string[] = [];
+  return {
+    calls,
+    client: async function <T>(path: string, init?: RequestInit) {
+      calls.push(`${init?.method ?? 'GET'} ${path}${init?.body ? ` ${init.body}` : ''}`);
+      const response = responses.shift();
+      if (response instanceof Error) throw response;
+      return response as T;
+    },
+  };
+}
+
+describe('PublicProfileSettings workflow', () => {
+  it('loads the owner GET projection into editable controls', async () => {
+    const { client, calls } = clientFor([
+      { profile: { ...profile, realName: null, biography: null } },
+    ]);
+
+    await expect(loadOwnerProfile(client)).resolves.toMatchObject({
       ...profile,
       realName: '',
       biography: '',
     });
+    expect(calls).toEqual(['GET /profile/public']);
   });
 
-  it('keeps independent visibility choices while preparing correction and hide requests', () => {
-    expect(
-      buildProfilePayload({ ...projectOwnerProfile(profile), gamertag: 'Nox 2', realName: '' }),
-    ).toMatchObject({
+  it('saves correction and hide payloads before reloading authoritative settings', async () => {
+    const form: PublicProfileForm = { ...profile, realName: '', biography: '' };
+    const { client, calls } = clientFor([
+      undefined,
+      { profile: { ...profile, gamertag: 'Nox 2' } },
+    ]);
+
+    await expect(saveOwnerProfile(client, { ...form, gamertag: 'Nox 2' })).resolves.toMatchObject({
       gamertag: 'Nox 2',
-      realName: null,
-      isPublished: true,
-      showAvatar: true,
-      showRealName: false,
-      showBiography: true,
     });
-    expect(buildProfilePayload(projectOwnerProfile(profile), false)).toMatchObject({
-      isPublished: false,
-      showAvatar: true,
-      showRealName: false,
-      showBiography: true,
-    });
+    expect(calls).toEqual([expect.stringContaining('PUT /profile/public'), 'GET /profile/public']);
+    expect(calls[0]).toContain('"showAvatar":true');
+    expect(calls[0]).toContain('"showRealName":false');
+
+    const hidden = clientFor([undefined, { profile: { ...profile, isPublished: false } }]);
+    await saveOwnerProfile(hidden.client, form, true);
+    expect(hidden.calls[0]).toContain('"isPublished":false');
+    expect(hidden.calls[0]).toContain('"showBiography":true');
   });
 
-  it('requires explicit delete confirmation and never reports success for unauthorized or failed work', () => {
-    expect(canDeleteProfile(false)).toBe(false);
-    expect(canDeleteProfile(true)).toBe(true);
-    expect(getMutationState(false, false)).toBe('idle');
-    expect(getMutationState(true, false)).toBe('error');
-    expect(getMutationState(false, true)).toBe('success');
-    expect(getProfileLoadState(401)).toBe('anonymous');
-    expect(getProfileLoadState(500)).toBe('error');
+  it('propagates unauthorized and validation failures without a success result', async () => {
+    const unauthorized = clientFor([new ApiClientError(401, 'UNAUTHORIZED', 'Sign in', 'Sign in')]);
+    await expect(loadOwnerProfile(unauthorized.client)).rejects.toMatchObject({ status: 401 });
+
+    const invalid = clientFor([new ApiClientError(422, 'INVALID', 'Invalid', 'Invalid')]);
+    await expect(saveOwnerProfile(invalid.client, profile)).rejects.toMatchObject({ status: 422 });
+    expect(invalid.calls).toEqual([expect.stringContaining('PUT /profile/public')]);
+  });
+
+  it('requires explicit destructive confirmation before it can call DELETE', async () => {
+    const unconfirmed = clientFor([]);
+    await expect(deleteOwnerProfile(unconfirmed.client, false)).resolves.toBe('not-confirmed');
+    expect(unconfirmed.calls).toEqual([]);
+  });
+
+  it('requires DELETE followed by owner GET 404 before deleting local private data', async () => {
+    const confirmed = clientFor([
+      undefined,
+      new ApiClientError(404, 'NOT_FOUND', 'Not found', 'Not found'),
+    ]);
+    await expect(deleteOwnerProfile(confirmed.client, true)).resolves.toBe('deleted');
+    expect(confirmed.calls).toEqual(['DELETE /profile/public', 'GET /profile/public']);
+
+    const stale = clientFor([undefined, { profile }]);
+    await expect(deleteOwnerProfile(stale.client, true)).resolves.toBe('unconfirmed');
+    expect(stale.calls).toEqual(['DELETE /profile/public', 'GET /profile/public']);
   });
 });

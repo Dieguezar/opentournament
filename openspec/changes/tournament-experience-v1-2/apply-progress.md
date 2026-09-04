@@ -499,3 +499,40 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - Rollback: revert this commit to remove the `/profile` route, owner controls, and navigation link without changing API/data.
 - Protected state: `.gitignore`, `artifacts/a11y-audit/`, and all three stashes (including `e269057a0ab90f7efb533f5195e15d0ec3dfa96a`) remain untouched.
 - Final owned diff: `394` changed lines, within the 400-line cap.
+
+## Work Unit WU5d-delete-convergence-correction
+
+**Status:** Corrective partial slice complete; tasks 5.1, 5.2, and 5.3 remain unchecked.
+
+### Correction Scope
+
+- Replaced profile revocation with an owner-scoped transaction that deletes the profile row, then retires its attached avatar media; no owner GET profile row or its PII remains after DELETE.
+- Moved the live owner-settings workflow behind the shared JSON-client boundary. DELETE now requires a follow-up owner GET to reject with 404 before the UI clears private fields, reports deletion, or refreshes. An unexpected 200 clears the local projection and shows an error without success.
+- Replaced component-adjacent pure helper tests with injected client workflow tests that exercise actual GET, PUT→GET, hide, failure, and DELETE→GET ordering used by `PublicProfileSettings`.
+
+### TDD Cycle Evidence
+
+- **RED:** the owner deletion integration assertion was added against the prior revoke implementation; its expected owner GET 404 was not satisfied while the profile row was only unpublished. The new web workflow test initially failed because `public-profile-workflow` did not exist.
+- **GREEN:** `pnpm --filter @opentournament/web test -- public-profile-settings.test.tsx` passed 21 files / 106 tests. It covers owner GET form projection, PUT then authoritative GET ordering, independent visibility flags and hide payload, 401/validation propagation, plus DELETE followed by GET 404 versus unexpected GET 200.
+- **PostgreSQL API proof:** fresh isolated PostgreSQL container `opentournament-wu5d-correction-pg` ran `returns owner settings and published Smash profile links without leaking private participants`: 1 passed / 11 skipped. It proves DELETE returns owner GET 404 and the former avatar becomes `retired` after profile removal. The original profile-publication target also passed (1 passed / 11 skipped) with the owner GET 404 assertion.
+- **REFACTOR:** removed test-only exports from the component and retained the production workflow boundary used by the client component.
+
+### Verification Evidence
+
+- `pnpm --filter @opentournament/api typecheck` and `pnpm --filter @opentournament/web typecheck` passed.
+- Exact workspace command `pnpm test` passed: 10 Turbo tasks; web 107 tests; API 63 passed / 14 integration-dependent skips; configuration 31 passed.
+- `pnpm --filter @opentournament/web build` passed; Next.js 16.3.2 emitted dynamic `/profile` and `/players/[slug]` routes.
+- Prettier was run and then `prettier --check` plus `git diff --check` passed on all correction files.
+
+### Work Unit Evidence
+
+- **Rollback boundary:** revert this correction commit to restore the previous WU5d profile revocation and client behavior; server changes are limited to `profile-media.ts` and its API integration coverage, while web changes are limited to the settings component/workflow/test.
+- **Protected state:** `.gitignore` and `artifacts/a11y-audit/` remain unstaged and untouched; all three pre-existing stashes remain, including `e269057a0ab90f7efb533f5195e15d0ec3dfa96a`.
+- **Container cleanup:** stopped `opentournament-wu5d-correction-pg` without removing its container or volumes.
+- **Final owned diff:** recorded after commit; stays within the 400-line correction cap.
+- **Final measured owned diff:** 358 changed lines (244 additions, 114 deletions) across six files, within the 400-line correction cap.
+
+### Correction Follow-up Evidence
+
+- The production workflow now requires the same explicit confirmation boolean used by the destructive button; its regression proves an unconfirmed attempt performs no DELETE call. Focused web workflow proof now passes 21 files / 107 tests.
+- The final line-count and rerun verification evidence supersede the preliminary count above.
