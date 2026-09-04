@@ -690,3 +690,13 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert this work-unit commit to remove tournament media controls, the additive opaque management projection, translations, test, manifest, and this evidence; existing palette, profile, overlay, and media API behavior remains intact.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
 - **Final measured owned diff:** 400 changed lines against `e29d95a04aaca81f2744346e5836a5a7a2c32562`, at the work-unit cap.
+## Work Unit WU5g2-cross-slot-concurrency-evidence-correction
+
+**Status:** Maintainer-authorized successor correction; tasks 5.1–5.3 remain unchecked.
+
+- **Split:** WU5g part 1 remains commit `a38452c` at its original 400-line boundary. This narrower successor is a separate commit on top; the combined change is not represented as one <=400-line work unit.
+- **RED/GREEN/REFACTOR:** controlled overlapping logo/banner proof initially failed without a queue; focused `tournament-media-controls` passed 1 file / 6 tests after one shared mutation queue serialized POST/DELETE plus authoritative GET. All controls remain disabled until convergence, so no stale projection can overwrite a later operation.
+- **Both slots:** workflow coverage executes logo and banner multipart endpoints, authoritative reloads, API failure/no success, bilingual/safe preview accessibility, and the overlap rejection.
+- **Verification:** API/web typechecks, exact `pnpm test` (web 24 files / 125 tests; API 63 passed / 14 skipped), Next 16.3.2 build, Prettier, and `git diff --check` passed. Runtime is N/A: existing routes are unchanged and Phase 6 owns browser E2E.
+- **Canonical correction manifest:** `wu5g2-verification-manifest.txt`; `sha256:14158227b75cf974e1d4ee0b5d1be7dd318774c403162fee8d1cf2340cc4de2e` is reproducible, covers listed source digests, excludes itself, and is the native evidence revision.
+- **Rollback/protected state:** revert this successor commit to restore the part-1 behavior; `.gitignore`, `artifacts/a11y-audit/`, and all three stashes are untouched.

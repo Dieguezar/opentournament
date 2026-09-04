@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { useI18n } from './i18n-provider';
 import { ApiClientError, apiClient } from '../lib/api';
@@ -15,11 +15,19 @@ export interface TournamentMedia {
 
 export type TournamentMediaClient = <T>(path: string, init?: RequestInit) => Promise<T>;
 
-const mediaIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-function project(media: Partial<TournamentMedia> | null | undefined): TournamentMedia {
-  return { logoMediaId: media?.logoMediaId ?? null, bannerMediaId: media?.bannerMediaId ?? null };
+export function createTournamentMediaMutationQueue() {
+  let pending: Promise<unknown> | null = null;
+  return {
+    run<T>(mutation: () => Promise<T>): Promise<T | null> {
+      if (pending) return Promise.resolve(null);
+      const result = mutation();
+      pending = result;
+      return result.finally(() => (pending = null));
+    },
+  };
 }
+
+const mediaIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function mediaPath(mediaId: string | null): string | null {
   return mediaId && mediaIdPattern.test(mediaId) ? `/api/v1/media/${mediaId}` : null;
@@ -29,10 +37,13 @@ export async function loadTournamentMedia(
   client: TournamentMediaClient,
   tournamentId: string,
 ): Promise<TournamentMedia> {
-  const response = await client<{ appearance?: Partial<TournamentMedia> | null }>(
+  const { appearance } = await client<{ appearance?: Partial<TournamentMedia> | null }>(
     `/tournaments/${tournamentId}`,
   );
-  return project(response.appearance);
+  return {
+    logoMediaId: appearance?.logoMediaId ?? null,
+    bannerMediaId: appearance?.bannerMediaId ?? null,
+  };
 }
 
 export async function uploadTournamentMedia(
@@ -57,7 +68,7 @@ export async function deleteTournamentMedia(
 }
 
 interface TournamentMediaFormProps {
-  busy: TournamentMediaSlot | null;
+  busy: boolean;
   copy: Dictionary['tournamentAdmin'];
   error: string | null;
   media: TournamentMedia;
@@ -90,7 +101,7 @@ export function TournamentMediaForm({
       <h3 id="media-title">{copy.mediaTitle}</h3>
       <p>{copy.mediaDescription}</p>
       {slots.map(({ slot, id, title, file }) => {
-        const pending = busy === slot;
+        const pending = busy;
         const preview = mediaPath(id);
         return (
           <fieldset key={slot}>
@@ -135,27 +146,33 @@ export function TournamentMediaControls({
 }) {
   const { dictionary } = useI18n();
   const copy = dictionary.tournamentAdmin;
-  const [media, setMedia] = useState(() => project(initialMedia));
-  const [busy, setBusy] = useState<TournamentMediaSlot | null>(null);
+  const [media, setMedia] = useState(() => ({
+    logoMediaId: initialMedia?.logoMediaId ?? null,
+    bannerMediaId: initialMedia?.bannerMediaId ?? null,
+  }));
+  const [busy, setBusy] = useState(false);
+  const queue = useRef(createTournamentMediaMutationQueue());
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   async function mutate(slot: TournamentMediaSlot, file?: File) {
-    setBusy(slot);
-    setError(null);
-    setSuccess(null);
-    try {
-      setMedia(
-        file
-          ? await uploadTournamentMedia(apiClient, tournamentId, slot, file)
-          : await deleteTournamentMedia(apiClient, tournamentId, slot),
-      );
-      setSuccess(copy.mediaSaved);
-    } catch (requestError) {
-      setError(requestError instanceof ApiClientError ? requestError.message : copy.mediaError);
-    } finally {
-      setBusy(null);
-    }
+    await queue.current.run(async () => {
+      setBusy(true);
+      setError(null);
+      setSuccess(null);
+      try {
+        setMedia(
+          file
+            ? await uploadTournamentMedia(apiClient, tournamentId, slot, file)
+            : await deleteTournamentMedia(apiClient, tournamentId, slot),
+        );
+        setSuccess(copy.mediaSaved);
+      } catch (requestError) {
+        setError(requestError instanceof ApiClientError ? requestError.message : copy.mediaError);
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   return (

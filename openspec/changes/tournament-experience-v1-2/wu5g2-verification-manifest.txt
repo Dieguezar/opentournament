@@ -1,0 +1,12 @@
+WU5g2 correction manifest v1
+encoding: UTF-8 without BOM; LF; trailing LF
+parent: a38452c0210072bde8ad8f8abb931ef5a5f93808
+focused: pnpm --filter @opentournament/web exec vitest run components/tournament-media-controls.test.tsx => passed; 1 file; 6 tests
+typecheck: API and web => passed
+workspace: pnpm test => passed; web 24 files/125 tests; API 63 passed/14 skipped; configuration 31 tests
+build: pnpm --filter @opentournament/web build => passed; Next.js 16.3.2
+format/diff: Prettier and git diff --check => passed
+runtime: N/A; browser E2E belongs to Phase 6
+file-sha256:
+apps/web/components/tournament-media-controls.tsx sha256:4f4a858b1133d436a2e5b088a9286d854dee7969191c00205fa54581983104ae
+apps/web/components/tournament-media-controls.test.tsx sha256:a45fffc1398210d1701f842f76728c3811e519117e5ae41ab72cd2707142f3cf

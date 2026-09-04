@@ -4,8 +4,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ApiClientError } from '../lib/api';
 import { getDictionary } from '../lib/i18n';
 import {
+  createTournamentMediaMutationQueue,
   deleteTournamentMedia,
-  loadTournamentMedia,
   TournamentMediaForm,
   uploadTournamentMedia,
   type TournamentMediaClient,
@@ -51,36 +51,26 @@ describe('tournament media controls workflow', () => {
     ]);
   });
 
-  it('loads authoritative initial media and deletes only the requested slot', async () => {
-    await expect(
-      loadTournamentMedia(
-        clientFor([
-          {
-            appearance: {
-              logoMediaId: null,
-              bannerMediaId: '22222222-2222-4222-8222-222222222222',
-            },
-          },
-        ]).client,
-        't1',
-      ),
-    ).resolves.toEqual({
-      logoMediaId: null,
+  it('uploads the banner through its own endpoint and reloads both slots', async () => {
+    const file = new File(['image'], 'banner.png', { type: 'image/png' });
+    const { client, calls } = clientFor([
+      undefined,
+      {
+        appearance: {
+          logoMediaId: '11111111-1111-4111-8111-111111111111',
+          bannerMediaId: '22222222-2222-4222-8222-222222222222',
+        },
+      },
+    ]);
+    await expect(uploadTournamentMedia(client, 't1', 'banner', file)).resolves.toEqual({
+      logoMediaId: '11111111-1111-4111-8111-111111111111',
       bannerMediaId: '22222222-2222-4222-8222-222222222222',
     });
-
-    const { client, calls, inits } = clientFor([
-      undefined,
-      { appearance: { logoMediaId: '11111111-1111-4111-8111-111111111111', bannerMediaId: null } },
+    expect(calls).toEqual([
+      'POST /tournaments/t1/appearance/banner [object FormData]',
+      'GET /tournaments/t1',
     ]);
-
-    await expect(deleteTournamentMedia(client, 't1', 'banner')).resolves.toEqual({
-      logoMediaId: '11111111-1111-4111-8111-111111111111',
-      bannerMediaId: null,
-    });
-    expect(calls).toEqual(['DELETE /tournaments/t1/appearance/banner', 'GET /tournaments/t1']);
   });
-
   it('propagates an API failure without a false success state', async () => {
     const failed = clientFor([new ApiClientError(403, 'FORBIDDEN', 'Denied', 'Denied')]);
     await expect(deleteTournamentMedia(failed.client, 't1', 'logo')).rejects.toMatchObject({
@@ -93,7 +83,7 @@ describe('rendered tournament media controls', () => {
   it('uses bilingual accessible labels and only same-origin opaque previews', () => {
     const english = renderToStaticMarkup(
       <TournamentMediaForm
-        busy={null}
+        busy={false}
         copy={getDictionary('en').tournamentAdmin}
         error={null}
         media={{
@@ -111,7 +101,7 @@ describe('rendered tournament media controls', () => {
 
     const spanish = renderToStaticMarkup(
       <TournamentMediaForm
-        busy={null}
+        busy={false}
         copy={getDictionary('es').tournamentAdmin}
         error={null}
         media={{ logoMediaId: null, bannerMediaId: null }}
@@ -123,11 +113,11 @@ describe('rendered tournament media controls', () => {
     expect(spanish).toContain('Logo del torneo');
   });
 
-  it('announces busy and error states while disabling only the pending slot', () => {
+  it('announces busy and error states while disabling all serialized controls', () => {
     const copy = getDictionary('en').tournamentAdmin;
     const busy = renderToStaticMarkup(
       <TournamentMediaForm
-        busy="logo"
+        busy={true}
         copy={copy}
         error={null}
         media={{ logoMediaId: null, bannerMediaId: '22222222-2222-4222-8222-222222222222' }}
@@ -138,12 +128,12 @@ describe('rendered tournament media controls', () => {
     );
     expect(busy).toContain('role="status"');
     expect(busy).toContain(copy.uploadingLogo);
-    expect(busy.match(/disabled=""/g)).toHaveLength(2);
+    expect(busy.match(/disabled=""/g)).toHaveLength(4);
     expect(busy).not.toMatch(/id="banner-file"[^>]*disabled/);
 
     const error = renderToStaticMarkup(
       <TournamentMediaForm
-        busy={null}
+        busy={false}
         copy={copy}
         error="Denied"
         media={{ logoMediaId: null, bannerMediaId: '22222222-2222-4222-8222-222222222222' }}
@@ -155,4 +145,20 @@ describe('rendered tournament media controls', () => {
     expect(error).toContain('role="alert"');
     expect(error).not.toContain(copy.mediaSaved);
   });
+});
+
+it('serializes overlapping slot mutations until the first authoritative projection resolves', async () => {
+  let resolveFirst!: (value: { logoMediaId: string | null; bannerMediaId: string | null }) => void;
+  const first = new Promise<{ logoMediaId: string | null; bannerMediaId: string | null }>(
+    (resolve) => {
+      resolveFirst = resolve;
+    },
+  );
+  const queue = createTournamentMediaMutationQueue();
+  const firstRun = queue.run(() => first);
+  await expect(
+    queue.run(() => Promise.resolve({ logoMediaId: null, bannerMediaId: 'late' })),
+  ).resolves.toBeNull();
+  resolveFirst({ logoMediaId: 'new-logo', bannerMediaId: null });
+  await expect(firstRun).resolves.toEqual({ logoMediaId: 'new-logo', bannerMediaId: null });
 });
