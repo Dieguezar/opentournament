@@ -10,6 +10,7 @@ import styles from '@/components/bracket-workspace.module.css';
 import { RegistrationActions, type RegistrationView } from '@/components/registration-actions';
 import { RulesetSummary } from '@/components/ruleset-summary';
 import { TournamentActions } from '@/components/tournament-actions';
+import { TournamentAppearanceControls } from '@/components/tournament-appearance-controls';
 import { ParticipantAccessManager } from '@/components/participant-access-manager';
 import { ReportPanel } from '@/components/report-panel';
 import { formatMessage, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
@@ -35,6 +36,11 @@ interface TournamentView {
   startsAt: string | null;
   seriesConfig: { bo?: number } | null;
   settings: TournamentSettings | null;
+}
+
+interface AppearanceView {
+  primaryColor: string | null;
+  accentColor: string | null;
 }
 
 interface MatchResultView {
@@ -195,7 +201,10 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
   const dictionary = getDictionary(locale);
   const copy = dictionary.tournamentAdmin;
   const { id } = await params;
-  const tournamentRes = await serverFetch<{ tournament: TournamentView }>(`/tournaments/${id}`);
+  const tournamentRes = await serverFetch<{
+    tournament: TournamentView;
+    appearance: AppearanceView | null;
+  }>(`/tournaments/${id}`);
   if (tournamentRes.status === 401) redirect('/login');
   if (tournamentRes.status === 404) notFound();
   const tournament = tournamentRes.data.tournament;
@@ -392,6 +401,10 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
           <h2>{copy.settingsTitle}</h2>
           <p>{copy.settingsDescription}</p>
           <TournamentActions tournamentId={id} status={tournament.status} />
+          <TournamentAppearanceControls
+            tournamentId={id}
+            initialAppearance={tournamentRes.data?.appearance ?? null}
+          />
           <ParticipantAccessManager
             tournamentId={id}
             registrations={registrations}

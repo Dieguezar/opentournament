@@ -642,3 +642,29 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - Fresh evidence revision: `sha256:1bcaff454f9b0ae5b92151a75575c6ff1b718e1e3ad2039c616f07d07d304462` (SHA-256 of the standalone final verification manifest, excluding this pointer).
 - **Rollback boundary:** revert the final WU5e commit to remove the avatar controls, workflow, transport guard, tests, translations, and this correction evidence without affecting the existing hard-delete or API media lifecycle.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
+
+## Work Unit WU5f-admin-appearance-palette
+
+**Status:** Partial Phase 5 slice complete; tasks 5.1, 5.2, and 5.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+- **RED:** `pnpm --filter @opentournament/web exec vitest run components/tournament-appearance-controls.test.tsx` failed 3 rendered-state tests because the production form presenter did not exist.
+- **GREEN:** the same focused command passed 1 file / 6 tests after the live controls rendered the extracted presenter.
+- **TRIANGULATION:** executable markup assertions cover invalid six-digit hex feedback, saving status with both color inputs and submit disabled, API error without success, authoritative PATCH response convergence before success, bilingual labels, and locally scoped CSS variables.
+- **REFACTOR:** the interactive owner component retains loading, PATCH authorization, and state transitions; its rendered presenter isolates accessible form markup without changing API routes or page scope.
+
+### Verification Evidence
+
+- Focused: `pnpm --filter @opentournament/web exec vitest run components/tournament-appearance-controls.test.tsx` passed (1 file, 6 tests).
+- Typechecks: `pnpm --filter @opentournament/api typecheck` and `pnpm --filter @opentournament/web typecheck` passed.
+- Workspace: exact `pnpm test` passed (10 Turbo tasks; web 23 files / 119 tests; API 63 passed / 14 skipped; configuration 31 tests).
+- Build: `pnpm --filter @opentournament/web build` passed with Next.js 16.3.2; `/tournaments/[id]` remains dynamic.
+- Formatting and safety: Prettier normalization/check, control-byte/placeholder scan, and `git diff --check` are recorded after the final evidence manifest is generated.
+- Verification manifest: `openspec/changes/tournament-experience-v1-2/wu5f-verification-manifest.txt` is canonical UTF-8/LF input of the exact outcomes and five relevant file digests; `sha256:0774ea5c4891e1f5dd1a94aa3e5d329cfa929af3adcef2d91af376d58b30c5c7` excludes this pointer.
+
+### Work Unit Evidence
+
+- Runtime harness: N/A. This is a client presentation seam over existing authorized GET/PATCH routes; executable rendered component tests and the production build cover the bounded UI behavior, while Phase 6 owns browser E2E.
+- Rollback/protected state: revert the amended WU5f commit to remove palette controls, translations, appearance projection, manifest, and evidence; existing authorization, server validation, logo/banner media, overlays, and other Phase 5 controls remain unchanged. `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
+- Final amended WU5f diff: 400 changed lines against `1c492fc78c010b8ea8c87f4984c8943df7ec12f5`, within the cap.

@@ -1,0 +1,17 @@
+WU5f verification manifest v1
+encoding: UTF-8 without BOM; LF; trailing LF
+parent: 1c492fc78c010b8ea8c87f4984c8943df7ec12f5
+focused: pnpm --filter @opentournament/web exec vitest run components/tournament-appearance-controls.test.tsx => passed; 1 file; 6 tests
+typecheck: pnpm --filter @opentournament/api typecheck => passed
+typecheck: pnpm --filter @opentournament/web typecheck => passed
+workspace: pnpm test => passed; 10 Turbo tasks; web 23 files/119 tests; API 63 passed/14 skipped; configuration 31 tests
+build: pnpm --filter @opentournament/web build => passed; Next.js 16.3.2
+format: pnpm exec prettier --check apps/web/components/tournament-appearance-controls.tsx apps/web/components/tournament-appearance-controls.test.tsx openspec/changes/tournament-experience-v1-2/apply-progress.md => passed
+safety: WU5f appendix scan => literal escape 0; placeholders 0; control bytes 0
+diff: git diff --check => passed
+file-sha256:
+apps/api/src/routes/tournaments.ts sha256:0ae52288c18acf0ef41138fab541ba4abd516f7d7806349e5be2d60e6fa5e1d2
+apps/web/app/tournaments/[id]/page.tsx sha256:168490fe559842f9c331018e9ead990dc833c1b0b3c43cf1858ee27d514b40b7
+apps/web/components/tournament-appearance-controls.tsx sha256:64b5d6b6ad601460f3175b81ff366ee6de0e851f3b0770f91ba6118511c77c76
+apps/web/components/tournament-appearance-controls.test.tsx sha256:dedf7354d0e1f5306d31ac9c89c70ae2a7c67ba7e35b63f71e22663338bd23e9
+apps/web/lib/i18n.ts sha256:a4f670c64b41db8b7ed3f61428116c22e9f24b1d34f0f57de1ca19ff1dcbd2c1

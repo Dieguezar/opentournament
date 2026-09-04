@@ -119,7 +119,15 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .from(organizations)
       .where(eq(organizations.id, tournament.organizationId))
       .limit(1);
-    return reply.send({ tournament, organization: org ?? null });
+    const [appearance] = await db
+      .select({
+        primaryColor: tournamentAppearances.primaryColor,
+        accentColor: tournamentAppearances.accentColor,
+      })
+      .from(tournamentAppearances)
+      .where(eq(tournamentAppearances.tournamentId, id))
+      .limit(1);
+    return reply.send({ tournament, organization: org ?? null, appearance: appearance ?? null });
   });
 
   app.get('/tournaments/:id/teams', async (request, reply) => {
