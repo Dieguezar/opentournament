@@ -777,3 +777,22 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert this correction commit to remove the pre-hydration shell and direct route-test seam while retaining the original WU5h live overlay implementation.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
 - **Verification manifest:** `wu5h-correction-verification-manifest.txt`, `sha256:7127a3941f7480d6ad574559e9c9b036ea0bd1156c241b01d76d6c4a05d25c6c`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.
+
+## Work Unit WU6a1-e2e-runtime-branding-media
+
+**Status:** Complete bounded successor. Task 6.1 remains unchecked because WU6a2 must cover overlay convergence and reconnect; tasks 6.2–6.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+- **RED:** the inherited WU6a focused Playwright listing found no `tournament-experience.spec.ts`; after adding the real scenario, direct `pnpm exec playwright test tests/e2e/tournament-experience.spec.ts --project=chromium` failed before execution because its default shared PostgreSQL connection returned `28P01`. This demonstrated the missing isolated runtime fixture rather than a product assertion failure.
+- **GREEN:** `node scripts/test-e2e-runtime.mjs` created isolated loopback PostgreSQL and MinIO containers, passed 1 Chromium scenario, and stopped both containers. The scenario performs real browser, web-proxy, API, PostgreSQL, and S3-compatible paths.
+- **REFACTOR:** Playwright config forwards only the isolated S3 endpoint and credentials to the API process; the runtime script owns random container names, ephemeral loopback ports, readiness, and cleanup without altering product behavior.
+
+### Work Unit Evidence
+
+- The E2E scenario creates isolated users, organization, and public tournament; persists branding/logo; verifies public logo/color, non-admin denial, and media headers; then renders a published avatar profile and confirms unpublishing makes its player and media routes 404.
+- Passed: focused runtime E2E (1 Chromium test), API/web typechecks, exact `pnpm test` (10 workspace tasks; web 25 files / 133 tests; API 63 passed / 14 skipped; configuration 31 tests), and Next.js 16.3.2 production build. Prettier/check and `git diff --check` are recorded after final evidence normalization.
+- **Runtime cleanup:** no user service, named volume, or Docker volume was deleted; `docker ps` was empty after the focused run. The script only stops its randomly named temporary containers.
+- **Rollback boundary:** revert the WU6a1 commit to remove the E2E runtime harness, configuration forwarding, test, manifest, and this evidence while retaining WU5h.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
+- **Verification manifest:** `wu6a1-verification-manifest.txt`, `sha256:e3f54a454767aabfc540606c6614d07be6438089f691afea6e959a805f050b60`; standalone UTF-8/LF, excludes self-reference, and lists reproducible source digests.

@@ -1,0 +1,12 @@
+WU6a1 E2E runtime branding and media verification; parent 1f853f24cac6c066b7eaf9b4be90d66263521393
+Commands
+- node scripts/test-e2e-runtime.mjs: passed (1 Chromium scenario)
+- pnpm --filter @opentournament/api typecheck: passed
+- pnpm --filter @opentournament/web typecheck: passed
+- pnpm test: passed (10 workspace tasks and 31 configuration tests)
+- pnpm --filter @opentournament/web build: passed (Next.js 16.3.2)
+- playwright.config.ts a686cb16c08130c25705f51d42cb6a13796c5af51455b68ae657369662958b5b
+- scripts/test-e2e-runtime.mjs 5854b179a94617abe259c06c40623fa793f9e917dae2a76a7ddefb7a3bbebcdc
+- tests/e2e/tournament-experience.spec.ts bb67467740309b34f804c0cbd094caae3b26cd2f403fcddf986c641f1c1a78c6
+- Temporary PostgreSQL and MinIO containers use random names, loopback ephemeral ports, and docker stop only.
+- No Docker volume was created or deleted; docker ps was empty after the focused run.
