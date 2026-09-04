@@ -2643,6 +2643,7 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
           headers,
         });
         expect(profile.statusCode).toBe(200);
+        const profileSlug = profile.json<{ profile: { slug: string } }>().profile.slug;
 
         const { default: sharp } = await import('sharp');
         const png = await sharp({
@@ -2856,6 +2857,15 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         ).toMatchObject({
           statusCode: 200,
         });
+        const replacementOwner = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profile/public',
+          headers,
+        });
+        expect(replacementOwner.statusCode).toBe(200);
+        expect(replacementOwner.json()).toMatchObject({
+          profile: { avatar: { id: concurrentId } },
+        });
         expect(
           await app.inject({ method: 'DELETE', url: '/api/v1/profile/public', headers }),
         ).toMatchObject({
@@ -2863,6 +2873,14 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         });
         expect(
           await app.inject({ method: 'GET', url: `/api/v1/media/${concurrentId}` }),
+        ).toMatchObject({
+          statusCode: 404,
+        });
+        expect(
+          await app.inject({ method: 'GET', url: '/api/v1/profile/public', headers }),
+        ).toMatchObject({ statusCode: 404 });
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/players/${profileSlug}` }),
         ).toMatchObject({
           statusCode: 404,
         });

@@ -78,7 +78,9 @@ describe('PublicProfileSettings workflow', () => {
 
   it('requires explicit destructive confirmation before it can call DELETE', async () => {
     const unconfirmed = clientFor([]);
-    await expect(deleteOwnerProfile(unconfirmed.client, false)).resolves.toBe('not-confirmed');
+    await expect(deleteOwnerProfile(unconfirmed.client, false)).resolves.toEqual({
+      state: 'not-confirmed',
+    });
     expect(unconfirmed.calls).toEqual([]);
   });
 
@@ -87,11 +89,32 @@ describe('PublicProfileSettings workflow', () => {
       undefined,
       new ApiClientError(404, 'NOT_FOUND', 'Not found', 'Not found'),
     ]);
-    await expect(deleteOwnerProfile(confirmed.client, true)).resolves.toBe('deleted');
+    await expect(deleteOwnerProfile(confirmed.client, true)).resolves.toEqual({ state: 'deleted' });
     expect(confirmed.calls).toEqual(['DELETE /profile/public', 'GET /profile/public']);
 
     const stale = clientFor([undefined, { profile }]);
-    await expect(deleteOwnerProfile(stale.client, true)).resolves.toBe('unconfirmed');
+    await expect(deleteOwnerProfile(stale.client, true)).resolves.toEqual({ state: 'unconfirmed' });
     expect(stale.calls).toEqual(['DELETE /profile/public', 'GET /profile/public']);
+  });
+
+  it('returns a failure outcome for ambiguous DELETE and post-DELETE verification failures', async () => {
+    const rejected = clientFor([
+      new ApiClientError(503, 'UNAVAILABLE', 'Unavailable', 'Unavailable'),
+    ]);
+    await expect(deleteOwnerProfile(rejected.client, true)).resolves.toMatchObject({
+      state: 'failed',
+      error: { status: 503 },
+    });
+    expect(rejected.calls).toEqual(['DELETE /profile/public']);
+
+    const verificationFailed = clientFor([
+      undefined,
+      new ApiClientError(500, 'UNKNOWN', 'Try again', 'Try again'),
+    ]);
+    await expect(deleteOwnerProfile(verificationFailed.client, true)).resolves.toMatchObject({
+      state: 'failed',
+      error: { status: 500 },
+    });
+    expect(verificationFailed.calls).toEqual(['DELETE /profile/public', 'GET /profile/public']);
   });
 });

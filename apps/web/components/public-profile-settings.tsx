@@ -63,21 +63,38 @@ export function PublicProfileSettings() {
   }
 
   async function remove() {
-    if (!form) return;
+    if (!form || !deleteConfirmed) return;
     setBusy('delete');
     setError(null);
     setSuccess(null);
     try {
-      if ((await deleteOwnerProfile(apiClient, deleteConfirmed)) !== 'deleted') {
+      const result = await deleteOwnerProfile(apiClient, deleteConfirmed);
+      if (result.state !== 'deleted') {
         setForm(null);
-        setLoadState('error');
-        setError(copy.actionError);
+        setLoadState(
+          result.state === 'failed' &&
+            result.error instanceof ApiClientError &&
+            result.error.status === 401
+            ? 'anonymous'
+            : 'error',
+        );
+        setError(
+          result.state === 'failed'
+            ? requestMessage(result.error, copy.actionError)
+            : copy.actionError,
+        );
         return;
       }
       setForm(null);
       setSuccess(copy.deleted);
       router.refresh();
     } catch (requestError) {
+      setForm(null);
+      setLoadState(
+        requestError instanceof ApiClientError && requestError.status === 401
+          ? 'anonymous'
+          : 'error',
+      );
       setError(requestMessage(requestError, copy.actionError));
     } finally {
       setBusy(null);

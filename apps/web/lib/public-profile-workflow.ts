@@ -57,17 +57,24 @@ export async function saveOwnerProfile(
   return loadOwnerProfile(client);
 }
 
+export type OwnerProfileDeleteResult =
+  { state: 'not-confirmed' | 'deleted' | 'unconfirmed' } | { state: 'failed'; error: unknown };
+
 export async function deleteOwnerProfile(
   client: OwnerProfileClient,
   confirmed: boolean,
-): Promise<'not-confirmed' | 'deleted' | 'unconfirmed'> {
-  if (!confirmed) return 'not-confirmed';
-  await client<void>('/profile/public', { method: 'DELETE' });
+): Promise<OwnerProfileDeleteResult> {
+  if (!confirmed) return { state: 'not-confirmed' };
+  try {
+    await client<void>('/profile/public', { method: 'DELETE' });
+  } catch (error) {
+    return { state: 'failed', error };
+  }
   try {
     await client<{ profile: OwnerPublicProfile }>('/profile/public');
-    return 'unconfirmed';
+    return { state: 'unconfirmed' };
   } catch (error) {
-    if (error instanceof ApiClientError && error.status === 404) return 'deleted';
-    throw error;
+    if (error instanceof ApiClientError && error.status === 404) return { state: 'deleted' };
+    return { state: 'failed', error };
   }
 }

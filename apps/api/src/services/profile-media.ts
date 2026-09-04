@@ -142,7 +142,14 @@ export async function revokeProfileAndAvatar(userId: string): Promise<string | n
     if (!existing) return null;
     const [deleted] = await transaction
       .delete(publicPlayerProfiles)
-      .where(eq(publicPlayerProfiles.id, existing.id))
+      .where(
+        and(
+          eq(publicPlayerProfiles.id, existing.id),
+          existing.avatarMediaId
+            ? eq(publicPlayerProfiles.avatarMediaId, existing.avatarMediaId)
+            : isNull(publicPlayerProfiles.avatarMediaId),
+        ),
+      )
       .returning({ id: publicPlayerProfiles.id });
     return deleted ? existing : null;
   });

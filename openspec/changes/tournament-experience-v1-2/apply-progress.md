@@ -536,3 +536,33 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 
 - The production workflow now requires the same explicit confirmation boolean used by the destructive button; its regression proves an unconfirmed attempt performs no DELETE call. Focused web workflow proof now passes 21 files / 107 tests.
 - The final line-count and rerun verification evidence supersede the preliminary count above.
+## Work Unit WU5d-concurrency-safe-delete-correction
+
+**Status:** Code correction complete with an external PostgreSQL-runtime verification blocker; tasks 5.1, 5.2, and 5.3 remain unchecked.
+
+### Correction Scope
+
+- Bound profile deletion to the captured avatar version in the owner-scoped transaction, using `avatar_media_id = captured` or `IS NULL` as appropriate. A changed row yields no deletion and no retirement; a retry captures the replacement and retires only that replacement after deletion.
+- Strengthened the existing avatar replacement/delete integration scenario to retain the replacement after the lost race, then prove owner and public profile 404 after the successful retry.
+- Changed the live owner workflow to return explicit delete outcomes. Any rejected DELETE or non-404 verification error clears the form immediately, preserves the specific API message (including 401 signed-out state), and never announces success.
+
+### TDD Cycle Evidence
+
+- **RED:** `pnpm --filter @opentournament/web test -- public-profile-settings.test.tsx` failed 3 new assertions against the previous string outcomes and propagated DELETE/verification exceptions.
+- **GREEN:** the same focused command passed 21 files / 108 tests after explicit failure outcomes were implemented. It covers unconfirmed deletion, DELETE rejection, GET 500 verification failure, GET 200 ambiguity, and GET 404 success ordering.
+- **PostgreSQL regression:** the existing deterministic replacement/delete integration scenario now asserts replacement retention before the lost-race 404 and durable owner/public 404 after retry. Runtime execution was attempted through `pnpm test:integration` but Docker Desktop's Linux-engine pipe was unavailable (`npipe:////./pipe/dockerDesktopLinuxEngine`), so no PostgreSQL container was started and this evidence remains unverified in this attempt.
+- **REFACTOR:** preserved the shared JSON client and bilingual component copy while moving destructive mutation failures into a typed production workflow result.
+
+### Verification Evidence
+
+- API and web typechecks passed.
+- Exact `pnpm test` passed: web 108 tests; API 63 passed / 14 integration-dependent skips; configuration 31 passed.
+- `pnpm --filter @opentournament/web build` passed; Next.js 16.3.2 emitted `/profile` as a dynamic route.
+- Prettier/check and `git diff --check` are recorded before commit.
+
+### Work Unit Evidence
+
+- **Rollback boundary:** revert this correction commit to restore the prior delete predicate and client failure behavior; affected files are the profile-media service, avatar integration test, profile workflow/component test, and this appended evidence.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
+- **Runtime blocker:** Docker daemon was unavailable; no containers or volumes were created, stopped, or removed by this attempt.
+- **Final measured owned diff:** 132 changed lines (117 additions, 15 deletions) across six files, within the 400-line cap.
