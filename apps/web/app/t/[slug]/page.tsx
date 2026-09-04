@@ -7,6 +7,10 @@ import type {
   TournamentStatus,
 } from '@opentournament/shared-types';
 import { LiveTournament } from '@/components/live-tournament';
+import {
+  TournamentBranding,
+  type TournamentBrandingAppearance,
+} from '@/components/tournament-branding';
 import { RegisterPanel } from '@/components/register-panel';
 import { ReportPanel } from '@/components/report-panel';
 import { RulesetSummary } from '@/components/ruleset-summary';
@@ -84,6 +88,7 @@ interface PublicTournamentResponse {
     settings: TournamentSettings | null;
   };
   organization: { name: string } | null;
+  appearance: TournamentBrandingAppearance | null;
 }
 
 const getPublicTournament = cache((slug: string) =>
@@ -412,13 +417,16 @@ export default async function PublicTournamentPage({
   return (
     <main className={`container ${styles.page}`} data-game={tournament.gameAdapterKey}>
       <header className={`${styles.pageHeader} ${styles.tournamentHeader}`}>
-        <div>
+        <TournamentBranding
+          appearance={tournamentRes.data?.appearance ?? null}
+          tournamentName={tournament.name}
+        >
           <p className={styles.eyebrow}>
             {tournamentRes.data?.organization?.name ?? copy.independentTournament}
           </p>
           <h1>{tournament.name}</h1>
           {tournament.description && <p className={styles.intro}>{tournament.description}</p>}
-        </div>
+        </TournamentBranding>
         <div className={styles.tournamentHeaderMeta}>
           <span className={status.className}>{status.label}</span>
           <span>{formatGameAdapter(tournament.gameAdapterKey, locale)}</span>

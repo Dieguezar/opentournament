@@ -1,0 +1,57 @@
+.branding {
+  --tournament-primary: var(--primary);
+  --tournament-accent: var(--primary);
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.banner {
+  position: absolute;
+  inset: 0;
+  opacity: 0.2;
+}
+
+.banner img {
+  object-fit: cover;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.copy h1 {
+  color: var(--tournament-primary);
+}
+
+.logo {
+  flex: 0 0 auto;
+  width: 5.5rem;
+  height: 5.5rem;
+  border: 2px solid var(--tournament-accent);
+  border-radius: 8px;
+  background: var(--surface);
+  object-fit: contain;
+}
+
+@media (max-width: 480px) {
+  .content {
+    align-items: flex-start;
+  }
+
+  .logo {
+    width: 4rem;
+    height: 4rem;
+  }
+}

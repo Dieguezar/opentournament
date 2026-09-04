@@ -387,3 +387,36 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - [ ] 5.1 RED remains pending for web branding, profile/privacy links, canvas, and forms.
 - [ ] 5.2 GREEN remains pending for public pages and management controls.
 - [ ] 5.3 GREEN/REFACTOR and all Phase 6 work remain pending.
+
+## Work Unit 5b: Public tournament branding
+
+**Status:** Partial slice complete; Tasks 5.1 and 5.2 remain unchecked because profile pages, privacy links, owner/admin forms, uploads, and overlay views are outside this work unit.
+
+### Completed Slice
+
+- Added a synchronous `TournamentBranding` presenter to render API-provided tournament branding on `/t/[slug]`.
+- Confined primary and accent CSS custom properties to the presenter, and accepted only six-digit hex colors.
+- Mapped logo and banner media IDs exclusively to same-origin `/api/v1/media/:id` paths through `next/image` with `unoptimized`, preserving proxy caching and the existing CSP.
+
+### TDD Cycle Evidence
+
+| Slice | Safety net | RED | GREEN / triangulation | Refactor |
+| --- | --- | --- | --- | --- |
+| Public tournament branding | No existing presenter test covered this page boundary. | `pnpm --filter @opentournament/web exec vitest run components/tournament-branding.test.tsx` exited 1 because `./tournament-branding` did not exist. | The focused test passed 3/3 after the presenter was added: branded logo/banner/color rendering, default no-media rendering, and malformed-color rejection cover distinct branches. | Typed scoped CSS variables as custom properties, then reran focused tests and typecheck; no behavior changed. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused test | `pnpm --filter @opentournament/web exec vitest run components/tournament-branding.test.tsx` passed (1 file, 3 tests). |
+| Typecheck | `pnpm --filter @opentournament/web typecheck` passed. |
+| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks; web reported 18 files and 98 tests; configuration suite reported 31 tests. |
+| Route/runtime wiring | `pnpm --filter @opentournament/web build` passed; Next.js 16.3.2 compiled and listed `/t/[slug]` as a dynamic route. No API-backed browser smoke was run because this bounded component consumes the existing public response and does not add a runtime route or API dependency. |
+| Formatting/diff | Prettier ran on all touched source/test/style files; `git diff --check` passed before commit. |
+| Rollback boundary | Revert the public page import, branding presenter, local CSS module, its test, and this WU5b evidence. Existing data fetches, 404 behavior, media API, profile work, and overlays remain unchanged. |
+
+### Remaining Tasks
+
+- [ ] 5.1 remains pending for the unsliced profile/privacy/links and canvas RED coverage.
+- [ ] 5.2 remains pending for owner/admin appearance controls and remaining public surfaces.
+- [ ] 5.3 and all Phase 6 work remain pending.
