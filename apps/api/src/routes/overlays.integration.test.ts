@@ -73,10 +73,28 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
         .insert(users)
         .values({ displayName: 'Overlay owner', email: `overlay-${suffix}@example.com` })
         .returning();
+      const [homeCaptain] = await db
+        .insert(users)
+        .values({ displayName: 'Home captain', email: `home-captain-${suffix}@example.com` })
+        .returning();
+      const [awayCaptain] = await db
+        .insert(users)
+        .values({ displayName: 'Away captain', email: `away-captain-${suffix}@example.com` })
+        .returning();
       const { token: sessionToken } = await createSession(db, owner!.id, 24);
+      const { token: homeSessionToken } = await createSession(db, homeCaptain!.id, 24);
+      const { token: awaySessionToken } = await createSession(db, awayCaptain!.id, 24);
       const authHeaders = {
         'x-csrf-token': 'overlay-csrf-token',
         cookie: `session=${sessionToken}; csrf=overlay-csrf-token`,
+      };
+      const homeHeaders = {
+        'x-csrf-token': 'home-csrf-token',
+        cookie: `session=${homeSessionToken}; csrf=home-csrf-token`,
+      };
+      const awayHeaders = {
+        'x-csrf-token': 'away-csrf-token',
+        cookie: `session=${awaySessionToken}; csrf=away-csrf-token`,
       };
       const [organization] = await db
         .insert(organizations)
@@ -90,7 +108,7 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
           name: 'Overlay Cup',
           visibility: 'public',
           status: 'open',
-          settings: { reportingMode: 'staff_only' },
+          settings: { reportingMode: 'bilateral' },
           publishedAt: new Date(),
         })
         .returning();
@@ -103,7 +121,7 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
         .insert(teams)
         .values({
           organizationId: organization!.id,
-          captainId: owner!.id,
+          captainId: homeCaptain!.id,
           name: 'Home team',
         })
         .returning();
@@ -111,7 +129,7 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
         .insert(teams)
         .values({
           organizationId: organization!.id,
-          captainId: owner!.id,
+          captainId: awayCaptain!.id,
           name: 'Away team',
         })
         .returning();
@@ -181,23 +199,58 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
         const bootstrap = await readSseUntil(reader, 'retry: 3000');
         expect(bootstrap).toContain(': bootstrap');
 
-        const result = await app.inject({
+        const initialReport = await app.inject({
+          method: 'POST',
+          url: `/api/v1/matches/${match!.id}/results`,
+          payload: { winnerTeamId: homeTeam!.id, homeScore: 2, awayScore: 0 },
+          headers: homeHeaders,
+        });
+        expect(initialReport.statusCode).toBe(201);
+        expect(initialReport.json<{ confirmed: boolean; waiting: boolean }>()).toMatchObject({
+          confirmed: false,
+          waiting: true,
+        });
+
+        const correctionReport = await app.inject({
           method: 'POST',
           url: `/api/v1/matches/${match!.id}/results`,
           payload: { winnerTeamId: homeTeam!.id, homeScore: 2, awayScore: 1 },
+          headers: awayHeaders,
+        });
+        expect(correctionReport.statusCode).toBe(201);
+        const disputeId = correctionReport.json<{ disputeId: string }>().disputeId;
+        const openedEvents = await readSseUntil(reader, 'event: dispute.opened');
+        expect(openedEvents).toContain(
+          `data: {"tournamentId":"${tournament!.id}","matchId":"${match!.id}"}`,
+        );
+        expect(openedEvents).toContain('event: overlay.invalidated\ndata: {}\n\n');
+
+        const correction = await app.inject({
+          method: 'POST',
+          url: `/api/v1/disputes/${disputeId}/resolve`,
+          payload: {
+            winnerTeamId: homeTeam!.id,
+            homeScore: 2,
+            awayScore: 1,
+            rationale: 'Correcting the verified score.',
+          },
           headers: authHeaders,
         });
-        expect(result.statusCode).toBe(200);
-        const invalidation = await readSseUntil(reader, 'event: overlay.invalidated');
-        expect(invalidation).toContain('event: result.confirmed');
-        expect(invalidation).toContain('event: overlay.invalidated\ndata: {}\n\n');
+        expect(correction.statusCode).toBe(200);
+        const correctionEvents = await readSseUntil(reader, 'event: dispute.resolved');
+        expect(correctionEvents).toContain(
+          `data: {"tournamentId":"${tournament!.id}","disputeId":"${disputeId}","winnerId":"${homeParticipant!.id}"}`,
+        );
+        expect(correctionEvents).toContain('event: overlay.invalidated\ndata: {}\n\n');
         expect(await readSseUntil(reader, ': heartbeat', 20_000)).toContain(': heartbeat');
 
         const correctedSnapshot = await fetch(snapshotUrl);
-        expect(await correctedSnapshot.json()).toMatchObject({
-          overlay: { champion: { id: homeParticipant!.id, label: 'Home team' } },
+        await expect(correctedSnapshot.json()).resolves.toMatchObject({
+          overlay: {
+            scoreboard: { id: match!.id, homeScore: 2, awayScore: 1 },
+            champion: { id: homeParticipant!.id, label: 'Home team' },
+          },
         });
-
         await db
           .update(tournaments)
           .set({ visibility: 'private' })

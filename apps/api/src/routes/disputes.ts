@@ -145,7 +145,9 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
       'dispute.opened',
       { matchId: body.matchId, tournamentId: outcome.context.tournament.id },
     );
-    void sendDiscordWebhook(`⚠️ A new dispute was opened in **${outcome.context.tournament.name}**.`);
+    void sendDiscordWebhook(
+      `⚠️ A new dispute was opened in **${outcome.context.tournament.name}**.`,
+    );
     return reply.status(201).send({ dispute: outcome.dispute });
   });
 
@@ -363,6 +365,14 @@ export async function registerDisputeRoutes(app: FastifyInstance): Promise<void>
           .update(tournamentParticipants)
           .set({ status: 'winner' })
           .where(eq(tournamentParticipants.id, champion));
+      }
+      if (winnerId) {
+        await transaction
+          .update(matches)
+          .set({
+            result: { winnerId, homeScore: body.homeScore, awayScore: body.awayScore },
+          })
+          .where(eq(matches.id, dispute.matchId));
       }
 
       await transaction.insert(rulings).values({

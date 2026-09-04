@@ -101,7 +101,12 @@ export function buildTournamentPresentation(
     .sort(compareMatches)
     .map((match) => toPublicMatch(match, participantsById))
     .filter((match): match is PublicMatch => match !== null);
-  const scoreboard = activeMatches[0] ?? readyMatches[0] ?? null;
+  const completedMatches = input.matches
+    .filter((match) => match.status === 'finalized')
+    .sort(compareMatches)
+    .map((match) => toPublicMatch(match, participantsById))
+    .filter((match): match is PublicMatch => match !== null);
+  const scoreboard = activeMatches[0] ?? readyMatches[0] ?? completedMatches[0] ?? null;
   const upNext = readyMatches.find((match) => match.id !== scoreboard?.id) ?? null;
   const champion =
     tournament.status === 'finalized'
