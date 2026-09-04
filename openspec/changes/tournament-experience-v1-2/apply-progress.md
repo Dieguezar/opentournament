@@ -313,3 +313,38 @@ Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE i
 ### Remaining Tasks
 
 Tasks 4.3 through 6.3 remain pending. WU4.3 owns the web client refetch/coalescing/stale-response behavior.
+
+## Work Unit 4b: Overlay live client convergence
+
+**Status:** Complete.
+
+### Completed Tasks
+
+- [x] 4.3 RED/GREEN/REFACTOR: Add a route-scoped overlay client controller that coalesces invalidations, refetches authoritative snapshots, rejects disposed-route responses, and closes unavailable streams.
+
+### TDD Cycle Evidence
+
+| Task | Test file | Layer | Safety net | RED | GREEN | Triangulate | Refactor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 4.3 | `apps/web/components/overlay-live.test.tsx` | Client-state unit | N/A (new component/test boundary) | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` exited 1 because `./overlay-live` did not exist. | Same focused command passed 3/3 after the minimum controller/component implementation. | Coalesced burst/reconnect, superseded stale response with abort, and 404 private/unavailable paths exercise distinct state transitions. | Removed the throwing network-error path so EventSource reconnect/open is the retry mechanism; focused test and typecheck remained green. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused test command | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed 1 file and 3 tests. |
+| Web typecheck | `pnpm --filter @opentournament/web typecheck` passed. |
+| Workspace proof | Exact `pnpm test` passed 10 Turbo tasks; web passed 17 files/93 tests and configuration checks passed 31/31. |
+| Runtime harness | N/A: this isolated client state machine uses mocked `fetch`, `EventSource`, and `AbortController`; Phase 6 explicitly owns browser/OBS E2E smoke coverage. The controller tests cover requests, reconnect invalidations, aborts, listener cleanup, and 404 stream closure without launching unrelated services. |
+| Formatting/diff | `pnpm exec prettier --check apps/web/components/overlay-live.tsx apps/web/components/overlay-live.test.tsx` and `git diff --check` passed. |
+| Rollback boundary | Revert `apps/web/components/overlay-live.tsx`, `apps/web/components/overlay-live.test.tsx`, task 4.3, and this evidence. API routes/SSE, overlay pages, and public UI remain untouched. |
+
+### Workload / Delivery Boundary
+
+- Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
+- Current slice: `wu4b-overlay-live-client`, based exactly on `39ea4d1f4b20db7940ceaf2268c50b2df800f35e`.
+- The slice contains only the reusable web client convergence state machine, its tests, and OpenSpec evidence; exact authored line count is recorded with the commit.
+
+### Remaining Tasks
+
+Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transparent overlay pages around this shared live client.
