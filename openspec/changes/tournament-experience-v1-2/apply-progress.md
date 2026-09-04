@@ -361,3 +361,29 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 | --- | --- |
 | Focused test command | `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed: 1 file, 5 tests. |
 | Rollback boundary | Revert the route-keyed wrapper, component rerender coverage, and this correction evidence. Controller behavior, API/SSE contracts, and Phase 5 pages remain unchanged. |
+
+## Work Unit 5a: Profile read contracts
+
+**Status:** Partial slice complete; Tasks 5.1 and 5.2 remain unchecked because their web surfaces and controls are out of scope.
+
+### TDD Cycle Evidence
+
+| Slice | Safety net | RED | GREEN / triangulation | Refactor |
+| --- | --- | --- | --- | --- |
+| Profile reads | Pre-slice `pnpm test:integration` exited nonzero with four failures; the isolated profile contract had no prior assertion. | Fresh PostgreSQL test exited 1 before implementation: unauthenticated `GET /profile/public` returned 404 instead of 401. | Fresh PostgreSQL focused API test passed 1/1 after adding owner settings, publication-gated avatars, and linked/unlinked Smash response coverage. Private, published, revoked, linked, and unlinked paths exercise distinct branches. | Avoided a duplicate media projection when building public DTOs; no behavior changed. |
+
+### Work Unit Evidence
+
+| Evidence | Result |
+| --- | --- |
+| Focused/runtime | Fresh PostgreSQL `opentournament-wu5a-final` passed `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts -t "returns owner settings and published Smash profile links without leaking private participants"` (1/1; 11 skipped). Container stopped without deleting volumes. |
+| API/typecheck | `pnpm --filter @opentournament/api typecheck` passed. |
+| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks plus 31 configuration tests. |
+| Formatting/diff | Prettier check/write completed on touched files; `git diff --check` passed. |
+| Rollback boundary | Revert the profile/tournament read projections, focused integration case, and this WU5a evidence; profile mutations, media lifecycle, overlays, and Phase 5 UI remain intact. |
+
+### Remaining Tasks
+
+- [ ] 5.1 RED remains pending for web branding, profile/privacy links, canvas, and forms.
+- [ ] 5.2 GREEN remains pending for public pages and management controls.
+- [ ] 5.3 GREEN/REFACTOR and all Phase 6 work remain pending.

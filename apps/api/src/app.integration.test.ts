@@ -2321,6 +2321,259 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
   );
 
   it(
+    'returns owner settings and published Smash profile links without leaking private participants',
+    { timeout: INTEGRATION_TEST_TIMEOUT_MS },
+    async () => {
+      process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
+      const {
+        publicMedia,
+        publicPlayerProfiles,
+        teams,
+        tournamentParticipants,
+        tournamentRegistrations,
+        runMigrations,
+      } = await import('@opentournament/database');
+      const { db } = await import('./db.js');
+      const { initServer } = await import('./app.js');
+      await runMigrations(process.env.TEST_DATABASE_URL!);
+      const app = await initServer(false);
+
+      interface Session {
+        session: string;
+        csrf: string;
+      }
+
+      async function registerUser(displayName: string): Promise<Session> {
+        const csrfRes = await app.inject({ method: 'GET', url: '/api/v1/auth/csrf' });
+        const csrfCookie = csrfRes.cookies.find((cookie) => cookie.name === 'csrf')!;
+        const registerRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/auth/register',
+          payload: {
+            displayName,
+            email: `${displayName.toLowerCase().replaceAll(' ', '')}-${Date.now()}@example.com`,
+            password: 'password-123',
+          },
+          headers: { 'x-csrf-token': csrfCookie.value, cookie: `csrf=${csrfCookie.value}` },
+        });
+        expect(registerRes.statusCode).toBe(201);
+        return {
+          session: registerRes.cookies.find((cookie) => cookie.name === 'session')!.value,
+          csrf: csrfCookie.value,
+        };
+      }
+
+      const headersFor = (session: Session) => ({
+        'x-csrf-token': session.csrf,
+        cookie: `session=${session.session}; csrf=${session.csrf}`,
+      });
+
+      try {
+        const owner = await registerUser('Linked Owner');
+        const unlinked = await registerUser('Unlinked Captain');
+        const suffix = crypto.randomUUID().slice(0, 8);
+        const slug = `linked-owner-${suffix}`;
+
+        expect(await app.inject({ method: 'GET', url: '/api/v1/profile/public' })).toMatchObject({
+          statusCode: 401,
+        });
+        expect(
+          await app.inject({
+            method: 'PUT',
+            url: '/api/v1/profile/public',
+            payload: {
+              slug,
+              gamertag: 'LinkedTag',
+              realName: 'Private Name',
+              biography: 'Public biography',
+              isPublished: false,
+              showBiography: true,
+              showAvatar: true,
+            },
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 200 });
+        expect(await app.inject({ method: 'GET', url: `/api/v1/players/${slug}` })).toMatchObject({
+          statusCode: 404,
+        });
+
+        const ownerMe = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/me',
+          headers: headersFor(owner),
+        });
+        const unlinkedMe = await app.inject({
+          method: 'GET',
+          url: '/api/v1/auth/me',
+          headers: headersFor(unlinked),
+        });
+        const ownerId = ownerMe.json<{ user: { id: string } }>().user.id;
+        const unlinkedId = unlinkedMe.json<{ user: { id: string } }>().user.id;
+        const [avatar] = await db
+          .insert(publicMedia)
+          .values({
+            userId: ownerId,
+            kind: 'avatar',
+            objectKey: `private/public-media/${suffix}.png`,
+            mimeType: 'image/png',
+            sizeBytes: 1,
+            width: 48,
+            height: 48,
+            checksum: 'a'.repeat(64),
+          })
+          .returning({ id: publicMedia.id });
+        await db
+          .update(publicPlayerProfiles)
+          .set({ avatarMediaId: avatar!.id })
+          .where(eq(publicPlayerProfiles.userId, ownerId));
+
+        const ownerSettings = await app.inject({
+          method: 'GET',
+          url: '/api/v1/profile/public',
+          headers: headersFor(owner),
+        });
+        expect(ownerSettings.statusCode).toBe(200);
+        expect(ownerSettings.json()).toMatchObject({
+          profile: {
+            slug,
+            realName: 'Private Name',
+            isPublished: false,
+            showAvatar: true,
+            avatar: { id: avatar!.id, url: `/api/v1/media/${avatar!.id}` },
+          },
+        });
+
+        expect(
+          await app.inject({
+            method: 'PUT',
+            url: '/api/v1/profile/public',
+            payload: { gamertag: 'LinkedTag', isPublished: true },
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 200 });
+        expect(
+          (await app.inject({ method: 'GET', url: `/api/v1/players/${slug}` })).json(),
+        ).toMatchObject({
+          player: {
+            slug,
+            gamertag: 'LinkedTag',
+            biography: 'Public biography',
+            avatar: { id: avatar!.id, url: `/api/v1/media/${avatar!.id}` },
+          },
+        });
+
+        const organization = await app.inject({
+          method: 'POST',
+          url: '/api/v1/organizations',
+          payload: { name: 'Profile Links Org', slug: `profile-links-${suffix}` },
+          headers: headersFor(owner),
+        });
+        const organizationId = organization.json<{ organization: { id: string } }>().organization
+          .id;
+        const tournamentRes = await app.inject({
+          method: 'POST',
+          url: '/api/v1/tournaments',
+          payload: {
+            organizationId,
+            slug: `profile-links-cup-${suffix}`,
+            name: 'Profile Links Cup',
+            gameAdapterKey: 'smash_ultimate',
+          },
+          headers: headersFor(owner),
+        });
+        const tournament = tournamentRes.json<{ tournament: { id: string; slug: string } }>()
+          .tournament;
+        const linkedTeam = await app.inject({
+          method: 'POST',
+          url: '/api/v1/teams',
+          payload: { organizationId, name: 'Linked Smash Label', gameAdapterKey: 'smash_ultimate' },
+          headers: headersFor(owner),
+        });
+        const linkedTeamId = linkedTeam.json<{ team: { id: string } }>().team.id;
+        const [unlinkedTeam] = await db
+          .insert(teams)
+          .values({
+            organizationId,
+            name: 'Unlinked Smash Label',
+            captainId: unlinkedId,
+            gameAdapterKey: 'smash_ultimate',
+          })
+          .returning({ id: teams.id });
+        expect(
+          await app.inject({
+            method: 'POST',
+            url: `/api/v1/tournaments/${tournament.id}/publish`,
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 200 });
+        expect(
+          await app.inject({
+            method: 'POST',
+            url: `/api/v1/tournaments/${tournament.id}/registrations`,
+            payload: { teamId: linkedTeamId },
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 201 });
+        const [unlinkedRegistration] = await db
+          .insert(tournamentRegistrations)
+          .values({ tournamentId: tournament.id, teamId: unlinkedTeam!.id, status: 'approved' })
+          .returning({ id: tournamentRegistrations.id });
+        await db.insert(tournamentParticipants).values({
+          tournamentId: tournament.id,
+          registrationId: unlinkedRegistration!.id,
+          teamId: unlinkedTeam!.id,
+          status: 'active',
+        });
+
+        const publicTournament = await app.inject({
+          method: 'GET',
+          url: `/api/v1/tournaments/by-slug/${tournament.slug}`,
+        });
+        expect(publicTournament.statusCode).toBe(200);
+        const publicParticipants = publicTournament.json<{
+          participants: Array<Record<string, unknown>>;
+        }>().participants;
+        expect(publicParticipants).toEqual(
+          expect.arrayContaining([
+            {
+              label: 'Linked Smash Label',
+              profile: expect.objectContaining({
+                slug,
+                gamertag: 'LinkedTag',
+                avatar: expect.objectContaining({ url: `/api/v1/media/${avatar!.id}` }),
+              }),
+            },
+            { label: 'Unlinked Smash Label' },
+          ]),
+        );
+        const unlinkedParticipant = publicParticipants.find(
+          (participant) => participant.label === 'Unlinked Smash Label',
+        );
+        expect(unlinkedParticipant).not.toHaveProperty('profile');
+
+        expect(
+          await app.inject({
+            method: 'PUT',
+            url: '/api/v1/profile/public',
+            payload: { gamertag: 'LinkedTag', isPublished: false },
+            headers: headersFor(owner),
+          }),
+        ).toMatchObject({ statusCode: 200 });
+        const revokedTournament = await app.inject({
+          method: 'GET',
+          url: `/api/v1/tournaments/by-slug/${tournament.slug}`,
+        });
+        const revokedLinked = revokedTournament
+          .json<{ participants: Array<Record<string, unknown>> }>()
+          .participants.find((participant) => participant.label === 'Linked Smash Label');
+        expect(revokedLinked).not.toHaveProperty('profile');
+      } finally {
+        await app.close();
+      }
+    },
+  );
+
+  it(
     'publishes an initial profile avatar and serves it by opaque media ID',
     { timeout: INTEGRATION_TEST_TIMEOUT_MS },
     async () => {

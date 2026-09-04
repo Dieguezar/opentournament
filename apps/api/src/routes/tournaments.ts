@@ -4,6 +4,8 @@ import {
   auditLogs,
   jobs,
   organizations,
+  publicMedia,
+  publicPlayerProfiles,
   teams,
   tournamentStaff,
   tournamentParticipants,
@@ -16,6 +18,7 @@ import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { getTournament, isOrgMember, isTournamentAdmin } from '../services/permissions.js';
 import { emitTournamentEvent } from '../services/realtime.js';
+import { publicProfile } from './profiles.js';
 import { sendDiscordWebhook } from '../services/discord.js';
 import { resolveTournamentCreationRequest } from '../services/tournament-creation.js';
 
@@ -348,9 +351,39 @@ export async function registerTournamentRoutes(app: FastifyInstance): Promise<vo
       .from(tournamentAppearances)
       .where(eq(tournamentAppearances.tournamentId, tournament.id))
       .limit(1);
+    const participants = await db
+      .select({
+        label: teams.name,
+        profile: publicPlayerProfiles,
+        avatar: publicMedia,
+      })
+      .from(tournamentParticipants)
+      .innerJoin(teams, eq(teams.id, tournamentParticipants.teamId))
+      .leftJoin(
+        publicPlayerProfiles,
+        and(
+          eq(teams.gameAdapterKey, 'smash_ultimate'),
+          eq(publicPlayerProfiles.userId, teams.captainId),
+          eq(publicPlayerProfiles.isPublished, true),
+        ),
+      )
+      .leftJoin(
+        publicMedia,
+        and(
+          eq(publicMedia.id, publicPlayerProfiles.avatarMediaId),
+          eq(publicMedia.state, 'active'),
+        ),
+      )
+      .where(eq(tournamentParticipants.tournamentId, tournament.id));
     return reply.send({
       tournament,
       organization: org ?? null,
+      participants: participants.map((participant) => ({
+        label: participant.label,
+        ...(participant.profile
+          ? { profile: publicProfile(participant.profile, participant.avatar) }
+          : {}),
+      })),
       appearance: appearance
         ? {
             logoMediaId: appearance.logoMediaId,

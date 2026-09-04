@@ -1,21 +1,76 @@
 import { and, eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
-import { auditLogs, publicPlayerProfiles } from '@opentournament/database';
+import { auditLogs, publicMedia, publicPlayerProfiles } from '@opentournament/database';
 import { publicProfileSettingsSchema } from '@opentournament/validation';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { revokeProfileAndAvatar } from '../services/profile-media.js';
 
-function publicProfile(profile: typeof publicPlayerProfiles.$inferSelect) {
+function mediaReference(media: typeof publicMedia.$inferSelect | null) {
+  if (!media) return undefined;
+  return {
+    id: media.id,
+    kind: media.kind,
+    url: `/api/v1/media/${media.id}`,
+    width: media.width,
+    height: media.height,
+  };
+}
+
+export function publicProfile(
+  profile: typeof publicPlayerProfiles.$inferSelect,
+  avatar: typeof publicMedia.$inferSelect | null = null,
+) {
+  const avatarReference = profile.showAvatar ? mediaReference(avatar) : undefined;
   return {
     slug: profile.slug,
     gamertag: profile.gamertag,
+    ...(avatarReference ? { avatar: avatarReference } : {}),
     ...(profile.showRealName && profile.realName ? { realName: profile.realName } : {}),
     ...(profile.showBiography && profile.biography ? { biography: profile.biography } : {}),
   };
 }
 
+function ownerProfile(
+  profile: typeof publicPlayerProfiles.$inferSelect,
+  avatar: typeof publicMedia.$inferSelect | null,
+) {
+  return {
+    slug: profile.slug,
+    gamertag: profile.gamertag,
+    realName: profile.realName,
+    biography: profile.biography,
+    isPublished: profile.isPublished,
+    showAvatar: profile.showAvatar,
+    showRealName: profile.showRealName,
+    showBiography: profile.showBiography,
+    avatar: mediaReference(avatar) ?? null,
+  };
+}
+
 export async function registerProfileRoutes(app: FastifyInstance): Promise<void> {
+  app.get('/profile/public', async (request, reply) => {
+    if (!requireAuth(request, reply)) return;
+    const [row] = await db
+      .select({ profile: publicPlayerProfiles, avatar: publicMedia })
+      .from(publicPlayerProfiles)
+      .leftJoin(
+        publicMedia,
+        and(
+          eq(publicMedia.id, publicPlayerProfiles.avatarMediaId),
+          eq(publicMedia.state, 'active'),
+        ),
+      )
+      .where(eq(publicPlayerProfiles.userId, request.user!.id))
+      .limit(1);
+    if (!row) {
+      return reply.status(404).send({
+        error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
+      });
+    }
+    return reply.send({ profile: ownerProfile(row.profile, row.avatar) });
+  });
+
   app.put('/profile/public', async (request, reply) => {
     if (!requireAuth(request, reply)) return;
     const body = publicProfileSettingsSchema.parse(request.body);
@@ -99,16 +154,23 @@ export async function registerProfileRoutes(app: FastifyInstance): Promise<void>
 
   app.get('/players/:slug', async (request, reply) => {
     const { slug } = request.params as { slug: string };
-    const [profile] = await db
-      .select()
+    const [row] = await db
+      .select({ profile: publicPlayerProfiles, avatar: publicMedia })
       .from(publicPlayerProfiles)
+      .leftJoin(
+        publicMedia,
+        and(
+          eq(publicMedia.id, publicPlayerProfiles.avatarMediaId),
+          eq(publicMedia.state, 'active'),
+        ),
+      )
       .where(and(eq(publicPlayerProfiles.slug, slug), eq(publicPlayerProfiles.isPublished, true)))
       .limit(1);
-    if (!profile) {
+    if (!row) {
       return reply.status(404).send({
         error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
       });
     }
-    return reply.send({ player: publicProfile(profile) });
+    return reply.send({ player: publicProfile(row.profile, row.avatar) });
   });
 }
