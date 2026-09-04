@@ -2699,10 +2699,52 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         expect(
           (await app.inject({ method: 'GET', url: `/api/v1/media/${bannerId}` })).statusCode,
         ).toBe(200);
-        const tournamentReplacement = await uploadTournamentMedia('logo');
-        const tournamentReplacementId = tournamentReplacement.json<{ media: { id: string } }>()
+        await pool.query(`
+          create function fail_tournament_media_retry_enqueue() returns trigger as $$
+          begin raise exception 'forced tournament retry enqueue failure'; end;
+          $$ language plpgsql;
+          create trigger fail_tournament_media_retry_enqueue before insert on jobs
+          for each row execute function fail_tournament_media_retry_enqueue();
+        `);
+        const tournamentRetirementFailure = vi
+          .spyOn(retirementStorage, 'deletePrivateObject')
+          .mockRejectedValueOnce(new Error('forced old tournament object deletion failure'));
+        let tournamentReplacement: Awaited<ReturnType<typeof uploadTournamentMedia>>;
+        let publishedMediaId = '';
+        try {
+          tournamentReplacement = await uploadTournamentMedia('logo');
+          const [publishedMedia] = await db
+            .select({
+              id: publicMedia.id,
+              objectKey: publicMedia.objectKey,
+              state: publicMedia.state,
+            })
+            .from(publicMedia)
+            .where(and(eq(publicMedia.tournamentId, tournamentId), eq(publicMedia.state, 'active')))
+            .orderBy(desc(publicMedia.createdAt))
+            .limit(1);
+          expect(publishedMedia).toMatchObject({ state: 'active' });
+          publishedMediaId = publishedMedia!.id;
+          expect(await retirementStorage.objectExists(publishedMedia!.objectKey)).toBe(true);
+          expect(
+            (await app.inject({ method: 'GET', url: `/api/v1/media/${publishedMedia!.id}` }))
+              .statusCode,
+          ).toBe(200);
+        } finally {
+          tournamentRetirementFailure.mockRestore();
+          await pool.query('drop trigger if exists fail_tournament_media_retry_enqueue on jobs');
+          await pool.query('drop function if exists fail_tournament_media_retry_enqueue()');
+        }
+        expect(tournamentReplacement!.statusCode).toBe(201);
+        const tournamentReplacementId = tournamentReplacement!.json<{ media: { id: string } }>()
           .media.id;
-        expect(tournamentReplacement.statusCode).toBe(201);
+        expect(tournamentReplacementId).toBe(publishedMediaId);
+        const [retiredLogo] = await db
+          .select({ objectKey: publicMedia.objectKey, state: publicMedia.state })
+          .from(publicMedia)
+          .where(eq(publicMedia.id, logoId));
+        expect(retiredLogo).toMatchObject({ state: 'retired' });
+        expect(await retirementStorage.objectExists(retiredLogo!.objectKey)).toBe(true);
         expect(
           (await app.inject({ method: 'GET', url: `/api/v1/media/${tournamentReplacementId}` }))
             .statusCode,

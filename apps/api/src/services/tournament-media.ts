@@ -46,9 +46,10 @@ export async function publishTournamentMedia(
     .limit(1);
   const previousMediaId = appearance?.mediaId ?? null;
   const staged = await stagePublicImage(input);
+  let media: { id: string };
 
   try {
-    const [media] = await db.transaction(async (transaction) => {
+    [media] = await db.transaction(async (transaction) => {
       const [created] = await transaction
         .insert(publicMedia)
         .values({
@@ -88,12 +89,12 @@ export async function publishTournamentMedia(
       });
       return [created, attached];
     });
-    await retirePublicMedia(db, previousMediaId);
-    return media!;
   } catch (error) {
     await discardStagedPublicImage(staged).catch(() => undefined);
     throw error;
   }
+  await retirePublicMedia(db, previousMediaId).catch(() => undefined);
+  return media;
 }
 
 export async function removeTournamentMedia(
