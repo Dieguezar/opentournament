@@ -1,14 +1,11 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { isOverlayView, overlayViews, type OverlayViewName } from '../lib/overlay-view';
 import { OverlayLive, type OverlaySnapshot } from './overlay-live';
 
-export const overlayViews = ['scoreboard', 'up-next', 'champion'] as const;
-export type OverlayViewName = (typeof overlayViews)[number];
-
-export function isOverlayView(view: string): view is OverlayViewName {
-  return (overlayViews as readonly string[]).includes(view);
-}
+export { isOverlayView, overlayViews };
+export type { OverlayViewName };
 
 const mediaIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

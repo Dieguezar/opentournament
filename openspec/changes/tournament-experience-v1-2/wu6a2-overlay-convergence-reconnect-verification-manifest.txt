@@ -1,0 +1,35 @@
+WU6a2 real Chromium public OBS overlay convergence and reconnect verification; parent 88a536e4db84b294b06c93574e3bdcb1105da283
+Commands
+
+- pnpm --filter @opentournament/web exec vitest run components/public-obs-overlay.test.tsx components/overlay-live.test.tsx: passed (2 files, 11 tests)
+- pnpm --filter @opentournament/api typecheck: passed
+- pnpm --filter @opentournament/web typecheck: passed
+- pnpm test: passed (10 workspace tasks; web 25 files / 133 tests; API 63 passed / 14 skipped; configuration 31 tests)
+- node scripts/test-e2e-runtime.mjs: passed (2 Chromium scenarios)
+- pnpm --filter @opentournament/web build: passed (Next.js 16.3.2)
+
+## Runtime
+
+- The reused WU6a1 harness verifies locally provisioned immutable PostgreSQL and MinIO images before --pull=never starts ephemeral loopback containers.
+- Cleanup awaits docker stop and checks named-volume inventory equality; no named/user volume is mounted or deleted.
+
+## Acceptance
+
+- Chromium renders scoreboard, up-next, and champion public routes in the fixed transparent no-scroll 1920x1080 shell; reload keeps the authoritative logo.
+- Appearance mutations emit public overlay invalidations; the live controller coalesces them and applies the latest authoritative snapshot.
+- A real browser offline/online transition refreshes the overlay through the production online listener; the latest opaque media ID wins.
+
+## Source SHA-256
+
+- apps/api/src/routes/public-media.ts d8ce1c70105fcdf3bbd2655920f570c8bb8459329f0001d6b6eb7682978c8f11
+- apps/web/app/t/[slug]/overlay/[view]/page.tsx 7ccd84b104b6293ceae06a012a85df0bd22669450be336cf9701129f0a809db7
+- apps/web/components/overlay-live.tsx 44d2b82c73e61bad5b50cd9af9df9e5713c47c9225a1717673ef8c81398af1af
+- apps/web/components/public-obs-overlay.tsx 349a70f113e34ae633b0e5c02f6ae32ea94dcdaeed42fa48a84965ff5eca4043
+- apps/web/lib/overlay-view.ts 9b70eab559c58ac5fb6f1ebb5fffc677affcdf873365162d43fb84e184926e0d
+- tests/e2e/tournament-experience.spec.ts 4405ef9fe3f45ac26f9054f41b4ea43d529f85056fd266d80d8c0a62bf21ec8e
+- scripts/test-e2e-runtime.mjs 543edecaa35b2c51a96fa3513c720679d018591cff123ba605a266d968e9d710
+- openspec/changes/tournament-experience-v1-2/tasks.md 7cc461181d84d646e497014d508b3757503bdf8b49bfe0b53a1c54a9aaffc039
+
+## Self-exclusion
+
+- This manifest does not hash itself or apply-progress.md, so its SHA-256 is reproducible.

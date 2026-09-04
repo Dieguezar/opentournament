@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { db } from '../db.js';
 import { requireAuth } from '../plugins/auth.js';
 import { getTournament, isTournamentAdmin } from '../services/permissions.js';
+import { emitTournamentEvent } from '../services/realtime.js';
 import { MAX_PUBLIC_MEDIA_BYTES } from '../services/public-media.js';
 import {
   publishProfileAvatar,
@@ -89,6 +90,7 @@ export async function registerPublicMediaRoutes(app: FastifyInstance): Promise<v
         slot,
         await readUpload(request),
       );
+      emitTournamentEvent(id, 'tournament.updated', { appearance: true });
       return reply.status(201).send({ media: { id: media.id } });
     } catch (error) {
       return sendMediaError(reply, error);
@@ -107,6 +109,7 @@ export async function registerPublicMediaRoutes(app: FastifyInstance): Promise<v
         .send({ error: { code: 'FORBIDDEN', message: 'A tournament admin role is required' } });
     }
     if (!(await removeTournamentMedia(request.user!.id, tournament, slot))) return notFound(reply);
+    emitTournamentEvent(id, 'tournament.updated', { appearance: true });
     return reply.status(204).send();
   });
 

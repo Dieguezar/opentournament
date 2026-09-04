@@ -183,3 +183,112 @@ test('publishes branded public media, then revokes a public profile safely', asy
     await outsider.api.dispose();
   }
 });
+
+test('public OBS overlay converges after invalidation, reconnect, and reload', async ({ page }) => {
+  const owner = await register('Overlay owner');
+  const suffix = crypto.randomUUID().replaceAll('-', '').slice(0, 10);
+  const image = async (red: number) =>
+    sharp({
+      create: { width: 2, height: 2, channels: 4, background: { r: red, g: 52, b: 86, alpha: 1 } },
+    })
+      .png()
+      .toBuffer();
+
+  try {
+    const organizationResponse = await owner.api.post('/api/v1/organizations', {
+      data: { name: `Overlay ${suffix}`, slug: `overlay-${suffix}` },
+      headers: mutationHeaders(owner),
+    });
+    expect(organizationResponse.status()).toBe(201);
+    const organizationId = ((await organizationResponse.json()) as { organization: { id: string } })
+      .organization.id;
+    const tournamentResponse = await owner.api.post('/api/v1/tournaments', {
+      data: {
+        organizationId,
+        gameAdapterKey: 'generic',
+        name: `Overlay ${suffix}`,
+        slug: `overlay-${suffix}`,
+      },
+      headers: mutationHeaders(owner),
+    });
+    expect(tournamentResponse.status()).toBe(201);
+    const tournament = (await tournamentResponse.json()) as {
+      tournament: { id: string; slug: string };
+    };
+    const initial = await upload(
+      owner,
+      `/api/v1/tournaments/${tournament.tournament.id}/appearance/logo`,
+      await image(18),
+    );
+    expect(initial.status()).toBe(201);
+    const initialId = ((await initial.json()) as { media: { id: string } }).media.id;
+    expect(
+      (
+        await owner.api.post(`/api/v1/tournaments/${tournament.tournament.id}/publish`, {
+          headers: mutationHeaders(owner),
+        })
+      ).status(),
+    ).toBe(200);
+
+    for (const view of ['scoreboard', 'up-next', 'champion']) {
+      await page.goto(`/t/${tournament.tournament.slug}/overlay/${view}`);
+      await expect(page.locator(`[data-overlay-view="${view}"]`)).toBeVisible();
+      await expect
+        .poll(() =>
+          page.evaluate(async (slug) => {
+            const response = await fetch(`/api/v1/tournaments/by-slug/${slug}/overlay`);
+            return response.status;
+          }, tournament.tournament.slug),
+        )
+        .toBe(200);
+      await expect(page.getByRole('heading', { name: `Overlay ${suffix}` })).toBeVisible({
+        timeout: 15_000,
+      });
+    }
+    await page.goto(`/t/${tournament.tournament.slug}/overlay/scoreboard`);
+    const canvas = page.locator('[data-overlay-view="scoreboard"]');
+    await expect(canvas).toHaveCSS('width', '1920px');
+    await expect(canvas).toHaveCSS('height', '1080px');
+    await expect(canvas).toHaveCSS('overflow', 'hidden');
+    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${initialId}`);
+    await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
+    await expect(page.locator('html')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+
+    await page.reload();
+    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${initialId}`);
+    const second = await upload(
+      owner,
+      `/api/v1/tournaments/${tournament.tournament.id}/appearance/logo`,
+      await image(52),
+    );
+    expect(second.status()).toBe(201);
+    const secondId = ((await second.json()) as { media: { id: string } }).media.id;
+    const third = await upload(
+      owner,
+      `/api/v1/tournaments/${tournament.tournament.id}/appearance/logo`,
+      await image(86),
+    );
+    expect(third.status()).toBe(201);
+    const thirdId = ((await third.json()) as { media: { id: string } }).media.id;
+    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${thirdId}`, {
+      timeout: 15_000,
+    });
+    expect(secondId).not.toBe(thirdId);
+
+    await page.context().setOffline(true);
+    const afterDisconnect = await upload(
+      owner,
+      `/api/v1/tournaments/${tournament.tournament.id}/appearance/logo`,
+      await image(120),
+    );
+    expect(afterDisconnect.status()).toBe(201);
+    const reconnectId = ((await afterDisconnect.json()) as { media: { id: string } }).media.id;
+    await page.context().setOffline(false);
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${reconnectId}`, {
+      timeout: 15_000,
+    });
+  } finally {
+    await owner.api.dispose();
+  }
+});

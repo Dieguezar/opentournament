@@ -817,3 +817,25 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert this correction commit to restore the prior WU6a1 runtime/test behavior and root-manifest location.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
 - **Canonical verification manifest:** `openspec/changes/tournament-experience-v1-2/wu6a1-publication-cleanup-verification-manifest.txt`, `sha256:25b565f08c1fe01e95a01a78a2815d6cac4f268cd24b8c238990fc47d63fb5ab`; standalone UTF-8/LF and self-excluding.
+
+## Work Unit WU6a2-overlay-convergence-reconnect-e2e
+
+**Status:** Complete. WU6a1 plus this real-browser overlay slice satisfy task 6.1, which is now checked; tasks 6.2–6.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+- **RED:** `pnpm exec playwright test tests/e2e/tournament-experience.spec.ts --list --grep "public OBS overlay"` found no overlay scenario. The new Chromium scenario then failed against the parent because appearance-media mutation did not emit a public overlay invalidation and the rendered logo stayed stale.
+- **GREEN:** `node scripts/test-e2e-runtime.mjs` passed both isolated Chromium scenarios after tournament media routes emit the existing tournament event, the real live controller binds browser fetch correctly, and online reconnection requests an authoritative refresh.
+- **REFACTOR:** valid overlay views moved to a server-safe shared module; the client presenter re-exports the existing contract. The WU6a2 correction changed its import to the relative style supported by this Vitest boundary after the first workspace-suite run exposed the unresolved alias.
+
+### Work Unit Evidence
+
+- Chromium executes the public `scoreboard`, `up-next`, and `champion` routes, confirms the fixed transparent 1920×1080 no-scroll canvas, validates same-origin opaque logo media, and verifies reload bootstrap.
+- Sequential logo replacement proves SSE invalidation/refetch convergence to the latest authoritative media ID. Existing `OverlayLiveController` tests retain executable coalescing and stale-response protection.
+- A browser offline/online transition while an owner mutation occurs refreshes the rendered public overlay to the authoritative replacement ID; no private endpoint or storage URL is used.
+- Passed: focused overlay tests (2 files / 11 tests); API and web typechecks; exact `pnpm test` (10 workspace tasks; web 25 files / 133 tests; API 63 passed / 14 skipped; configuration 31 tests); isolated runtime (2 Chromium scenarios); Next.js 16.3.2 production build; Prettier check; and `git diff --check`.
+- **Runtime cleanup:** WU6a1's reused harness starts only randomly named `--rm` loopback containers from local immutable images with `--pull=never`, awaits `docker stop`, and confirms named-volume inventory equality. No named/user volume was mounted or deleted.
+- **Rollback boundary:** revert this WU6a2 commit to remove the browser overlay scenario, media invalidation emission, reconnect refresh, and server-safe view module while retaining WU6a1 branding/media E2E coverage.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
+- **Verification manifest:** `wu6a2-overlay-convergence-reconnect-verification-manifest.txt`, `sha256:2625ab8a9abafed70e6f7f8091e5fe8d44322e8044c4b07ad0737b0de053e6b5`; standalone UTF-8/LF and self-excluding.
+- **Next:** WU6b (task 6.2 deployment documentation) is the next bounded Phase 6 slice.

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
-import { isOverlayView, PublicObsOverlay } from '../../../../../components/public-obs-overlay';
+import { PublicObsOverlay } from '../../../../../components/public-obs-overlay';
+import { isOverlayView } from '../../../../../lib/overlay-view';
 
 export const dynamic = 'force-dynamic';
 

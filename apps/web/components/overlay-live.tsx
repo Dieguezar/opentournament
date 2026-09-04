@@ -61,6 +61,10 @@ export class OverlayLiveController {
     this.refresh();
   }
 
+  refreshNow() {
+    this.refresh();
+  }
+
   dispose() {
     if (this.isDisposed) return;
     this.isDisposed = true;
@@ -125,13 +129,19 @@ export function OverlayLive({ slug, view, children }: OverlayLiveProps) {
   useEffect(() => {
     const controller = new OverlayLiveController({
       slug,
-      fetchImpl: fetch,
+      fetchImpl: (input, init) => fetch(input, init),
       eventSourceFactory: (url) => new EventSource(url),
       onSnapshot: (value) => setSnapshot({ routeKey, value }),
       onUnavailable: () => setSnapshot(null),
     });
     controller.start();
-    return () => controller.dispose();
+    if (typeof window === 'undefined') return () => controller.dispose();
+    const refreshOnReconnect = () => controller.refreshNow();
+    window.addEventListener('online', refreshOnReconnect);
+    return () => {
+      window.removeEventListener('online', refreshOnReconnect);
+      controller.dispose();
+    };
   }, [routeKey]);
 
   return snapshot?.routeKey === routeKey ? children(snapshot.value) : null;
