@@ -241,25 +241,28 @@ Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament l
 
 ### TDD Cycle Evidence
 
-| Task | Safety net | RED | GREEN / triangulation | Refactor |
-| --- | --- | --- | --- | --- |
-| 4.1 | New service and focused test had no existing baseline. | `pnpm --filter @opentournament/api test -- src/services/overlay-presentation.test.ts` exited 1 because the test referenced the absent `./overlay-presentation.js` module. | The original focused cases covered public gating, unavailable participants, active-match precedence, Up Next exclusion, and finalized champions. Ordering coverage was corrected below with independently varied scheduled/null, bracket, round, position, and ID assertions. | Prettier completed; focused test, API typecheck, workspace `pnpm test`, and `git diff --check` passed. |
+| Task | Safety net                                             | RED                                                                                                                                                                       | GREEN / triangulation                                                                                                                                                                                                                                                         | Refactor                                                                                               |
+| ---- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 4.1  | New service and focused test had no existing baseline. | `pnpm --filter @opentournament/api test -- src/services/overlay-presentation.test.ts` exited 1 because the test referenced the absent `./overlay-presentation.js` module. | The original focused cases covered public gating, unavailable participants, active-match precedence, Up Next exclusion, and finalized champions. Ordering coverage was corrected below with independently varied scheduled/null, bracket, round, position, and ID assertions. | Prettier completed; focused test, API typecheck, workspace `pnpm test`, and `git diff --check` passed. |
 
 ### Work Unit Evidence
 
-| Evidence | Result |
-| --- | --- |
+| Evidence             | Result                                                                                                                                                                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Focused test command | `pnpm --filter @opentournament/api exec vitest run src/services/overlay-presentation.test.ts` passed: 1 test file and 9 tests. This is the isolated file command; the prior `test --` invocation ran the broader API suite and is not retained as focused proof. |
-| Runtime harness | N/A: this work unit is a pure deterministic projection with no database, HTTP, SSE, process, storage, or external runtime boundary. WU4a2 owns the route/SSE integration harness. |
-| API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |`n| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests. |`n| Formatting/diff | Touched API source/test files passed Prettier check; `git diff --check` passed. |
-| Workspace proof | Exact `pnpm test` passed: 10 Turbo test tasks and 31 configuration tests. |
-| Rollback boundary | Revert `overlay-presentation.ts`, its focused tests, task checkbox, and this WU4a1 evidence. No routes, SSE, realtime, media, web, or database behavior is included. |
+| Runtime harness      | N/A: this work unit is a pure deterministic projection with no database, HTTP, SSE, process, storage, or external runtime boundary. WU4a2 owns the route/SSE integration harness.                                                                                |
+| API typecheck        | `pnpm --filter @opentournament/api typecheck` passed.                                                                                                                                                                                                            |
+| Workspace proof      | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests.                                                                                                                                                                                             |
+| Formatting/diff      | Touched API source/test files passed Prettier check; `git diff --check` passed.                                                                                                                                                                                  |
+| Workspace proof      | Exact `pnpm test` passed: 10 Turbo test tasks and 31 configuration tests.                                                                                                                                                                                        |
+| Rollback boundary    | Revert `overlay-presentation.ts`, its focused tests, task checkbox, and this WU4a1 evidence. No routes, SSE, realtime, media, web, or database behavior is included.                                                                                             |
 
 ### Gatekeeper Correction: Ordering and label proof
 
 - **Coverage correction:** Added isolated assertions for scheduled-time precedence over null schedules, winners/losers/final bracket ranking, round-number ordering, persisted position plus stable-ID ties, and whitespace-only labels mapping to `TBD`.
 - **RED classification:** The assertions were added before any production edit. The isolated run passed 9/9 because `compareMatches` and `trim() || 'TBD'` already implement the required behavior; this is a missing-coverage correction, not a fabricated production-defect RED.
 - **GREEN/refactor:** No production files changed. `pnpm exec prettier --check apps/api/src/services/overlay-presentation.test.ts`, `pnpm --filter @opentournament/api typecheck`, exact `pnpm test` (10 Turbo tasks and 31 configuration checks), and `git diff --check` all passed after the test/evidence update.
+
 ### Workload / Delivery Boundary
 
 - Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
@@ -269,6 +272,7 @@ Tasks 3.1–3.3 remain unchecked until WU3d implements and verifies tournament l
 ### Remaining Tasks
 
 Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE invalidation; WU4b owns client convergence.
+
 ## Work Unit 4a2: Public overlay routes and SSE invalidation
 
 **Status:** Complete.
@@ -279,17 +283,25 @@ Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE i
 
 ### TDD Cycle Evidence
 
-| Task | Safety net | RED | GREEN / triangulation | Refactor |
-| --- | --- | --- | --- | --- |
-| 4.2 | `pnpm --filter @opentournament/api exec vitest run src/services/overlay-presentation.test.ts` passed 9/9 before edits. | Fresh PostgreSQL `pnpm --filter @opentournament/api exec vitest run src/routes/overlays.integration.test.ts` exited 1: expected the absent overlay route to return 200 but received 404. | The same focused command on fresh PostgreSQL passed 1/1: public authoritative bootstrap, no-cache headers, bounded SSE bootstrap/retry, sanitized invalidation, result-correction refetch, and private/unlisted 404 gates. | A final fresh PostgreSQL rerun passed 1/1 after awaiting the snapshot assertion and adding the unlisted gate case. |
+| Task | Safety net                                                                                                             | RED                                                                                                                                                                    | GREEN / triangulation                                                                                                                                                                                                                              | Refactor                                                                                                                                         |
+| ---- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 4.2  | `pnpm --filter @opentournament/api exec vitest run src/services/overlay-presentation.test.ts` passed 9/9 before edits. | Fresh PostgreSQL focused integration exited 1 because a public SSE request using the existing UUID tournament identifier returned 404; the route supported only slugs. | The focused real-PostgreSQL command passed 1/1: compatibility UUID lookup, legacy `result.confirmed` plus payload-free overlay invalidation, public snapshot, private/unlisted 404 no-store gates, bounded retry/bootstrap/heartbeat, and cleanup. | The contract correction uses a repeatable-read snapshot transaction, preserves named SSE events, and adds no-store headers on all overlay paths. |
 
 ### Work Unit Evidence
 
-| Evidence | Result |
-| --- | --- |
-| Focused runtime | A real Fastify listener with bounded `fetch`/SSE reader and `AbortController` cleanup ran against fresh PostgreSQL. After a persisted result correction, the public stream emitted only `overlay.invalidated`, then the authoritative route returned scores 2–1. Containers were stopped without deleting volumes. |
-| API typecheck | `pnpm --filter @opentournament/api typecheck` passed. |`n| Workspace proof | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests. |`n| Formatting/diff | Touched API source/test files passed Prettier check; `git diff --check` passed. |
-| Rollback boundary | Revert the overlay route/registration, public event gate and sanitized SSE option, focused integration coverage, task checkbox, and this WU4a2 evidence. Existing tournament events and WU4a1 presentation projection remain. |
+| Evidence          | Result                                                                                                                                                                                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused runtime   | A real Fastify listener with bounded `fetch`/SSE reader and `AbortController` cleanup ran against fresh PostgreSQL. After a persisted result correction, the public stream emitted only `overlay.invalidated`, then the authoritative route returned scores 2–1. Containers were stopped without deleting volumes. |
+| API typecheck     | `pnpm --filter @opentournament/api typecheck` passed.                                                                                                                                                                                                                                                              |
+| Workspace proof   | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests.                                                                                                                                                                                                                                               |
+| Formatting/diff   | Touched API source/test files passed Prettier check; `git diff --check` passed.                                                                                                                                                                                                                                    |
+| Rollback boundary | Revert the snapshot transaction/no-store policy, compatible event lookup and dual public event delivery, realtime cleanup observability, focused integration assertions, and this correction evidence. The presentation projection, legacy named events, and WU4.3 web scope remain otherwise untouched.           |
+
+### Gatekeeper Correction: Route and SSE contract
+
+- **Snapshot correctness:** The visibility gate and all appearance/participant/match reads now execute in one read-only `REPEATABLE READ` transaction, so a concurrent privacy change cannot combine an old public gate with later private-state reads.
+- **Compatibility and caching:** `/events/public` accepts either the established tournament UUID or slug; it preserves each legacy named event and additionally emits payload-free `overlay.invalidated`. Snapshot, SSE, and private/unlisted 404 responses require revalidation with `no-store`.
+- **Runtime proof:** Fresh PostgreSQL integration used bracket generation and result confirmation endpoints rather than a direct match update or synthetic correction event. The bounded stream reader asserts retry/bootstrap/heartbeat, public refetch convergence, 404 gates, and abort/cancellation listener-plus-interval cleanup.
 
 ### Workload / Delivery Boundary
 

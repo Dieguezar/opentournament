@@ -1,5 +1,5 @@
 import { and, eq, isNull } from 'drizzle-orm';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import {
   brackets,
   matches,
@@ -11,28 +11,40 @@ import {
   tournaments,
 } from '@opentournament/database';
 import { db } from '../db.js';
+
+type OverlayReader = Pick<typeof db, 'select'>;
 import { buildTournamentPresentation } from '../services/overlay-presentation.js';
 
-function notFound(reply: { status: (code: number) => { send: (body: unknown) => unknown } }) {
-  return reply.status(404).send({
-    error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
-  });
+function notFound(reply: FastifyReply) {
+  return reply
+    .header('Cache-Control', 'no-cache, no-store, must-revalidate')
+    .status(404)
+    .send({
+      error: { code: 'NOT_FOUND', message: 'The resource does not exist' },
+    });
 }
 
 async function findTournamentPresentation(slug: string) {
-  const [tournament] = await db
+  return db.transaction((transaction) => readTournamentPresentation(transaction, slug), {
+    isolationLevel: 'repeatable read',
+    accessMode: 'read only',
+  });
+}
+
+async function readTournamentPresentation(database: OverlayReader, slug: string) {
+  const [tournament] = await database
     .select()
     .from(tournaments)
     .where(and(eq(tournaments.slug, slug), isNull(tournaments.deletedAt)))
     .limit(1);
   if (!tournament || tournament.visibility !== 'public' || !tournament.publishedAt) return null;
 
-  const [appearance] = await db
+  const [appearance] = await database
     .select()
     .from(tournamentAppearances)
     .where(eq(tournamentAppearances.tournamentId, tournament.id))
     .limit(1);
-  const participants = await db
+  const participants = await database
     .select({
       id: tournamentParticipants.id,
       label: teams.name,
@@ -41,7 +53,7 @@ async function findTournamentPresentation(slug: string) {
     .from(tournamentParticipants)
     .innerJoin(teams, eq(teams.id, tournamentParticipants.teamId))
     .where(eq(tournamentParticipants.tournamentId, tournament.id));
-  const tournamentMatches = await db
+  const tournamentMatches = await database
     .select({
       id: matches.id,
       status: matches.status,

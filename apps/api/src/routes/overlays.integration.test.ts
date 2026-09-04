@@ -8,21 +8,35 @@ const SSE_READ_TIMEOUT_MS = 5_000;
 async function readSseUntil(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   expected: string,
+  timeoutMs = SSE_READ_TIMEOUT_MS,
 ): Promise<string> {
-  const timeout = new Promise<never>((_, reject) => {
-    setTimeout(
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<never>((_, reject) => {
+    timeout = setTimeout(
       () => reject(new Error(`Timed out waiting for SSE fragment: ${expected}`)),
-      SSE_READ_TIMEOUT_MS,
+      timeoutMs,
     );
   });
-  const decoder = new TextDecoder();
-  let received = '';
-  while (!received.includes(expected)) {
-    const next = await Promise.race([reader.read(), timeout]);
-    if (next.done) throw new Error(`SSE closed before receiving: ${expected}`);
-    received += decoder.decode(next.value, { stream: true });
+  try {
+    const decoder = new TextDecoder();
+    let received = '';
+    while (!received.includes(expected)) {
+      const next = await Promise.race([reader.read(), deadline]);
+      if (next.done) throw new Error(`SSE closed before receiving: ${expected}`);
+      received += decoder.decode(next.value, { stream: true });
+    }
+    return received;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
-  return received;
+}
+
+async function waitFor(assertion: () => boolean): Promise<void> {
+  const deadline = Date.now() + SSE_READ_TIMEOUT_MS;
+  while (!assertion()) {
+    if (Date.now() >= deadline) throw new Error('Timed out waiting for SSE cleanup');
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
 }
 
 describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
@@ -38,20 +52,20 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
     async () => {
       process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
       const {
-        brackets,
         matches,
         organizations,
-        rounds,
         runMigrations,
-        stages,
         teams,
         tournamentParticipants,
+        tournamentStaff,
         tournaments,
         users,
       } = await import('@opentournament/database');
       const { db } = await import('../db.js');
       const { initServer } = await import('../app.js');
-      const { emitTournamentEvent } = await import('../services/realtime.js');
+      const { activeRealtimeHeartbeats, activeRealtimeSubscriptions } =
+        await import('../services/realtime.js');
+      const { createSession } = await import('@opentournament/auth');
 
       await runMigrations(process.env.TEST_DATABASE_URL!);
       const suffix = `${Date.now()}-${crypto.randomUUID()}`;
@@ -59,6 +73,11 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
         .insert(users)
         .values({ displayName: 'Overlay owner', email: `overlay-${suffix}@example.com` })
         .returning();
+      const { token: sessionToken } = await createSession(db, owner!.id, 24);
+      const authHeaders = {
+        'x-csrf-token': 'overlay-csrf-token',
+        cookie: `session=${sessionToken}; csrf=overlay-csrf-token`,
+      };
       const [organization] = await db
         .insert(organizations)
         .values({ name: 'Overlay organization', slug: `overlay-org-${suffix}` })
@@ -70,10 +89,16 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
           slug: `overlay-${suffix}`,
           name: 'Overlay Cup',
           visibility: 'public',
-          status: 'in_progress',
+          status: 'open',
+          settings: { reportingMode: 'staff_only' },
           publishedAt: new Date(),
         })
         .returning();
+      await db.insert(tournamentStaff).values({
+        tournamentId: tournament!.id,
+        userId: owner!.id,
+        role: 'admin',
+      });
       const [homeTeam] = await db
         .insert(teams)
         .values({
@@ -98,32 +123,20 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
         .insert(tournamentParticipants)
         .values({ tournamentId: tournament!.id, teamId: awayTeam!.id })
         .returning();
-      const [stage] = await db
-        .insert(stages)
-        .values({ tournamentId: tournament!.id, format: 'single_elimination', position: 1 })
-        .returning();
-      const [bracket] = await db
-        .insert(brackets)
-        .values({ stageId: stage!.id, type: 'winners' })
-        .returning();
-      const [round] = await db
-        .insert(rounds)
-        .values({ bracketId: bracket!.id, number: 1, name: 'Final' })
-        .returning();
-      const [match] = await db
-        .insert(matches)
-        .values({
-          tournamentId: tournament!.id,
-          roundId: round!.id,
-          engineId: `overlay-${suffix}`,
-          position: 1,
-          status: 'in_progress',
-          homeParticipantId: homeParticipant!.id,
-          awayParticipantId: awayParticipant!.id,
-        })
-        .returning();
-
       const app = await initServer(false);
+      const bracket = await app.inject({
+        method: 'POST',
+        url: `/api/v1/tournaments/${tournament!.id}/bracket/generate`,
+        headers: authHeaders,
+      });
+      expect(bracket.statusCode).toBe(200);
+      const [match] = await db
+        .select()
+        .from(matches)
+        .where(eq(matches.tournamentId, tournament!.id))
+        .limit(1);
+      expect(match).toBeDefined();
+
       const address = await app.listen({ host: '127.0.0.1', port: 0 });
       const controller = new AbortController();
       try {
@@ -141,12 +154,12 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
             },
             scoreboard: {
               id: match!.id,
-              status: 'in_progress',
+              status: 'scheduled',
               scheduledAt: null,
-              stagePosition: 1,
+              stagePosition: 0,
               bracketType: 'winners',
               roundNumber: 1,
-              position: 1,
+              position: 0,
               home: { id: homeParticipant!.id, label: 'Home team' },
               away: { id: awayParticipant!.id, label: 'Away team' },
               homeScore: null,
@@ -158,46 +171,65 @@ describe.skipIf(!hasDb)('public overlay routes (requires PostgreSQL)', () => {
         });
 
         const stream = await fetch(
-          `${address}/api/v1/events/public?tournament=${encodeURIComponent(tournament!.slug)}`,
+          `${address}/api/v1/events/public?tournament=${encodeURIComponent(tournament!.id)}`,
           { signal: controller.signal },
         );
         expect(stream.status).toBe(200);
         expect(stream.headers.get('content-type')).toContain('text/event-stream');
-        expect(stream.headers.get('cache-control')).toContain('no-cache');
+        expect(stream.headers.get('cache-control')).toContain('no-store');
         const reader = stream.body!.getReader();
-        await readSseUntil(reader, 'retry: 3000');
+        const bootstrap = await readSseUntil(reader, 'retry: 3000');
+        expect(bootstrap).toContain(': bootstrap');
 
-        await db
-          .update(matches)
-          .set({ result: { homeScore: 2, awayScore: 1 } })
-          .where(eq(matches.id, match!.id));
-        emitTournamentEvent(tournament!.id, 'result.corrected', { matchId: match!.id });
+        const result = await app.inject({
+          method: 'POST',
+          url: `/api/v1/matches/${match!.id}/results`,
+          payload: { winnerTeamId: homeTeam!.id, homeScore: 2, awayScore: 1 },
+          headers: authHeaders,
+        });
+        expect(result.statusCode).toBe(200);
         const invalidation = await readSseUntil(reader, 'event: overlay.invalidated');
-        expect(invalidation).toContain('data: {}');
-        expect(invalidation).not.toContain(match!.id);
+        expect(invalidation).toContain('event: result.confirmed');
+        expect(invalidation).toContain('event: overlay.invalidated\ndata: {}\n\n');
+        expect(await readSseUntil(reader, ': heartbeat', 20_000)).toContain(': heartbeat');
 
         const correctedSnapshot = await fetch(snapshotUrl);
         expect(await correctedSnapshot.json()).toMatchObject({
-          overlay: { scoreboard: { homeScore: 2, awayScore: 1 } },
+          overlay: { champion: { id: homeParticipant!.id, label: 'Home team' } },
         });
 
         await db
           .update(tournaments)
           .set({ visibility: 'private' })
           .where(eq(tournaments.id, tournament!.id));
-        expect((await fetch(snapshotUrl)).status).toBe(404);
-        expect(
-          (
-            await fetch(
-              `${address}/api/v1/events/public?tournament=${encodeURIComponent(tournament!.slug)}`,
-            )
-          ).status,
-        ).toBe(404);
+        const privateSnapshot = await fetch(snapshotUrl);
+        expect(privateSnapshot.status).toBe(404);
+        expect(privateSnapshot.headers.get('cache-control')).toContain('no-store');
+        const privateEvents = await fetch(
+          `${address}/api/v1/events/public?tournament=${encodeURIComponent(tournament!.slug)}`,
+        );
+        expect(privateEvents.status).toBe(404);
+        expect(privateEvents.headers.get('cache-control')).toContain('no-store');
         await db
           .update(tournaments)
           .set({ visibility: 'unlisted', publishedAt: null })
           .where(eq(tournaments.id, tournament!.id));
-        expect((await fetch(snapshotUrl)).status).toBe(404);
+        const unlistedSnapshot = await fetch(snapshotUrl);
+        expect(unlistedSnapshot.status).toBe(404);
+        expect(unlistedSnapshot.headers.get('cache-control')).toContain('no-store');
+        const unlistedEvents = await fetch(
+          `${address}/api/v1/events/public?tournament=${encodeURIComponent(tournament!.slug)}`,
+        );
+        expect(unlistedEvents.status).toBe(404);
+        expect(unlistedEvents.headers.get('cache-control')).toContain('no-store');
+
+        await reader.cancel();
+        controller.abort();
+        await waitFor(
+          () =>
+            activeRealtimeSubscriptions(`tournament:${tournament!.id}`) === 0 &&
+            activeRealtimeHeartbeats() === 0,
+        );
       } finally {
         controller.abort();
         await app.close();
