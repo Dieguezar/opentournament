@@ -295,7 +295,7 @@ Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE i
 | API typecheck     | `pnpm --filter @opentournament/api typecheck` passed.                                                                                                                                                                                                                                                                                                                                                                                  |
 | Workspace proof   | Exact `pnpm test` passed: 10 Turbo tasks and 31 configuration tests.                                                                                                                                                                                                                                                                                                                                                                   |
 | Formatting/diff   | Touched API source/test files passed Prettier check; `git diff --check` passed.                                                                                                                                                                                                                                                                                                                                                        |
-| Rollback boundary | Revert the snapshot transaction/no-store policy, compatible event lookup and dual public event delivery, realtime cleanup observability, focused integration assertions, and this correction evidence. The presentation projection, legacy named events, and WU4.3 web scope remain otherwise untouched.                                                                                                                               |
+| Rollback boundary | Revert the snapshot transaction/no-store policy, compatible event lookup and dual public event delivery, realtime cleanup observability, adjudicated dispute-score persistence, finalized-match scoreboard fallback, focused integration assertions, and this correction evidence. Legacy named events and WU4.3 web scope remain otherwise untouched.                                                                               |
 
 ### Gatekeeper Correction: Route and SSE contract
 
@@ -308,7 +308,7 @@ Tasks 4.2 through 6.3 remain pending. WU4a2 owns public overlay routes and SSE i
 
 - Delivery strategy: `auto-chain`; chain strategy: `feature-branch-chain`.
 - Current slice: `wu4a2-overlay-routes-sse`, based exactly on `bfab47fc3ec8e0ceccc9ffd030939ee072d57d47`.
-- This commit contains the public HTTP/SSE boundary and runtime proof only; WU4.3 web convergence remains out of scope.
+- The WU4a2 chain contains the public HTTP/SSE boundary, adjudicated dispute-score persistence, finalized-match scoreboard fallback, and runtime proof; WU4.3 web convergence remains out of scope.
 
 ### Remaining Tasks
 
