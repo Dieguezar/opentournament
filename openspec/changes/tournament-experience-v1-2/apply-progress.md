@@ -837,5 +837,5 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Runtime cleanup:** WU6a1's reused harness starts only randomly named `--rm` loopback containers from local immutable images with `--pull=never`, awaits `docker stop`, and confirms named-volume inventory equality. No named/user volume was mounted or deleted.
 - **Rollback boundary:** revert this WU6a2 commit to remove the browser overlay scenario, media invalidation emission, reconnect refresh, and server-safe view module while retaining WU6a1 branding/media E2E coverage.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
-- **Verification manifest:** `wu6a2-overlay-convergence-reconnect-verification-manifest.txt`, `sha256:2625ab8a9abafed70e6f7f8091e5fe8d44322e8044c4b07ad0737b0de053e6b5`; standalone UTF-8/LF and self-excluding.
+- **Verification manifest:** `wu6a2-overlay-convergence-reconnect-verification-manifest.txt`, `sha256:5d40e96c37a4752a70126556718134b53b381f71c9c6fb65cfa55bed25bd4a6d`; standalone UTF-8/LF and self-excluding.
 - **Next:** WU6b (task 6.2 deployment documentation) is the next bounded Phase 6 slice.

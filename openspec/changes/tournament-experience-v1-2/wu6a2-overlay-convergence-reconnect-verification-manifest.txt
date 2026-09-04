@@ -28,7 +28,7 @@ Commands
 - apps/web/lib/overlay-view.ts 9b70eab559c58ac5fb6f1ebb5fffc677affcdf873365162d43fb84e184926e0d
 - tests/e2e/tournament-experience.spec.ts 4405ef9fe3f45ac26f9054f41b4ea43d529f85056fd266d80d8c0a62bf21ec8e
 - scripts/test-e2e-runtime.mjs 543edecaa35b2c51a96fa3513c720679d018591cff123ba605a266d968e9d710
-- openspec/changes/tournament-experience-v1-2/tasks.md 7cc461181d84d646e497014d508b3757503bdf8b49bfe0b53a1c54a9aaffc039
+- openspec/changes/tournament-experience-v1-2/tasks.md a5204f6cad3348cc83cd52426bd49e3649f791ee407041cdf9f48c19713a815e
 
 ## Self-exclusion
 
