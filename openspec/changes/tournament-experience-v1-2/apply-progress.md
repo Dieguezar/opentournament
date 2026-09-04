@@ -566,3 +566,28 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
 - **Runtime blocker:** Docker daemon was unavailable; no containers or volumes were created, stopped, or removed by this attempt.
 - **Final measured owned diff:** 132 changed lines (117 additions, 15 deletions) across six files, within the 400-line cap.
+
+## Work Unit WU5d-profile-recreation-runtime-remediation
+
+**Status:** Runtime remediation complete; tasks 5.1, 5.2, and 5.3 remain unchecked.
+
+### Diagnosis and TDD Evidence
+
+- **Observed response:** the focused PostgreSQL/MinIO regression returned `400` with `{ error: { code: 'PROFILE_SLUG_REQUIRED' } }`. The hard-delete and CAS paths were correct; the test attempted to create a new profile without its required stable slug.
+- **RED:** refined the focused assertion to capture that response contract and retain the intended `200` expectation; the fresh PostgreSQL/MinIO run failed at the recreation PUT exactly as expected.
+- **GREEN:** the recreation request now supplies the previously stable `profileSlug`, then asserts the returned stable slug/gamertag. The exact focused command passed from a fresh PostgreSQL database with MinIO: 1 passed / 11 skipped.
+- **REFACTOR:** kept the production `PROFILE_SLUG_REQUIRED` guard unchanged. This preserves immutable stable slug semantics while allowing the authenticated owner to create a new profile after hard deletion by explicitly selecting the stable slug; the following owner update without a slug remains covered by the existing test.
+
+### Verification Evidence
+
+- `pnpm --filter @opentournament/api exec vitest run src/app.integration.test.ts --testNamePattern "publishes an initial profile avatar and serves it by opaque media ID"` passed against fresh `opentournament-wu5d-remed-pg-green` and MinIO containers.
+- `pnpm --filter @opentournament/api typecheck` passed.
+- Exact `pnpm test` passed: API 63 passed / 14 integration-dependent skips; web 108 tests; configuration 31 passed.
+- Prettier check and `git diff --check` passed.
+
+### Work Unit Evidence
+
+- **Rollback boundary:** revert this evidence correction commit to restore the invalid slugless recreation fixture; production hard-delete, CAS, privacy, and client failure behavior are unchanged.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, and all three existing stashes remain untouched.
+- **Container cleanup:** stopped `opentournament-wu5d-remed-pg`, `opentournament-wu5d-remed-pg-green`, and `opentournament-wu5d-remed-minio` without removing volumes.
+- **Final measured owned diff:** 50 changed lines (40 additions, 10 deletions) across two files, within the 400-line cap.

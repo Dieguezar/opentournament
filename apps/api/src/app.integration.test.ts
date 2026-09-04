@@ -2895,16 +2895,21 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
         ).toMatchObject({
           statusCode: 404,
         });
-        expect(
-          (
-            await app.inject({
-              method: 'PUT',
-              url: '/api/v1/profile/public',
-              payload: { gamertag: 'Media', isPublished: true, showAvatar: false },
-              headers,
-            })
-          ).statusCode,
-        ).toBe(200);
+        const recreatedProfile = await app.inject({
+          method: 'PUT',
+          url: '/api/v1/profile/public',
+          payload: {
+            slug: profileSlug,
+            gamertag: 'Media',
+            isPublished: true,
+            showAvatar: false,
+          },
+          headers,
+        });
+        expect(recreatedProfile.statusCode).toBe(200);
+        expect(recreatedProfile.json()).toMatchObject({
+          profile: { slug: profileSlug, gamertag: 'Media' },
+        });
         expect(await app.inject({ method: 'GET', url: `/api/v1/media/${mediaId}` })).toMatchObject({
           statusCode: 404,
         });
