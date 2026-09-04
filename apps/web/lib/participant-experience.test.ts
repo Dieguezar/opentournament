@@ -34,6 +34,7 @@ describe('participant experience', () => {
       accountLabel: 'Organizador',
       links: [
         { href: '/dashboard', label: 'Torneos' },
+        { href: '/profile', label: 'Perfil público' },
         { href: '/tournaments/new', label: 'Nuevo torneo' },
         { href: '/teams/new', label: 'Nuevo participante' },
       ],
@@ -87,6 +88,7 @@ describe('participant experience', () => {
       accountLabel: 'Organizer',
       links: [
         { href: '/dashboard', label: 'Tournaments' },
+        { href: '/profile', label: 'Public profile' },
         { href: '/tournaments/new', label: 'New tournament' },
         { href: '/teams/new', label: 'New participant' },
       ],

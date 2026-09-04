@@ -479,3 +479,23 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert the correction commit to restore the immediately preceding WU5c player-page implementation; no migration or persistent-data change was introduced.
 - **Protected state:** `.gitignore` and `artifacts/a11y-audit/` remain unstaged/unmodified by this work; all three pre-existing stashes remain, including `e269057a0ab90f7efb533f5195e15d0ec3dfa96a`.
 - **Final owned diff:** `268` changed lines, within the 400-line correction cap.
+
+## Work Unit WU5d: Owner profile controls
+
+**Status:** Partial Phase 5 slice complete; tasks 5.1, 5.2, and 5.3 remain unchecked.
+
+### TDD Cycle Evidence
+
+- **Safety net:** `pnpm --filter @opentournament/web test -- participant-experience.test.ts` passed 20 files / 102 tests before edits.
+- **RED:** the new settings-contract module was absent and navigation expectations failed (2 failures).
+- **GREEN:** focused web tests passed 21 files / 105 tests: projection, correction/hide payloads, independent flags, delete confirmation, unauthorized/error, no-success state, and navigation.
+- **REFACTOR:** converged mutations by reloading owner GET settings after PUT; success follows that refresh only.
+
+### Work Unit Evidence
+
+- Focused tests and web typecheck passed; exact `pnpm test` and Next production build passed.
+- Runtime wiring: `/profile` is dynamic and uses the shared JSON API client only; no FormData/upload path was added.
+- Prettier check and `git diff --check` passed for source/test files.
+- Rollback: revert this commit to remove the `/profile` route, owner controls, and navigation link without changing API/data.
+- Protected state: `.gitignore`, `artifacts/a11y-audit/`, and all three stashes (including `e269057a0ab90f7efb533f5195e15d0ec3dfa96a`) remain untouched.
+- Final owned diff: `394` changed lines, within the 400-line cap.

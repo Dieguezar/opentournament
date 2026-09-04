@@ -49,6 +49,7 @@ export function getHeaderPresentation(
     accountLabel: auth.user.displayName,
     links: [
       { href: '/dashboard', label: navigation.tournaments },
+      { href: '/profile', label: navigation.publicProfile },
       { href: '/tournaments/new', label: navigation.newTournament },
       { href: '/teams/new', label: navigation.newParticipant },
     ],
