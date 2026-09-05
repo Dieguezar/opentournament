@@ -183,6 +183,37 @@ describe('OverlayLiveController', () => {
     expect(source.closed).toBe(true);
     expect([...source.listeners.values()].every((listeners) => listeners.size === 0)).toBe(true);
   });
+
+  it('reopens SSE and refetches authoritative state after an SSE error', async () => {
+    vi.useFakeTimers();
+    const { fetchImpl, pending } = deferredFetch();
+    const firstSource = new MockEventSource();
+    const reconnectedSource = new MockEventSource();
+    const sources = [firstSource, reconnectedSource];
+    const snapshots: string[] = [];
+    const controller = new OverlayLiveController({
+      slug: 'spring-major',
+      fetchImpl,
+      eventSourceFactory: () => sources.shift()!,
+      onSnapshot: (snapshot) => snapshots.push(snapshot.tournament.name),
+      onUnavailable: vi.fn(),
+    });
+
+    controller.start();
+    pending[0]?.resolve(overlay('before-restart'));
+    await flush();
+    firstSource.emit('error');
+    await vi.advanceTimersByTimeAsync(3_000);
+
+    expect(firstSource.closed).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    pending[1]?.resolve(overlay('after-restart'));
+    await flush();
+
+    expect(snapshots).toEqual(['before-restart', 'after-restart']);
+    controller.dispose();
+    vi.useRealTimers();
+  });
 });
 
 describe('OverlayLive route supersession', () => {

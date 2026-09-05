@@ -874,3 +874,25 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert this documentation/evidence commit to remove the WU6c smoke record, manifest, and task completion; production overlay behavior remains unchanged.
 - **Protected state:** pre-existing `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
 - **Verification manifest:** `wu6c-obs-cef-smoke-verification-manifest.txt`; digest is recorded there and the manifest excludes itself.
+
+## Work Unit WU6c-eventsource-reconnect-correction
+
+**Status:** Corrective successor complete. Task 6.3 remains checked after replacing the insufficient reconnect claim with independent OBS/CEF proof.
+
+### TDD Cycle Evidence
+
+- **Safety net:** `pnpm --filter @opentournament/web exec vitest run components/overlay-live.test.tsx` passed 1 file / 5 tests before the correction.
+- **RED:** the new focused reconnect test failed: after `error` and three seconds, the original `OverlayLiveController` neither closed the old source nor created a second EventSource.
+- **GREEN:** the focused command passed 1 file / 6 tests after the controller closed an errored source and opened a replacement after 3 seconds; its startup refresh remains coalesced and existing stale-response/route-supersession tests continue to pass.
+- **REFACTOR:** one controller-owned timer and error listener preserve the existing authoritative refresh, invalidation, abort, coalescing, and stale-sequence boundaries; no parallel transport or test-only path was added.
+
+### Work Unit Evidence
+
+- **Production defect and fix:** real OBS/CEF did not reopen the native EventSource after the prior task API restart, so browser-native retry could not be relied on. `OverlayLiveController` now explicitly replaces an errored EventSource after 3 seconds and fetches the authoritative overlay during replacement startup.
+- **Independent runtime order:** baseline screenshot `acd2b36021b1dee2e832b18d5086fd5ade7389d50da608d4d1de1bb55b5cb85b`; only task API stop `2026-09-05T03:52:57.7427618Z`; confirmed port 57741 down `03:53:00.0456275Z`; same-port API restart `03:53:11.8637269Z`. With no Browser Source setting change, OBS reload, or `refreshnocache`, CEF requested both `/overlay` and a new `/events/public` connection about 2.4 seconds after API listening, then performed the open-triggered authoritative refresh. A distinct authorized logo mutation at `03:53:31.4818372Z` produced live source screenshot `f844486368dcb6edc495fa5cf8743cf4afa00b81f089a7ec6cfa3d980e7d6d69` at `03:53:36.1372234Z` (1920×1080; 2,060,435 transparent / 4,961 opaque pixels).
+- **Separate manual reload:** only afterward, `PressInputPropertiesButton(refreshnocache)` ran at `03:53:57.6825836Z`; screenshot at `03:54:10.1025085Z` was the current authoritative `f844486368dcb6edc495fa5cf8743cf4afa00b81f089a7ec6cfa3d980e7d6d69`. It is deliberately not used as reconnect evidence.
+- **Build/view proof:** OBS 32.2.2, obs-websocket 5.7.4, obs-browser 2.26.9, CEF 127.0.6533.120. The actual Browser Source queried as `browser_source`, 1920×1080 transparent/no-scroll and rendered `scoreboard` `f844486368dcb6edc495fa5cf8743cf4afa00b81f089a7ec6cfa3d980e7d6d69`, `up-next` `7d8fe2186db9a49cf418ba10055456252a1007ec323f924e81d8402f5529699d`, and `champion` `06dcca930871206aa985969b70b2cc44c8fb42550bd082f6019caa77cef8e395`.
+- **Passed checks:** focused web test (6 tests); web and API typechecks; exact `pnpm test` (10 Turbo tasks, web 25 files / 134 tests; API 63 passed / 14 skipped; configuration 31 tests); Next.js 16.3.2 production build; real OBS rerun. No synthetic RED/GREEN was used for the runtime-only steps.
+- **Rollback boundary:** revert the focused correction commit to restore browser-native EventSource-only recovery and the superseded smoke wording; no API, database, storage, or OBS profile product state is committed.
+- **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, all three pre-existing stashes, the user-owned main-checkout Next runtime, and named/user Docker volumes were not touched.
+- **Verification manifest:** `wu6c-obs-cef-smoke-verification-manifest.txt`, self-excluding immutable LF blob manifest; digest recorded in the correction commit.

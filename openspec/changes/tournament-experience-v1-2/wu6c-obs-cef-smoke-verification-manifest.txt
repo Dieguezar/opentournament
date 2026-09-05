@@ -1,7 +1,9 @@
-# WU6c OBS/CEF Smoke Verification Manifest
+# WU6c OBS/CEF Reconnect Correction Verification Manifest
 
 Canonical inputs use immutable LF Git blob IDs. This manifest deliberately excludes itself.
 
-0cc5757956c444deb2f8e66eede06a1cf773d282  docs/DEPLOYMENT.md
+5456744b6275a91abfe24657d60271676f6d7f3e  apps/web/components/overlay-live.tsx
+045bc6d4b74f94ecf6e47d7cfe86822667cb28b3  apps/web/components/overlay-live.test.tsx
+f0c4fb0242dde7a7e6a95aedc5c46f8c3b2b99c0  docs/DEPLOYMENT.md
 5f9a49f648f4ae8d2a80783936ce0a2eec191e29  openspec/changes/tournament-experience-v1-2/tasks.md
-2a97530f3fad9666c19bdf5f170c8595ab8d581b  openspec/changes/tournament-experience-v1-2/apply-progress.md
+b66d8f23c43cb262234f841a4a596f2df5d7f827  openspec/changes/tournament-experience-v1-2/apply-progress.md

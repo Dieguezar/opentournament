@@ -43,6 +43,7 @@ export class OverlayLiveController {
 
   private connection: OverlayEventSource | null = null;
   private currentRequest: AbortController | null = null;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private isDirty = false;
   private isDisposed = false;
   private isFetching = false;
@@ -57,6 +58,7 @@ export class OverlayLiveController {
       `/api/v1/events/public?tournament=${encodeURIComponent(this.options.slug)}`,
     );
     this.connection.addEventListener('open', this.refresh);
+    this.connection.addEventListener('error', this.reconnect);
     this.connection.addEventListener('overlay.invalidated', this.refresh);
     this.refresh();
   }
@@ -68,6 +70,8 @@ export class OverlayLiveController {
   dispose() {
     if (this.isDisposed) return;
     this.isDisposed = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
     this.currentRequest?.abort();
     this.currentRequest = null;
     this.closeConnection();
@@ -111,9 +115,19 @@ export class OverlayLiveController {
     this.isFetching = false;
   }
 
+  private readonly reconnect = () => {
+    if (this.isDisposed || this.reconnectTimer) return;
+    this.closeConnection();
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.start();
+    }, 3_000);
+  };
+
   private closeConnection() {
     if (!this.connection) return;
     this.connection.removeEventListener('open', this.refresh);
+    this.connection.removeEventListener('error', this.reconnect);
     this.connection.removeEventListener('overlay.invalidated', this.refresh);
     this.connection.close();
     this.connection = null;
