@@ -4,10 +4,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ApiClientError } from '../lib/api';
 import { getDictionary } from '../lib/i18n';
 import { AvatarManagementControls } from './public-profile-settings';
+import avatarStyles from './public-player-profile.module.css';
 import {
   clearOwnerAvatar,
   deleteOwnerProfile,
   loadOwnerProfile,
+  loadProfileEditor,
   saveOwnerProfile,
   type OwnerProfileClient,
   type PublicProfileForm,
@@ -40,6 +42,40 @@ function clientFor(responses: Array<unknown>): { client: OwnerProfileClient; cal
 }
 
 describe('PublicProfileSettings workflow', () => {
+  it('opens an unpublished creation form only when the owner profile is missing', async () => {
+    const missing = clientFor([new ApiClientError(404, 'NOT_FOUND', 'Missing', 'Missing')]);
+    await expect(loadProfileEditor(missing.client)).resolves.toMatchObject({
+      isNew: true,
+      slug: '',
+      gamertag: '',
+      avatar: null,
+      isPublished: false,
+      showAvatar: false,
+      showRealName: false,
+      showBiography: false,
+    });
+    for (const status of [401, 500]) {
+      const failed = clientFor([new ApiClientError(status, 'UNKNOWN', 'Failed', 'Failed')]);
+      await expect(loadProfileEditor(failed.client)).rejects.toMatchObject({ status });
+    }
+  });
+
+  it('sends the chosen slug on creation and reloads saved settings', async () => {
+    const saved = clientFor([undefined, { profile: { ...profile, isPublished: false } }]);
+    await expect(
+      saveOwnerProfile(saved.client, {
+        ...profile,
+        isNew: true,
+        isPublished: false,
+      }),
+    ).resolves.toMatchObject({ slug: profile.slug, isPublished: false });
+    expect(JSON.parse(saved.calls[0]!.slice('PUT /profile/public '.length))).toMatchObject({
+      slug: profile.slug,
+      isPublished: false,
+    });
+    expect(saved.calls[0]).not.toContain('isNew');
+  });
+
   it('loads the owner GET projection into editable controls', async () => {
     const { client, calls } = clientFor([
       { profile: { ...profile, realName: null, biography: null } },
@@ -180,6 +216,9 @@ it('renders an announced disabled upload state and only a same-origin avatar pre
   expect(markup).toContain('Uploading avatar…');
   expect(markup).toContain('disabled=""');
   expect(markup).toContain('src="/api/v1/media/media-id"');
+  expect(markup).toContain(`class="${avatarStyles.avatar}"`);
+  expect(markup).toContain('width="80"');
+  expect(markup).toContain('height="80"');
   expect(markup).not.toContain('storage.example');
   expect(markup).not.toContain('object-key');
 });

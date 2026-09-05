@@ -235,6 +235,12 @@ const es = {
     intro: 'Corregí tu identidad pública y elegí qué información querés publicar.',
     loading: 'Cargando tu perfil público…',
     slug: 'URL pública',
+    createIntro:
+      'Crea tu perfil. Permanecerá privado hasta que actives Publicar perfil y guardes los cambios.',
+    slugHelp:
+      'Elige de 2 a 40 caracteres: minúsculas, números y guiones entre palabras. Esta dirección no podrá cambiarse después de guardar.',
+    saveBeforeAvatar: 'Guarda primero el perfil para poder subir un avatar.',
+    viewPublic: 'Ver perfil público',
     gamertag: 'Gamertag',
     realName: 'Nombre real',
     biography: 'Biografía',
@@ -1006,6 +1012,12 @@ const en: Dictionary = {
     intro: 'Correct your public identity and choose what information to publish.',
     loading: 'Loading your public profile…',
     slug: 'Public URL',
+    createIntro:
+      'Create your profile. It stays private until you enable Publish profile and save your changes.',
+    slugHelp:
+      'Choose 2–40 characters: lowercase letters, numbers and hyphens between words. This address cannot change after saving.',
+    saveBeforeAvatar: 'Save your profile before uploading an avatar.',
+    viewPublic: 'View public profile',
     gamertag: 'Gamertag',
     realName: 'Real name',
     biography: 'Biography',

@@ -13,6 +13,7 @@ export interface OwnerPublicProfile {
 }
 
 export interface PublicProfileForm {
+  isNew?: boolean;
   slug: OwnerPublicProfile['slug'];
   gamertag: OwnerPublicProfile['gamertag'];
   realName: string;
@@ -32,6 +33,7 @@ export function projectOwnerProfile(profile: OwnerPublicProfile): PublicProfileF
 
 function buildProfilePayload(form: PublicProfileForm, isPublished = form.isPublished) {
   return {
+    ...(form.isNew ? { slug: form.slug } : {}),
     gamertag: form.gamertag,
     realName: form.realName || null,
     biography: form.biography || null,
@@ -45,6 +47,28 @@ function buildProfilePayload(form: PublicProfileForm, isPublished = form.isPubli
 export async function loadOwnerProfile(client: OwnerProfileClient): Promise<PublicProfileForm> {
   const response = await client<{ profile: OwnerPublicProfile }>('/profile/public');
   return projectOwnerProfile(response.profile);
+}
+
+export async function loadProfileEditor(client: OwnerProfileClient): Promise<PublicProfileForm> {
+  try {
+    return await loadOwnerProfile(client);
+  } catch (error) {
+    if (!(error instanceof ApiClientError) || error.status !== 404 || error.code !== 'NOT_FOUND') {
+      throw error;
+    }
+    return {
+      isNew: true,
+      slug: '',
+      gamertag: '',
+      realName: '',
+      biography: '',
+      avatar: null,
+      isPublished: false,
+      showAvatar: false,
+      showRealName: false,
+      showBiography: false,
+    };
+  }
 }
 
 export async function saveOwnerProfile(

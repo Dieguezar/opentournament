@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 
 import { useI18n } from './i18n-provider';
+import avatarStyles from './public-player-profile.module.css';
 import { ApiClientError, apiClient } from '../lib/api';
 import {
-  loadOwnerProfile,
+  loadProfileEditor,
   saveOwnerProfile,
   deleteOwnerProfile,
   clearOwnerAvatar,
@@ -41,7 +42,15 @@ export function AvatarManagementControls({
   return (
     <section aria-labelledby="avatar-title">
       <h2 id="avatar-title">{copy.avatar}</h2>
-      {avatar && <img alt={copy.avatarPreview} src={`/api/v1/media/${avatar.id}`} />}
+      {avatar && (
+        <img
+          alt={copy.avatarPreview}
+          className={avatarStyles.avatar}
+          width={80}
+          height={80}
+          src={`/api/v1/media/${avatar.id}`}
+        />
+      )}
       <label htmlFor="avatar-file">{copy.avatarFile}</label>
       <input
         accept="image/png,image/jpeg,image/webp"
@@ -86,7 +95,8 @@ export function PublicProfileSettings() {
   const [deleteConfirmed, setDeleteConfirmed] = useState(false);
 
   const loadProfile = useCallback(async () => {
-    setForm(await loadOwnerProfile(apiClient));
+    setForm(await loadProfileEditor(apiClient));
+    setError(null);
     setLoadState('ready');
   }, []);
 
@@ -228,9 +238,35 @@ export function PublicProfileSettings() {
           void save(false);
         }}
       >
-        <p>
-          <strong>{copy.slug}:</strong> /players/{form.slug}
-        </p>
+        {form.isNew ? (
+          <>
+            <p>{copy.createIntro}</p>
+            <label htmlFor="profile-slug">{copy.slug}</label>
+            <input
+              id="profile-slug"
+              required
+              minLength={2}
+              maxLength={40}
+              pattern="[a-z0-9]+(-[a-z0-9]+)*"
+              value={form.slug}
+              aria-describedby="profile-slug-help"
+              onChange={(event) => setForm({ ...form, slug: event.target.value })}
+            />
+            <p id="profile-slug-help" className="muted">
+              {copy.slugHelp}
+            </p>
+          </>
+        ) : (
+          <p>
+            <strong>{copy.slug}:</strong> /players/{form.slug}
+            {form.isPublished && (
+              <>
+                {' '}
+                · <Link href={`/players/${form.slug}`}>{copy.viewPublic}</Link>
+              </>
+            )}
+          </p>
+        )}
         <label htmlFor="gamertag">{copy.gamertag}</label>
         <input
           id="gamertag"
@@ -253,13 +289,17 @@ export function PublicProfileSettings() {
           value={form.biography}
           onChange={(event) => setText('biography', event.target.value)}
         />
-        <AvatarManagementControls
-          avatar={form.avatar}
-          busy={busy === 'upload' || busy === 'clear' ? busy : null}
-          copy={copy}
-          onClear={() => void clearAvatar()}
-          onUpload={(file) => void upload(file)}
-        />
+        {form.isNew ? (
+          <p className="muted">{copy.saveBeforeAvatar}</p>
+        ) : (
+          <AvatarManagementControls
+            avatar={form.avatar}
+            busy={busy === 'upload' || busy === 'clear' ? busy : null}
+            copy={copy}
+            onClear={() => void clearAvatar()}
+            onUpload={(file) => void upload(file)}
+          />
+        )}
         <fieldset>
           <legend>{copy.privacy}</legend>
           {(
@@ -293,31 +333,33 @@ export function PublicProfileSettings() {
           <button
             type="button"
             className="button-secondary"
-            disabled={busy !== null || !form.isPublished}
+            disabled={busy !== null || form.isNew || !form.isPublished}
             onClick={() => void save(true)}
           >
             {busy === 'hide' ? copy.hiding : copy.hide}
           </button>
         </div>
       </form>
-      <section className="card">
-        <label>
-          <input
-            type="checkbox"
-            checked={deleteConfirmed}
-            onChange={(event) => setDeleteConfirmed(event.target.checked)}
-          />{' '}
-          {copy.deleteConfirm}
-        </label>
-        <button
-          type="button"
-          className="button-danger"
-          disabled={busy !== null || !deleteConfirmed}
-          onClick={() => void remove()}
-        >
-          {busy === 'delete' ? copy.deleting : copy.delete}
-        </button>
-      </section>
+      {!form.isNew && (
+        <section className="card">
+          <label>
+            <input
+              type="checkbox"
+              checked={deleteConfirmed}
+              onChange={(event) => setDeleteConfirmed(event.target.checked)}
+            />{' '}
+            {copy.deleteConfirm}
+          </label>
+          <button
+            type="button"
+            className="button-danger"
+            disabled={busy !== null || !deleteConfirmed}
+            onClick={() => void remove()}
+          >
+            {busy === 'delete' ? copy.deleting : copy.delete}
+          </button>
+        </section>
+      )}
     </main>
   );
 }
