@@ -5,6 +5,7 @@ import {
   buildTestDatabaseUrl,
   createContainerName,
   getPnpmInvocation,
+  getIntegrationTestArgs,
   getPublishedPostgresPort,
 } from '../../scripts/test-integration.mjs';
 
@@ -14,6 +15,15 @@ const rootPackage = JSON.parse(
 
 test('exposes a single integration-test command', () => {
   assert.equal(rootPackage.scripts['test:integration'], 'node scripts/test-integration.mjs');
+});
+
+test('serializes API files sharing the integration database', () => {
+  assert.deepEqual(getIntegrationTestArgs(), [
+    '--filter',
+    '@opentournament/api',
+    'test',
+    '--no-file-parallelism',
+  ]);
 });
 
 test('parses Docker IPv4 and IPv6 published-port output', () => {

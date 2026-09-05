@@ -2595,7 +2595,11 @@ describe.skipIf(!hasDb)('API integration (requires PostgreSQL)', () => {
             .select({ state: publicMedia.state })
             .from(publicMedia)
             .where(eq(publicMedia.id, avatar!.id)),
-        ).resolves.toEqual([{ state: 'retired' }]);
+        ).resolves.toEqual([{ state: expect.stringMatching(/^(retired|deleted)$/) }]);
+        // Retirement may finish synchronously when object storage is available.
+        expect(
+          await app.inject({ method: 'GET', url: `/api/v1/media/${avatar!.id}` }),
+        ).toMatchObject({ statusCode: 404 });
       } finally {
         await app.close();
       }

@@ -89,10 +89,15 @@ async function waitForPostgres(containerName) {
 
 async function runApiIntegrationTests(testDatabaseUrl) {
   const pnpm = getPnpmInvocation();
-  return runInherited(pnpm.command, [...pnpm.args, '--filter', '@opentournament/api', 'test'], {
+  return runInherited(pnpm.command, [...pnpm.args, ...getIntegrationTestArgs()], {
     ...process.env,
     TEST_DATABASE_URL: testDatabaseUrl,
   });
+}
+
+export function getIntegrationTestArgs() {
+  // Integration files migrate and mutate the same isolated database.
+  return ['--filter', '@opentournament/api', 'test', '--no-file-parallelism'];
 }
 
 export async function main() {
