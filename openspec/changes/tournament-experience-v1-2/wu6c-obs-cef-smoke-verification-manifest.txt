@@ -4,6 +4,7 @@ Canonical inputs use immutable LF Git blob IDs. This manifest deliberately exclu
 
 5456744b6275a91abfe24657d60271676f6d7f3e  apps/web/components/overlay-live.tsx
 045bc6d4b74f94ecf6e47d7cfe86822667cb28b3  apps/web/components/overlay-live.test.tsx
-f0c4fb0242dde7a7e6a95aedc5c46f8c3b2b99c0  docs/DEPLOYMENT.md
+2846f2e953cac0a87afa9c9e52ea071989a5f7f8  docs/DEPLOYMENT.md
 5f9a49f648f4ae8d2a80783936ce0a2eec191e29  openspec/changes/tournament-experience-v1-2/tasks.md
-b66d8f23c43cb262234f841a4a596f2df5d7f827  openspec/changes/tournament-experience-v1-2/apply-progress.md
+ca40558e307cbb980fa19b4747920a5b9b2ce6eb  openspec/changes/tournament-experience-v1-2/apply-progress.md
+fe9ad5ebef341deb6288ceab939333d955f0b9ad  openspec/changes/tournament-experience-v1-2/wu6c-obs-cef-reconnect-evidence.md

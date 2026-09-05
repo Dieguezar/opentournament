@@ -896,3 +896,10 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - **Rollback boundary:** revert the focused correction commit to restore browser-native EventSource-only recovery and the superseded smoke wording; no API, database, storage, or OBS profile product state is committed.
 - **Protected state:** `.gitignore`, `artifacts/a11y-audit/`, all three pre-existing stashes, the user-owned main-checkout Next runtime, and named/user Docker volumes were not touched.
 - **Verification manifest:** `wu6c-obs-cef-smoke-verification-manifest.txt`, self-excluding immutable LF blob manifest; digest recorded in the correction commit.
+
+## WU6c-retained-reconnect-evidence-remediation
+
+**Status:** Complete focused evidence remediation; task 6.3 remains checked.
+
+- Real OBS/CEF scoreboard baseline, same-port API stop/restart, automatic `/events/public` reopen, authoritative refresh, authorized mutation, and later `refreshnocache` are retained with line anchors and hashes in `wu6c-obs-cef-reconnect-evidence.md`.
+- No production/test/task change and no broad test, build, or three-view rerun occurred. Rollback: revert only this evidence/documentation commit.
