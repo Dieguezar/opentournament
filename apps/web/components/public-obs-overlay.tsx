@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { isOverlayView, overlayViews, type OverlayViewName } from '../lib/overlay-view';
 import { OverlayLive, type OverlaySnapshot } from './overlay-live';
+import styles from './public-obs-overlay.module.css';
 
 export { isOverlayView, overlayViews };
 export type { OverlayViewName };
@@ -42,6 +43,7 @@ export function OverlayCanvasShell({
   return (
     <main
       aria-label={`OBS ${view}`}
+      className={styles.canvas}
       data-overlay-view={view}
       style={{
         backgroundColor: 'transparent',
@@ -58,24 +60,94 @@ export function OverlayCanvasShell({
   );
 }
 
+function matchContext(match: Record<string, unknown> | null): string {
+  if (!match) return 'Waiting for a match';
+  const bracket = { winners: 'WINNERS', losers: 'LOSERS', final: 'FINAL' }[
+    String(match.bracketType)
+  ];
+  const round = typeof match.roundNumber === 'number' ? `ROUND ${match.roundNumber}` : '';
+  return [bracket, round].filter(Boolean).join(' · ') || 'MATCH';
+}
+
+function MatchNames({ match }: { match: Record<string, unknown> }) {
+  return (
+    <>
+      <span>{label(match.home)}</span>
+      <b className={styles.versus}>VS</b>
+      <span>{label(match.away)}</span>
+    </>
+  );
+}
+
 function OverlayContent({ snapshot, view }: { snapshot: OverlaySnapshot; view: OverlayViewName }) {
   const tournament = record(snapshot.tournament);
   const title = typeof tournament?.name === 'string' ? tournament.name : 'Tournament';
   const logo = mediaPath(snapshot);
   const match = record(view === 'scoreboard' ? snapshot.scoreboard : snapshot.upNext);
-  const champion = label(snapshot.champion);
+  const champion = record(snapshot.champion);
+  const next = record(snapshot.upNext);
+  const status =
+    match?.status === 'in_progress'
+      ? 'LIVE'
+      : match?.status === 'finalized'
+        ? 'RESULT'
+        : match
+          ? 'SCHEDULED'
+          : '';
 
   return (
-    <section aria-live="polite">
-      {logo && <img alt="" src={logo} />}
-      <h1>{title}</h1>
-      {view === 'champion' ? (
-        <p>Champion: {champion}</p>
+    <section className={styles.broadcast} aria-live="polite">
+      <div className={styles.brand}>
+        <img src="/brand/opentournament-symbol-on-dark.png" width={80} height={40} alt="" />
+        <span>OpenTournament</span>
+      </div>
+      {view === 'scoreboard' ? (
+        <>
+          <div className={styles.scoreboard}>
+            <div className={styles.player} title={label(match?.home)}>
+              <span>{match ? label(match.home) : '—'}</span>
+            </div>
+            <strong className={styles.score}>{score(match?.homeScore)}</strong>
+            <div className={styles.tournament}>
+              <div className={styles.tournamentTitle}>
+                {logo && <img alt="Tournament logo" src={logo} />}
+                <h1 title={title}>{title}</h1>
+              </div>
+              <p>{matchContext(match)}</p>
+              {status && <span className={styles.status}>{status}</span>}
+            </div>
+            <strong className={styles.score}>{score(match?.awayScore)}</strong>
+            <div className={styles.player} title={label(match?.away)}>
+              <span>{match ? label(match.away) : '—'}</span>
+            </div>
+          </div>
+          <aside className={styles.next} aria-label="Next match">
+            <strong>UP NEXT</strong>
+            {next ? <MatchNames match={next} /> : <span>Next match not scheduled</span>}
+          </aside>
+        </>
       ) : (
-        <p>
-          {label(match?.home)} {view === 'scoreboard' && score(match?.homeScore)} —{' '}
-          {view === 'scoreboard' && score(match?.awayScore)} {label(match?.away)}
-        </p>
+        <div className={styles.feature}>
+          <div className={styles.featureTournament}>
+            {logo && <img alt="Tournament logo" src={logo} />}
+            <h1>{title}</h1>
+          </div>
+          <p className={styles.kicker}>{view === 'champion' ? 'TOURNAMENT CHAMPION' : 'UP NEXT'}</p>
+          {view === 'champion' ? (
+            <p className={styles.winner}>
+              {champion ? `Champion: ${label(champion)}` : 'Champion not decided'}
+            </p>
+          ) : next ? (
+            <>
+              <div className={styles.matchup}>
+                <MatchNames match={next} />
+              </div>
+              <p className={styles.round}>{matchContext(next)}</p>
+            </>
+          ) : (
+            <p className={styles.empty}>Next match not scheduled</p>
+          )}
+        </div>
       )}
     </section>
   );

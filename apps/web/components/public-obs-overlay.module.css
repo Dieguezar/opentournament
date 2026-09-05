@@ -1,0 +1,218 @@
+.canvas {
+  color: #f4f6f8;
+  font-family: var(--font-interface, Inter, Arial, sans-serif);
+  color-scheme: dark;
+}
+
+.broadcast {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.brand {
+  position: absolute;
+  top: 38px;
+  left: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 21px;
+  font-weight: 750;
+  padding: 12px;
+  background: #111318;
+}
+
+.brand img {
+  object-fit: contain;
+}
+
+.scoreboard {
+  position: absolute;
+  top: 28px;
+  left: 354px;
+  right: 70px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 104px 352px 104px minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 104px;
+  gap: 5px;
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+  text-align: center;
+  text-transform: uppercase;
+  background: #111318;
+  border-top: 2px solid #4c7dff;
+  border-bottom: 2px solid #2b303b;
+  transform: skewX(-18deg);
+}
+
+.player:last-child {
+  transform: skewX(18deg);
+}
+.player span {
+  transform: skewX(18deg);
+}
+.player:last-child span {
+  transform: skewX(-18deg);
+}
+
+.score {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #255edb;
+  color: #fff;
+  font-size: 56px;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  clip-path: polygon(20% 0, 100% 0, 80% 100%, 0 100%);
+}
+.score:nth-last-child(2) {
+  clip-path: polygon(0 0, 80% 0, 100% 100%, 20% 100%);
+}
+
+.tournament {
+  padding: 13px 18px 10px;
+  text-align: center;
+  background: #0f1116;
+  border-top: 2px solid #4c7dff;
+  border-bottom: 2px solid #4c7dff;
+  clip-path: polygon(7% 0, 93% 0, 100% 50%, 93% 100%, 7% 100%, 0 50%);
+}
+
+.tournamentTitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.tournamentTitle img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.tournament h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 850;
+  line-height: 1.15;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.tournament p {
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 650;
+  color: #f4f6f8;
+}
+.status {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: #a8b0bf;
+}
+
+.next {
+  position: absolute;
+  right: 40px;
+  bottom: 88px;
+  width: 560px;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 36px;
+  border: 1px solid #4c7dff;
+  border-left: 8px solid #4c7dff;
+  background: #111318;
+  font-size: 21px;
+  font-weight: 750;
+  clip-path: polygon(4% 0, 100% 0, 96% 100%, 0 100%);
+}
+.next > strong {
+  border-right: 1px solid #a8b0bf;
+  padding-right: 24px;
+  white-space: nowrap;
+}
+.next span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.versus {
+  color: #82a4ff;
+  font-size: 0.75em;
+  flex-shrink: 0;
+}
+
+.feature {
+  position: absolute;
+  top: 260px;
+  left: 320px;
+  right: 320px;
+  padding: 56px 64px;
+  border: 2px solid #4c7dff;
+  border-top-width: 8px;
+  background: #111318;
+  text-align: center;
+}
+.featureTournament {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.featureTournament img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+.feature h1 {
+  margin: 0;
+  font-size: 30px;
+  color: #a8b0bf;
+  overflow-wrap: anywhere;
+}
+.kicker {
+  margin: 36px 0 24px;
+  color: #82a4ff;
+  font-size: 20px;
+  letter-spacing: 0.18em;
+  font-weight: 750;
+}
+.matchup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  font-size: 60px;
+  font-weight: 850;
+}
+.matchup span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.winner {
+  font-size: 64px;
+  line-height: 1.2;
+  margin: 24px 0;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+.round,
+.empty {
+  margin: 28px 0 0;
+  font-size: 24px;
+  color: #a8b0bf;
+}

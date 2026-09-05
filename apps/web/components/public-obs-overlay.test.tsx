@@ -21,6 +21,42 @@ const snapshot = {
 };
 
 describe('public OBS overlay canvas', () => {
+  it('uses official branding and includes the next match alongside the scoreboard', () => {
+    const markup = renderToStaticMarkup(
+      <OverlayCanvas
+        snapshot={{
+          ...snapshot,
+          scoreboard: {
+            ...snapshot.scoreboard,
+            bracketType: 'winners',
+            roundNumber: 2,
+            status: 'scheduled',
+          },
+        }}
+        view="scoreboard"
+      />,
+    );
+    expect(markup).toContain('/brand/opentournament-symbol-on-dark.png');
+    expect(markup).toContain('OpenTournament');
+    expect(markup).toContain('UP NEXT');
+    expect(markup).toContain('Charlie');
+    expect(markup).toContain('WINNERS · ROUND 2');
+    expect(markup).not.toContain('BO5');
+    expect(markup).not.toContain('LIVE');
+  });
+
+  it('shows honest empty states instead of a fictitious champion or match', () => {
+    const empty = { ...snapshot, scoreboard: null, upNext: null, champion: null };
+    expect(renderToStaticMarkup(<OverlayCanvas snapshot={empty} view="scoreboard" />)).toContain(
+      'Waiting for a match',
+    );
+    expect(renderToStaticMarkup(<OverlayCanvas snapshot={empty} view="up-next" />)).toContain(
+      'Next match not scheduled',
+    );
+    const champion = renderToStaticMarkup(<OverlayCanvas snapshot={empty} view="champion" />);
+    expect(champion).toContain('Champion not decided');
+    expect(champion).not.toContain('Champion: TBD');
+  });
   it('accepts only the three deterministic public views', () => {
     expect(['scoreboard', 'up-next', 'champion'].every(isOverlayView)).toBe(true);
     expect(isOverlayView('private-admin')).toBe(false);
@@ -59,6 +95,7 @@ describe('public OBS overlay canvas', () => {
     expect(markup).toContain('body:has([data-obs-route])');
     expect(markup).toContain('overflow:hidden');
     expect(markup).toContain('>header,body:has([data-obs-route])>.skip-link{display:none}');
+    expect(markup).toContain('body:has([data-obs-route]) nextjs-portal{display:none}');
   });
 
   it('server-renders the actual route canvas before live hydration', async () => {

@@ -80,3 +80,17 @@ No actionable P0, P1, or P2 visual differences remain.
 - Build intentionally not run, per project instruction.
 
 final result: passed
+
+## OBS broadcast implementation — 2026-09-05
+
+- Reference: approved `exec-cbede236-67ff-443e-8250-8ff8290df595.png` (1672 x 941, 16:9), interpreted on the required 1920 x 1080 OBS canvas.
+- Browser evidence: in-app browser at 1920 x 1080; full-frame screenshots and DOM readback of cocodemo scoreboard, Up Next, Champion empty state, and Copa Nexo completed state. Source and implementation were visually inspected in the task; screenshots are retained in the conversation, not saved as local evidence files.
+- Typography: Inter-based bold names and tabular score digits; smaller round/status labels. Brand symbol uses the original project PNG, not the generated imitation.
+- Layout: mirrored top scoreboard, center tournament context, bottom-right next match. Fixed canvas required for OBS, not a responsive website. Slanted panel treatments preserve the selected direction.
+- Colors: explicit OpenTournament blue/white/charcoal independent of website light mode. No pink/violet leftovers.
+- Content: real names and public match state replace illustrative data. The API does not expose best-of or semifinal labels, so these are not fabricated. Null scores show a dash; scheduled matches are not labeled live. Champion remains a compatible optional route, not a newly implemented intermission state machine.
+- Transparency: computed HTML/body/wrapper/canvas backgrounds all rgba(0,0,0,0). Next development indicator is hidden only on OBS routes. No user match data was mutated.
+- P3 visual follow-up: perimeter texture and elaborate corner trim from the mock are simplified/omitted. A generated decorative asset had baked-in opaque checkerboard and was rejected rather than compromising alpha.
+- Checks: 14 focused overlay/live-controller tests passed; web typecheck and scoped ESLint passed. Native OBS playback/reconnection was not rerun in this design pass.
+
+final result: passed
