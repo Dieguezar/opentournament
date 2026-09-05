@@ -1,7 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
 import { publicMedia, publicPlayerProfiles } from '@opentournament/database';
 import { db } from '../db.js';
-import { deletePrivateObject, getPrivateObject } from './storage.js';
+import { getPrivateObject } from './storage.js';
 import {
   MAX_PUBLIC_MEDIA_BYTES,
   discardStagedPublicImage,

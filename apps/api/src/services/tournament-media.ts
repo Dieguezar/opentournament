@@ -4,7 +4,6 @@ import {
   publicMedia,
   tournamentAppearances,
   tournaments,
-  type Db,
 } from '@opentournament/database';
 import { db } from '../db.js';
 import { getPrivateObject } from './storage.js';

@@ -21,13 +21,13 @@ test('enforces exactly one public media owner with a database check', () => {
     (check) => check.name === 'public_media_exactly_one_owner',
   );
 
-  expect(constraint).toBeDefined();
+  if (!constraint) {
+    throw new Error('Expected public_media_exactly_one_owner check');
+  }
   expect(
-    constraint?.value.queryChunks.filter((chunk) => 'name' in chunk).map((chunk) => chunk.name),
+    constraint.value.queryChunks.flatMap((chunk) => (chunk && 'name' in chunk ? [chunk.name] : [])),
   ).toEqual(['user_id', 'tournament_id']);
   expect(
-    constraint?.value.queryChunks
-      .filter((chunk) => 'value' in chunk)
-      .flatMap((chunk) => chunk.value),
+    constraint.value.queryChunks.flatMap((chunk) => (chunk && 'value' in chunk ? chunk.value : [])),
   ).toContain(' IS NOT NULL) <> (');
 });
