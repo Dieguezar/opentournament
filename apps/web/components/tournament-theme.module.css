@@ -1,0 +1,14 @@
+.theme {
+  background: var(--canvas);
+  color: var(--text);
+}
+
+.page {
+  min-height: calc(100vh - 5.5rem);
+}
+
+.theme h1,
+.theme h2,
+.theme h3 {
+  color: var(--tournament-heading, var(--text));
+}

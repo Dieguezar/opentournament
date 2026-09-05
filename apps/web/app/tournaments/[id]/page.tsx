@@ -11,7 +11,6 @@ import { RegistrationActions, type RegistrationView } from '@/components/registr
 import { RulesetSummary } from '@/components/ruleset-summary';
 import { TournamentActions } from '@/components/tournament-actions';
 import { TournamentAppearanceControls } from '@/components/tournament-appearance-controls';
-import { TournamentMediaControls } from '@/components/tournament-media-controls';
 import { ParticipantAccessManager } from '@/components/participant-access-manager';
 import { ReportPanel } from '@/components/report-panel';
 import { formatMessage, getDictionary, type Dictionary, type Locale } from '@/lib/i18n';
@@ -35,6 +34,8 @@ interface TournamentView {
   capacity: number;
   gameAdapterKey: GameAdapterKey;
   startsAt: string | null;
+  publishedAt: string | null;
+  visibility: string;
   seriesConfig: { bo?: number } | null;
   settings: TournamentSettings | null;
 }
@@ -244,6 +245,7 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
       <nav className={styles.utilityLinks} aria-label={copy.tournamentNavigation}>
         <Link href="/dashboard">{copy.tournamentDashboard}</Link>
         <Link href={`/t/${tournament.slug}`}>{copy.publicPage}</Link>
+        {isAdmin && <a href="#appearance">{copy.personalization}</a>}
         {isAdmin && <Link href={`/tournaments/${id}/disputas`}>{copy.disputes}</Link>}
       </nav>
 
@@ -311,6 +313,7 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
 
       <nav className={styles.tabs} aria-label={copy.tournamentSections}>
         <a href="#overview">{copy.overview}</a>
+        {isAdmin && <a href="#appearance">{copy.personalization}</a>}
         {isAdmin && <a href="#participants">{copy.participants}</a>}
         <a href="#bracket">{isSmash ? copy.setsAndBracket : copy.matchesAndBracket}</a>
         {isAdmin && <a href="#settings">{copy.settings}</a>}
@@ -404,19 +407,24 @@ export default async function TournamentAdminPage({ params }: { params: Promise<
           <h2>{copy.settingsTitle}</h2>
           <p>{copy.settingsDescription}</p>
           <TournamentActions tournamentId={id} status={tournament.status} />
-          <TournamentAppearanceControls
-            tournamentId={id}
-            initialAppearance={tournamentRes.data?.appearance ?? null}
-          />
-          <TournamentMediaControls
-            tournamentId={id}
-            initialMedia={tournamentRes.data?.appearance ?? null}
-          />
           <ParticipantAccessManager
             tournamentId={id}
             registrations={registrations}
             initialReportingMode={tournament.settings?.reportingMode ?? 'bilateral'}
           />
+        </section>
+      )}
+      {isAdmin && (
+        <section id="appearance" className={`${styles.supportPanel} ${styles.settings}`}>
+          <h2>{copy.personalization}</h2>
+          <TournamentAppearanceControls
+            key={id}
+            tournamentId={id}
+            tournamentName={tournament.name}
+            mediaVisible={Boolean(tournament.publishedAt) && tournament.visibility === 'public'}
+            initialAppearance={tournamentRes.data?.appearance ?? null}
+          />
+          <Link href={`/t/${tournament.slug}`}>{copy.publicPage} →</Link>
         </section>
       )}
     </main>

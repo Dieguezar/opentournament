@@ -51,6 +51,22 @@ describe('tournament appearance controls workflow', () => {
       saveAppearance(denied.client, 't1', { primaryColor: '#123456', accentColor: '#ABCDEF' }),
     ).rejects.toMatchObject({ status: 403 });
   });
+
+  it('preserves null defaults, including resetting only one color', async () => {
+    expect(validatePalette({ primaryColor: null, accentColor: null })).toEqual({
+      primaryColor: null,
+      accentColor: null,
+    });
+    expect(validatePalette({ primaryColor: null, accentColor: '#abcdef' })).toEqual({
+      primaryColor: null,
+      accentColor: '#ABCDEF',
+    });
+    const { client } = clientFor([{ appearance: null }]);
+    await expect(loadAppearance(client, 't1')).resolves.toEqual({
+      primaryColor: null,
+      accentColor: null,
+    });
+  });
 });
 
 describe('rendered palette controls', () => {
@@ -66,8 +82,10 @@ describe('rendered palette controls', () => {
     expect(markup).toContain('Primary color');
     expect(markup).toContain('Accent color');
     expect(markup).toContain('aria-label="Palette preview"');
-    expect(markup).toContain('--appearance-primary:#123456');
-    expect(markup).toContain('--appearance-accent:#ABCDEF');
+    expect(markup).toContain('--tournament-primary:#123456');
+    expect(markup).toContain('--tournament-accent:#ABCDEF');
+    expect(markup.match(/type="color"/g)).toHaveLength(2);
+    expect(markup).toContain('Suggested palettes');
 
     const spanish = renderToStaticMarkup(
       <I18nProvider dictionary={getDictionary('es')} locale="es">
@@ -107,7 +125,6 @@ describe('rendered palette controls', () => {
     expect(markup).toContain('role="alert"');
     expect(markup).toContain(copy.invalidAppearance);
     expect(markup).not.toContain('role="status"');
-    expect(markup).toContain('aria-invalid="true"');
   });
 
   it('renders an announced saving state with every editable control disabled', () => {
@@ -116,8 +133,29 @@ describe('rendered palette controls', () => {
 
     expect(markup).toContain('role="status"');
     expect(markup).toContain(copy.savingAppearance);
-    expect(markup.match(/disabled=""/g)).toHaveLength(3);
+    expect(markup.match(/disabled=""/g)).toHaveLength(7);
     expect(markup).toContain('aria-busy="true"');
+  });
+
+  it('previews the real tournament name and media while identifying unsaved colors', () => {
+    const markup = renderToStaticMarkup(
+      <TournamentAppearanceForm
+        busy={false}
+        copy={getDictionary('en').tournamentAdmin}
+        error={null}
+        success={null}
+        palette={{ primaryColor: '#8B5CF6', accentColor: '#F472B6' }}
+        dirty
+        tournamentName="Preview Cup"
+        media={{ logoMediaId: '11111111-1111-4111-8111-111111111111', bannerMediaId: null }}
+        onPaletteChange={() => undefined}
+        onSubmit={() => undefined}
+      />,
+    );
+    expect(markup).toContain('<h3>Preview Cup</h3>');
+    expect(markup).toContain('Unsaved colors');
+    expect(markup).toContain('/api/v1/media/11111111-1111-4111-8111-111111111111');
+    expect(markup).not.toContain('Saved colors');
   });
 
   it('renders API failure without a false success and success only after convergence', async () => {

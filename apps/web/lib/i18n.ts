@@ -469,6 +469,28 @@ const es = {
     notCheckedIn: 'Sin check-in',
     settingsTitle: 'Configuración y estado',
     settingsDescription: 'Publicá, generá el bracket o cancelá el torneo según su estado actual.',
+    personalization: 'Personalización',
+    palettePresets: 'Paletas sugeridas',
+    presetBlue: 'Azul',
+    presetEmerald: 'Esmeralda',
+    presetViolet: 'Violeta',
+    paletteHelp:
+      'Selecciona un color o edita su código HEX. Un campo vacío utiliza el color predeterminado del sitio.',
+    resetPalette: 'Usar colores predeterminados',
+    unsavedAppearance: 'Colores sin guardar',
+    savedAppearance: 'Colores guardados',
+    headerPreviewDescription: 'Vista previa de la página pública.',
+    pagePreviewTitle: 'Participación y partidas',
+    pagePreviewDescription:
+      'La paleta se aplica al fondo, las tarjetas, los títulos, los enlaces y los botones. Los avisos conservan sus colores para mantener su significado.',
+    pagePreviewAction: 'Inscribirse al torneo',
+    mediaLimits:
+      'PNG, JPEG o WebP · Máximo 2 MB · Hasta 4096 px por lado y 8 millones de píxeles en total.',
+    noMedia: 'Sin imagen',
+    mediaAwaitingPublication:
+      'Imagen guardada. Vista previa disponible al publicar el torneo como público.',
+    logoHint: 'Recomendado: imagen cuadrada. Se muestra completa, sin recortar.',
+    bannerHint: 'Recomendado: imagen horizontal. Se recorta para cubrir el encabezado.',
     appearanceTitle: 'Paleta del torneo',
     appearanceDescription:
       'Definí los colores que se muestran en las superficies públicas del torneo.',
@@ -482,7 +504,8 @@ const es = {
     appearanceError: 'No pudimos actualizar la paleta.',
     invalidAppearance: 'Usá colores hexadecimales de seis dígitos, por ejemplo #123ABC.',
     mediaTitle: 'Imágenes del torneo',
-    mediaDescription: 'Subí o quitá el logo y el banner públicos del torneo.',
+    mediaDescription:
+      'Las imágenes se guardan al seleccionarlas, por separado de los colores. Se muestran en la página pública cuando el torneo está publicado.',
     logoTitle: 'Logo del torneo',
     bannerTitle: 'Banner del torneo',
     logoFile: 'Archivo de logo',
@@ -1246,6 +1269,27 @@ const en: Dictionary = {
     settingsTitle: 'Configuration and status',
     settingsDescription:
       'Publish, generate the bracket, or cancel the tournament according to its current status.',
+    personalization: 'Personalization',
+    palettePresets: 'Suggested palettes',
+    presetBlue: 'Blue',
+    presetEmerald: 'Emerald',
+    presetViolet: 'Violet',
+    paletteHelp: 'Pick a color or edit its HEX code. An empty field uses the site’s default color.',
+    resetPalette: 'Use default colors',
+    unsavedAppearance: 'Unsaved colors',
+    savedAppearance: 'Saved colors',
+    headerPreviewDescription: 'Public page preview.',
+    pagePreviewTitle: 'Participation and matches',
+    pagePreviewDescription:
+      'The palette applies to backgrounds, cards, headings, links and buttons. Notices keep their colors to preserve their meaning.',
+    pagePreviewAction: 'Register for tournament',
+    mediaLimits:
+      'PNG, JPEG or WebP · Maximum 2 MB · Up to 4096 px per side and 8 million pixels total.',
+    noMedia: 'No image',
+    mediaAwaitingPublication:
+      'Image saved. Preview available once the tournament is published publicly.',
+    logoHint: 'Recommended: a square image. Shown in full, without cropping.',
+    bannerHint: 'Recommended: a landscape image. Cropped to cover the header.',
     appearanceTitle: 'Tournament palette',
     appearanceDescription: 'Set the colors displayed on the tournament’s public surfaces.',
     primaryColor: 'Primary color',
@@ -1258,7 +1302,8 @@ const en: Dictionary = {
     appearanceError: 'Unable to update the palette.',
     invalidAppearance: 'Use six-digit hexadecimal colors, for example #123ABC.',
     mediaTitle: 'Tournament images',
-    mediaDescription: 'Upload or remove the tournament’s public logo and banner.',
+    mediaDescription:
+      'Images save when selected, separately from the colors. They appear on the public page once the tournament is published.',
     logoTitle: 'Tournament logo',
     bannerTitle: 'Tournament banner',
     logoFile: 'Logo file',

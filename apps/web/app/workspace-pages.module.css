@@ -469,11 +469,11 @@
 }
 
 .formShell[data-game='smash_ultimate'] {
-  --game-accent: #b3294a;
+  --game-accent: var(--tournament-game-accent, #b3294a);
 }
 
 :global(:root[data-theme='dark']) .formShell[data-game='smash_ultimate'] {
-  --game-accent: #ff8ba3;
+  --game-accent: var(--tournament-game-accent, #ff8ba3);
 }
 
 .formSection {
@@ -730,10 +730,13 @@
 }
 
 @media (min-width: 720px) {
-  .pageHeader,
-  .tournamentHeader {
+  .pageHeader {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
+  }
+
+  .tournamentHeader {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboardLayout {

@@ -89,6 +89,46 @@ describe('tournament media controls workflow', () => {
 });
 
 describe('rendered tournament media controls', () => {
+  it('announces only the image being updated while locking both slots', () => {
+    const copy = getDictionary('en').tournamentAdmin;
+    const markup = renderToStaticMarkup(
+      <TournamentMediaForm
+        busy
+        activeSlot="banner"
+        copy={copy}
+        error={null}
+        success={null}
+        media={{ logoMediaId: null, bannerMediaId: null }}
+        onDelete={() => undefined}
+        onUpload={() => undefined}
+      />,
+    );
+    expect(markup).toContain(copy.uploadingBanner);
+    expect(markup).not.toContain(copy.uploadingLogo);
+    expect(markup.match(/disabled=""/g)).toHaveLength(4);
+  });
+
+  it('explains enforced limits and hides unavailable private-draft image requests', () => {
+    const copy = getDictionary('en').tournamentAdmin;
+    const markup = renderToStaticMarkup(
+      <TournamentMediaForm
+        busy={false}
+        copy={copy}
+        error={null}
+        success={null}
+        media={{ logoMediaId: '11111111-1111-4111-8111-111111111111', bannerMediaId: null }}
+        mediaVisible={false}
+        onDelete={() => undefined}
+        onUpload={() => undefined}
+      />,
+    );
+    expect(markup).toContain(copy.mediaLimits);
+    expect(markup).toContain(copy.mediaAwaitingPublication);
+    expect(markup).not.toContain('<img');
+    expect(markup).toContain('aria-describedby="media-limits"');
+    expect(markup.match(/<button[^>]*id="logo-remove"[^>]*>/)?.[0]).not.toContain('disabled');
+  });
+
   it('uses bilingual accessible labels and only same-origin opaque previews', () => {
     const english = renderToStaticMarkup(
       <TournamentMediaForm

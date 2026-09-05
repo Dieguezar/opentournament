@@ -1,0 +1,181 @@
+.personalization {
+  scroll-margin-top: 2rem;
+}
+.personalization h3 {
+  margin-top: 0;
+}
+.paletteForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+.editor,
+.preview {
+  min-width: 0;
+}
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border: 0;
+  padding: 0;
+  margin: 0 0 1.25rem;
+}
+.presets legend {
+  margin-bottom: 0.65rem;
+  font-weight: 600;
+}
+.presets button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.swatch {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+}
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.colorGrid label {
+  display: block;
+  margin-bottom: 0.5rem;
+}
+.colorField {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.colorField input[type='color'] {
+  width: 3rem;
+  height: 2.75rem;
+  min-width: 3rem;
+  padding: 0.2rem;
+  cursor: pointer;
+}
+.colorField input:not([type='color']) {
+  min-width: 0;
+  width: 100%;
+  font-family: monospace;
+}
+.hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.preview {
+  padding: 1rem;
+  background: var(--canvas);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.previewLabel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+  font-size: 0.8rem;
+}
+.previewLabel span {
+  color: var(--text-muted);
+}
+.previewCard {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+}
+.previewCard h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.saveRow {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+.saveRow button {
+  order: -1;
+}
+.saveRow p {
+  margin: 0;
+}
+.mediaSection {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.mediaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.mediaSlot {
+  min-width: 0;
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.mediaSlot legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+}
+.mediaSlot label {
+  display: block;
+  margin: 0.75rem 0 0.4rem;
+}
+.mediaSlot input {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 1rem;
+}
+.logoPreview,
+.bannerPreview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 9rem;
+  overflow: hidden;
+  background: var(--canvas);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.logoPreview img {
+  width: 7rem;
+  height: 7rem;
+  object-fit: contain;
+}
+.bannerPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@media (max-width: 760px) {
+  .paletteForm,
+  .mediaGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .preview {
+    order: -1;
+  }
+}
+@media (max-width: 420px) {
+  .colorGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

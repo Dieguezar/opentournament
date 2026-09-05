@@ -28,6 +28,8 @@ import {
   getTournamentStatus,
 } from '@/lib/presentation';
 import { serverFetch } from '@/lib/server-api';
+import { tournamentThemeStyle } from '@/lib/tournament-theme';
+import themeStyles from '@/components/tournament-theme.module.css';
 import styles from '../../workspace-pages.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -420,148 +422,154 @@ export default async function PublicTournamentPage({
   );
 
   return (
-    <main className={`container ${styles.page}`} data-game={tournament.gameAdapterKey}>
-      <header className={`${styles.pageHeader} ${styles.tournamentHeader}`}>
-        <TournamentBranding
-          appearance={tournamentRes.data?.appearance ?? null}
-          tournamentName={tournament.name}
-        >
-          <p className={styles.eyebrow}>
-            {tournamentRes.data?.organization?.name ?? copy.independentTournament}
-          </p>
-          <h1>{tournament.name}</h1>
-          {tournament.description && <p className={styles.intro}>{tournament.description}</p>}
-        </TournamentBranding>
-        <div className={styles.tournamentHeaderMeta}>
-          <span className={status.className}>{status.label}</span>
-          <span>{formatGameAdapter(tournament.gameAdapterKey, locale)}</span>
-          <span>
-            {tournament.format === 'double_elimination'
-              ? dictionary.presentation.doubleElimination
-              : dictionary.presentation.singleElimination}
-          </span>
-          <span>{formatMessage(copy.capacity, { capacity: tournament.capacity })}</span>
-          {tournament.startsAt && (
+    <div
+      className={`${themeStyles.theme} ${themeStyles.page}`}
+      style={tournamentThemeStyle(tournamentRes.data?.appearance ?? null)}
+      data-tournament-theme={tournament.id}
+    >
+      <main className={`container ${styles.page}`} data-game={tournament.gameAdapterKey}>
+        <header className={`${styles.pageHeader} ${styles.tournamentHeader}`}>
+          <TournamentBranding
+            appearance={tournamentRes.data?.appearance ?? null}
+            tournamentName={tournament.name}
+          >
+            <p className={styles.eyebrow}>
+              {tournamentRes.data?.organization?.name ?? copy.independentTournament}
+            </p>
+            <h1>{tournament.name}</h1>
+            {tournament.description && <p className={styles.intro}>{tournament.description}</p>}
+          </TournamentBranding>
+          <div className={styles.tournamentHeaderMeta}>
+            <span className={status.className}>{status.label}</span>
+            <span>{formatGameAdapter(tournament.gameAdapterKey, locale)}</span>
             <span>
-              {formatMessage(copy.startsAt, {
-                date: new Date(tournament.startsAt).toLocaleString(locale),
-              })}
+              {tournament.format === 'double_elimination'
+                ? dictionary.presentation.doubleElimination
+                : dictionary.presentation.singleElimination}
             </span>
-          )}
-        </div>
-      </header>
+            <span>{formatMessage(copy.capacity, { capacity: tournament.capacity })}</span>
+            {tournament.startsAt && (
+              <span>
+                {formatMessage(copy.startsAt, {
+                  date: new Date(tournament.startsAt).toLocaleString(locale),
+                })}
+              </span>
+            )}
+          </div>
+        </header>
 
-      <RulesetSummary
-        gameAdapterKey={tournament.gameAdapterKey}
-        format={tournament.format}
-        seriesBestOf={seriesBestOf}
-        settings={tournament.settings}
-        locale={locale}
-      />
-
-      <dl className={styles.metrics} aria-label={copy.summary}>
-        <div>
-          <dt>{isSmash ? copy.registeredPlayers : copy.registeredTeams}</dt>
-          <dd>{teams.length}</dd>
-        </div>
-        <div>
-          <dt>{copy.publishedRounds}</dt>
-          <dd>{roundCount}</dd>
-        </div>
-        <div>
-          <dt>{isSmash ? copy.sets : isLeagueOfLegends ? copy.seriesPlural : copy.matches}</dt>
-          <dd>{matchCount}</dd>
-        </div>
-      </dl>
-
-      {isTournamentRunning && (
-        <BracketSection
-          brackets={brackets}
-          tournamentId={tournament.id}
-          isSmash={isSmash}
-          isLeagueOfLegends={isLeagueOfLegends}
+        <RulesetSummary
+          gameAdapterKey={tournament.gameAdapterKey}
+          format={tournament.format}
+          seriesBestOf={seriesBestOf}
+          settings={tournament.settings}
           locale={locale}
+        />
+
+        <dl className={styles.metrics} aria-label={copy.summary}>
+          <div>
+            <dt>{isSmash ? copy.registeredPlayers : copy.registeredTeams}</dt>
+            <dd>{teams.length}</dd>
+          </div>
+          <div>
+            <dt>{copy.publishedRounds}</dt>
+            <dd>{roundCount}</dd>
+          </div>
+          <div>
+            <dt>{isSmash ? copy.sets : isLeagueOfLegends ? copy.seriesPlural : copy.matches}</dt>
+            <dd>{matchCount}</dd>
+          </div>
+        </dl>
+
+        {isTournamentRunning && (
+          <BracketSection
+            brackets={brackets}
+            tournamentId={tournament.id}
+            isSmash={isSmash}
+            isLeagueOfLegends={isLeagueOfLegends}
+            locale={locale}
+            copy={copy}
+          />
+        )}
+
+        <JourneySection
+          tournamentStatus={tournament.status}
+          isTournamentRunning={isTournamentRunning}
+          isSmash={isSmash}
           copy={copy}
         />
-      )}
 
-      <JourneySection
-        tournamentStatus={tournament.status}
-        isTournamentRunning={isTournamentRunning}
-        isSmash={isSmash}
-        copy={copy}
-      />
+        {isRegistrationActive ? (
+          <RegisterPanel
+            tournamentId={tournament.id}
+            gameAdapterKey={tournament.gameAdapterKey}
+            tournamentStatus={tournament.status}
+          />
+        ) : (
+          <div className={styles.panel}>
+            <p className={styles.meta}>{publicRegistrationMessage}</p>
+          </div>
+        )}
 
-      {isRegistrationActive ? (
-        <RegisterPanel
+        {!isTournamentRunning && (
+          <BracketSection
+            brackets={brackets}
+            tournamentId={tournament.id}
+            isSmash={isSmash}
+            isLeagueOfLegends={isLeagueOfLegends}
+            locale={locale}
+            copy={copy}
+          />
+        )}
+
+        <ReportPanel
           tournamentId={tournament.id}
           gameAdapterKey={tournament.gameAdapterKey}
-          tournamentStatus={tournament.status}
+          seriesBestOf={seriesBestOf}
+          settings={tournament.settings}
         />
-      ) : (
-        <div className={styles.panel}>
-          <p className={styles.meta}>{publicRegistrationMessage}</p>
-        </div>
-      )}
 
-      {!isTournamentRunning && (
-        <BracketSection
-          brackets={brackets}
-          tournamentId={tournament.id}
-          isSmash={isSmash}
-          isLeagueOfLegends={isLeagueOfLegends}
-          locale={locale}
-          copy={copy}
-        />
-      )}
-
-      <ReportPanel
-        tournamentId={tournament.id}
-        gameAdapterKey={tournament.gameAdapterKey}
-        seriesBestOf={seriesBestOf}
-        settings={tournament.settings}
-      />
-
-      <div className={styles.publicSupportGrid}>
-        <section className={styles.panel} aria-labelledby="teams-title">
-          <div className={styles.sectionHeader}>
-            <div>
-              <p className={styles.eyebrow}>{copy.participants}</p>
-              <h2 id="teams-title">
-                {formatMessage(isSmash ? copy.playersRegistered : copy.teamsRegistered, {
-                  count: teams.length,
-                })}
-              </h2>
-            </div>
-          </div>
-          {teams.length === 0 ? (
-            <p className={styles.emptyCopy}>
-              {isSmash ? copy.noPlayersRegistered : copy.noTeamsRegistered}
-            </p>
-          ) : (
-            <PublicTournamentRegistrationList
-              copy={copy}
-              listClassName={styles.teamList}
-              locale={locale}
-              metaClassName={styles.teamMeta}
-              participants={participants}
-              registrations={teams}
-            />
-          )}
-        </section>
-
-        {tournament.rules && (
-          <section className={styles.panel} aria-labelledby="rules-title">
+        <div className={styles.publicSupportGrid}>
+          <section className={styles.panel} aria-labelledby="teams-title">
             <div className={styles.sectionHeader}>
               <div>
-                <p className={styles.eyebrow}>{copy.information}</p>
-                <h2 id="rules-title">{copy.rules}</h2>
+                <p className={styles.eyebrow}>{copy.participants}</p>
+                <h2 id="teams-title">
+                  {formatMessage(isSmash ? copy.playersRegistered : copy.teamsRegistered, {
+                    count: teams.length,
+                  })}
+                </h2>
               </div>
             </div>
-            <p className={styles.rules}>{tournament.rules}</p>
+            {teams.length === 0 ? (
+              <p className={styles.emptyCopy}>
+                {isSmash ? copy.noPlayersRegistered : copy.noTeamsRegistered}
+              </p>
+            ) : (
+              <PublicTournamentRegistrationList
+                copy={copy}
+                listClassName={styles.teamList}
+                locale={locale}
+                metaClassName={styles.teamMeta}
+                participants={participants}
+                registrations={teams}
+              />
+            )}
           </section>
-        )}
-      </div>
-    </main>
+
+          {tournament.rules && (
+            <section className={styles.panel} aria-labelledby="rules-title">
+              <div className={styles.sectionHeader}>
+                <div>
+                  <p className={styles.eyebrow}>{copy.information}</p>
+                  <h2 id="rules-title">{copy.rules}</h2>
+                </div>
+              </div>
+              <p className={styles.rules}>{tournament.rules}</p>
+            </section>
+          )}
+        </div>
+      </main>
+    </div>
   );
 }

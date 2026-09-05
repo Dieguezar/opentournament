@@ -1,17 +1,19 @@
 .branding {
-  --tournament-primary: var(--primary);
-  --tournament-accent: var(--primary);
+  --tournament-primary: #4c7dff;
+  --tournament-accent: #4c7dff;
   position: relative;
   min-width: 0;
+  width: 100%;
   overflow: hidden;
   border-radius: 8px;
   background: var(--surface);
+  border-top: 4px solid var(--tournament-primary);
+  border-bottom: 2px solid var(--tournament-accent);
 }
 
 .banner {
-  position: absolute;
-  inset: 0;
-  opacity: 0.2;
+  position: relative;
+  height: clamp(8rem, 22vw, 17rem);
 }
 
 .banner img {
@@ -24,15 +26,26 @@
   min-width: 0;
   align-items: center;
   gap: 1rem;
-  padding: 1rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--tournament-primary) 12%, transparent),
+    transparent
+  );
 }
 
 .copy {
   min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
 }
 
-.copy h1 {
-  color: var(--tournament-primary);
+.copy h1,
+.copy h3 {
+  color: var(--tournament-heading, var(--text));
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2.65rem);
+  line-height: 1.15;
 }
 
 .logo {

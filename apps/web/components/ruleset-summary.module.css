@@ -1,5 +1,5 @@
 .summary {
-  --game-accent: #b3294a;
+  --game-accent: var(--tournament-game-accent, #b3294a);
 
   margin-top: 1rem;
   padding: 1.5rem;
@@ -10,7 +10,7 @@
 }
 
 :global(:root[data-theme='dark']) .summary {
-  --game-accent: #ff8ba3;
+  --game-accent: var(--tournament-game-accent, #ff8ba3);
 }
 
 .header {

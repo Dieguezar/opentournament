@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { useI18n } from './i18n-provider';
+import styles from './tournament-personalization.module.css';
 import { ApiClientError, apiClient } from '../lib/api';
 import type { Dictionary } from '../lib/i18n';
 
@@ -31,6 +32,7 @@ export function createTournamentMediaMutationQueue() {
 
 export interface TournamentMediaControllerState {
   busy: boolean;
+  activeSlot: TournamentMediaSlot | null;
   error: string | null;
   media: TournamentMedia;
   success: string | null;
@@ -94,6 +96,7 @@ export function createTournamentMediaController(
   let pending = 0;
   let state: TournamentMediaControllerState = {
     busy: false,
+    activeSlot: null,
     error: null,
     media: initialMedia,
     success: null,
@@ -105,7 +108,7 @@ export function createTournamentMediaController(
     state = { ...state, busy: true };
     publish();
     return queue.run(async () => {
-      state = { ...state, error: null, success: null };
+      state = { ...state, activeSlot: slot, error: null, success: null };
       publish();
       try {
         const media = file
@@ -120,7 +123,7 @@ export function createTournamentMediaController(
         };
       } finally {
         pending -= 1;
-        state = { ...state, busy: pending > 0 };
+        state = { ...state, busy: pending > 0, activeSlot: null };
         publish();
       }
     });
@@ -141,22 +144,26 @@ export function createTournamentMediaController(
 
 interface TournamentMediaFormProps {
   busy: boolean;
+  activeSlot?: TournamentMediaSlot | null;
   copy: Dictionary['tournamentAdmin'];
   error: string | null;
   media: TournamentMedia;
   success: string | null;
   onDelete: (slot: TournamentMediaSlot) => void;
   onUpload: (slot: TournamentMediaSlot, file: File) => void;
+  mediaVisible?: boolean;
 }
 
 export function TournamentMediaForm({
   busy,
+  activeSlot,
   copy,
   error,
   media,
   success,
   onDelete,
   onUpload,
+  mediaVisible = true,
 }: TournamentMediaFormProps) {
   const slots = [
     { slot: 'logo' as const, id: media.logoMediaId, title: copy.logoTitle, file: copy.logoFile },
@@ -169,45 +176,58 @@ export function TournamentMediaForm({
   ];
 
   return (
-    <section aria-labelledby="media-title">
+    <section className={styles.mediaSection} aria-labelledby="media-title">
       <h3 id="media-title">{copy.mediaTitle}</h3>
       <p>{copy.mediaDescription}</p>
-      {slots.map(({ slot, id, title, file }) => {
-        const pending = busy;
-        const preview = mediaPath(id);
-        return (
-          <fieldset key={slot}>
-            <legend>{title}</legend>
-            {preview && <img alt={title} src={preview} />}
-            <label htmlFor={`${slot}-file`}>{file}</label>
-            <input
-              accept="image/png,image/jpeg,image/webp"
-              aria-describedby={pending ? `${slot}-status` : undefined}
-              disabled={pending}
-              id={`${slot}-file`}
-              type="file"
-              onChange={(event) => {
-                const selected = event.target.files?.[0];
-                if (selected) onUpload(slot, selected);
-                event.currentTarget.value = '';
-              }}
-            />
-            {pending && (
-              <p id={`${slot}-status`} role="status" aria-live="polite">
-                {slot === 'logo' ? copy.uploadingLogo : copy.uploadingBanner}
-              </p>
-            )}
-            <button
-              id={`${slot}-remove`}
-              type="button"
-              disabled={pending || !preview}
-              onClick={() => onDelete(slot)}
-            >
-              {copy.deleteMedia}
-            </button>
-          </fieldset>
-        );
-      })}
+      <p id="media-limits" className={styles.hint}>
+        {copy.mediaLimits}
+      </p>
+      <div className={styles.mediaGrid}>
+        {slots.map(({ slot, id, title, file }) => {
+          const pending = busy;
+          const updating = busy && (!activeSlot || activeSlot === slot);
+          const preview = mediaPath(id);
+          return (
+            <fieldset key={slot} className={styles.mediaSlot} aria-busy={pending}>
+              <legend>{title}</legend>
+              <div className={slot === 'logo' ? styles.logoPreview : styles.bannerPreview}>
+                {preview && mediaVisible ? (
+                  <img alt={title} src={preview} />
+                ) : (
+                  <span>{preview ? copy.mediaAwaitingPublication : copy.noMedia}</span>
+                )}
+              </div>
+              <p className={styles.hint}>{slot === 'logo' ? copy.logoHint : copy.bannerHint}</p>
+              <label htmlFor={`${slot}-file`}>{file}</label>
+              <input
+                accept="image/png,image/jpeg,image/webp"
+                aria-describedby={`media-limits${updating ? ` ${slot}-status` : ''}`}
+                disabled={pending}
+                id={`${slot}-file`}
+                type="file"
+                onChange={(event) => {
+                  const selected = event.target.files?.[0];
+                  if (selected) onUpload(slot, selected);
+                  event.currentTarget.value = '';
+                }}
+              />
+              {updating && (
+                <p id={`${slot}-status`} role="status" aria-live="polite">
+                  {slot === 'logo' ? copy.uploadingLogo : copy.uploadingBanner}
+                </p>
+              )}
+              <button
+                id={`${slot}-remove`}
+                type="button"
+                disabled={pending || !preview}
+                onClick={() => onDelete(slot)}
+              >
+                {copy.deleteMedia}
+              </button>
+            </fieldset>
+          );
+        })}
+      </div>
       {error && <p role="alert">{error}</p>}
       {success && <p role="status">{success}</p>}
     </section>
@@ -217,9 +237,13 @@ export function TournamentMediaForm({
 export function TournamentMediaControls({
   tournamentId,
   initialMedia,
+  onMediaChange,
+  mediaVisible = true,
 }: {
   tournamentId: string;
   initialMedia: Partial<TournamentMedia> | null;
+  onMediaChange?: (media: TournamentMedia) => void;
+  mediaVisible?: boolean;
 }) {
   const { dictionary } = useI18n();
   const copy = dictionary.tournamentAdmin;
@@ -241,13 +265,18 @@ export function TournamentMediaControls({
   const [state, setState] = useState<TournamentMediaControllerState>(() => controller.state);
 
   useEffect(() => controller.subscribe(setState), [controller]);
+  useEffect(() => {
+    onMediaChange?.(state.media);
+  }, [state.media, onMediaChange]);
 
   return (
     <TournamentMediaForm
       busy={state.busy}
+      activeSlot={state.activeSlot}
       copy={copy}
       error={state.error}
       media={state.media}
+      mediaVisible={mediaVisible}
       success={state.success}
       onDelete={(slot) => void controller.remove(slot)}
       onUpload={(slot, file) => void controller.upload(slot, file)}
