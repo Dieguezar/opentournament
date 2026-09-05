@@ -47,6 +47,10 @@ OpenTournament v1.1.0 is published. Phases 0–3 and the original release-readin
 
 ## Current hardening priorities
 
+### v1.2.0 local candidate
+
+Full-page tournament personalization, public account profiles, same-origin media, and branded public-only OBS overlays are implemented. See [release evidence](RELEASE_CHECKLIST.md) before publication. A custom overlay editor or arbitrary overlay uploads are deferred, not requirements for this release.
+
 1. Keep clean installation, verification delivery, upgrades, backups, and temporary evaluation paths predictable.
 2. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
 3. Extend the delivered bilingual authentication, public-tournament, and participant-shell E2E coverage to remaining mutation-heavy organizer flows.

@@ -6,6 +6,27 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-09-05
+
+Local release candidate; no tag, public images, or GitHub release published yet.
+
+### Added
+
+- Tournament appearance settings with full-page color themes, palette presets, live preview, and validated logo/banner uploads.
+- Global account-owned public player profiles with explicit field visibility, avatars, immutable public slugs, and public Smash participant links.
+- Same-origin public-media delivery with opaque identifiers, image validation, access revocation, and storage cleanup.
+- Public-only OBS scoreboard, up-next, and champion views with automatic match selection and SSE-driven snapshot refresh.
+- Branded transparent 1920×1080 broadcast overlays with contextual match status and a next-match strip.
+
+### Fixed
+
+- First-time profile setup now opens a private creation form instead of a missing-resource error.
+- Profile-editor avatars are constrained to an 80×80 preview instead of their original image dimensions.
+- Public tournament colors now reach page backgrounds, cards, headings, links, buttons, and brackets, not just the header.
+- Appearance controls distinguish color saves from immediate media uploads and explain unpublished previews.
+- Integration files sharing a temporary database run serially to avoid concurrent migration races.
+- Profile-revocation coverage accepts completed storage deletion as well as queued retirement and checks that media becomes inaccessible.
+
 ## [1.1.0] - 2026-08-27
 
 ### Added
