@@ -58,7 +58,7 @@ Chain strategy: pending
 
 - [x] 6.1 **RED/GREEN**: Add `tests/e2e/tournament-experience.spec.ts` for branding, overlays, revocation, denial, headers, convergence, reconnect; run tests.
 - [x] 6.2 **REFACTOR/DOCS**: Document storage/proxy lifecycle, SSE cache/proxy, and one API instance in `docs/DEPLOYMENT.md`.
-- [ ] 6.3 **Smoke**: On supported OBS/CEF builds, record transparency, bootstrap, refresh, reconnect, reload in `docs/DEPLOYMENT.md`.
+- [x] 6.3 **Smoke**: On supported OBS/CEF builds, record transparency, bootstrap, refresh, reconnect, reload in `docs/DEPLOYMENT.md`.
 
 ## Deferred Scope
 

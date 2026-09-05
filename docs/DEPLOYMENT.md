@@ -142,3 +142,16 @@ Overlay updates stream from `/api/v1/events/public?tournament=:id`. Realtime cha
 - For unexpected public media access, verify publication/revocation state first, then confirm the requested URL is `/api/v1/media/:id` and MinIO is not publicly exposed.
 - For stale overlays, verify the API instance count, SSE response headers, proxy buffering/timeout settings, and reconnect/refetch behavior before clearing browser caches.
 - Roll back application images only with matching database compatibility, keep backups, and verify revocation behavior again after rollback.
+
+### OBS Browser Source smoke record (2026-09-04)
+
+A real local OBS Browser Source smoke ran against the disposable isolated runtime, rather than Playwright. OBS was controlled through its local `obs-websocket` API and each visual assertion used `GetSourceScreenshot` on the actual `browser_source` input named `Overlay Browser`.
+
+- **Build evidence:** OBS 32.0.4 on Windows; `obs-websocket` 5.6.3; `obs-browser` 2.26.3 with CEF runtime 127.0.6533.120.
+- **Canvas and transparency:** OBS queried the source as 1920×1080 with `html, body { background: transparent; margin: 0; overflow: hidden; }`. Source screenshots were 1920×1080 and retained 2,059,753–2,060,037 fully transparent pixels plus 5,131–5,132 fully opaque rendered pixels across the named views.
+- **Authoritative bootstrap:** Browser Source loaded the public `scoreboard`, `up-next`, and `champion` routes for one isolated published tournament. Distinct source screenshot SHA-256 values were `97b2c906…d7333`, `18d526ed…c3025`, and `c6b827f5…df7b2`, respectively.
+- **Live refresh:** replacing the published logo through the authorized application route changed the scoreboard source screenshot from `97b2c906…d7333` to `d13870bf…3189d` after the public invalidation/refetch path. The authoritative overlay response returned `Cache-Control: no-cache, no-store, must-revalidate`.
+- **Reconnect:** after stopping and restarting only the isolated API process, the source retained the last rendered snapshot while unavailable, then converged after EventSource reconnect; a post-reconnect logo mutation produced source screenshot `6bbef1db…84ff0`.
+- **Manual reload:** invoking the OBS Browser Source `refreshnocache` property through obs-websocket reloaded the page and converged to the then-current authoritative logo; resulting source screenshot SHA-256 was `c6a57690…010e0`.
+
+Bounded reproduction: run one API process and one web process against isolated PostgreSQL/MinIO; publish a tournament with a logo; configure an OBS Browser Source at `http://localhost:<web-port>/t/<slug>/overlay/<scoreboard|up-next|champion>` with a 1920×1080 transparent canvas; use source screenshots (not display capture) to check bootstrap, an authorized appearance mutation, API restart/reconnect, and `refreshnocache`. Keep the object store private and do not use an external storage URL.

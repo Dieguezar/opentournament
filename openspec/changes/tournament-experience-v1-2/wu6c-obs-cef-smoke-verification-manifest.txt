@@ -1,0 +1,7 @@
+# WU6c OBS/CEF Smoke Verification Manifest
+
+Canonical inputs use immutable LF Git blob IDs. This manifest deliberately excludes itself.
+
+0cc5757956c444deb2f8e66eede06a1cf773d282  docs/DEPLOYMENT.md
+5f9a49f648f4ae8d2a80783936ce0a2eec191e29  openspec/changes/tournament-experience-v1-2/tasks.md
+2a97530f3fad9666c19bdf5f170c8595ab8d581b  openspec/changes/tournament-experience-v1-2/apply-progress.md

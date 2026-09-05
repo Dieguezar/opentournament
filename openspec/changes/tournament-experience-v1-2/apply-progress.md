@@ -856,3 +856,21 @@ Tasks 5.1 through 6.3 remain pending. Phase 5 owns rendering the three transpare
 - Runtime harness: N/A for this passive documentation slice; no deployment state, containers, volumes, or external services were changed. The documented runtime validation is bounded to existing health/public/revocation/SSE checks.
 - Rollback boundary: revert this commit to remove only the deployment operations appendix, task 6.2 completion, manifest, and this evidence; task 6.3 and application behavior remain unchanged.
 - Protected state: `.gitignore`, `artifacts/a11y-audit/`, and all three pre-existing stashes remain untouched.
+
+## Work Unit WU6c-obs-cef-smoke
+
+**Status:** Complete. Task 6.3 is checked; all 19/19 tasks are complete.
+
+### TDD / Runtime Evidence
+
+- **Mode:** Strict TDD is active for the change, but WU6c is a real OBS/CEF runtime-evidence task with no product code change; no artificial RED/GREEN production cycle was invented.
+- **Runtime harness:** OBS 32.0.4 Browser Source (`obs-browser` 2.26.3; CEF runtime 127.0.6533.120; obs-websocket 5.6.3) rendered the isolated local application through its embedded CEF input. `GetSourceScreenshot` verified the exact 1920×1080 transparent canvas and nonempty pixels for `scoreboard`, `up-next`, and `champion`.
+- **Bootstrap/refresh/reconnect/reload:** authorized logo replacement changed the real scoreboard Browser Source screenshot hash; after task-owned API interruption and restart, the source converged after EventSource reconnect and a later authorized mutation; `refreshnocache` reloaded the Browser Source and converged to the current logo.
+
+### Work Unit Evidence
+
+- Screenshot evidence: scoreboard bootstrap `97b2c906f1799516f8e4217e72ef87cb6345754c8fc63320d6bf20baf99d7333`; up-next `18d526ed10bb7909b54230bcd8d803203d32ab54a7b9e553eeea290397ec3025`; champion `c6b827f5335295a7fcf67ba360ca26d7bd91d0678656427ab31f88f34cbdf7b2`; SSE refresh `d13870bf68dc849d34c62dfb7c1a580eb965c355a2cb81d1341f31717ce3189d`; reconnect convergence `6bbef1dbf2db4df118ac6f62023347fa2d44b1f7e99e7ba26cbe8b68e4384ff0`; manual reload `c6a57690184e2725d7c02a978c8f459ff25b45a6d4f6fa679a6a0ebda4d010e0`.
+- **Focused check:** OBS websocket source query confirmed `browser_source`, `Overlay Browser`, visible scene item, width 1920, height 1080, and transparent/no-scroll CSS. No Playwright substitution was used.
+- **Rollback boundary:** revert this documentation/evidence commit to remove the WU6c smoke record, manifest, and task completion; production overlay behavior remains unchanged.
+- **Protected state:** pre-existing `.gitignore`, `artifacts/a11y-audit/`, and all three stashes remain untouched.
+- **Verification manifest:** `wu6c-obs-cef-smoke-verification-manifest.txt`; digest is recorded there and the manifest excludes itself.
