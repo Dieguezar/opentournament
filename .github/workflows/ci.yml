@@ -10,6 +10,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Disposable test storage only; these are not deployment credentials.
+env:
+  S3_ENDPOINT: http://127.0.0.1:9000
+  S3_REGION: us-east-1
+  S3_BUCKET: opentournament-test
+  S3_ACCESS_KEY: minioadmin
+  S3_SECRET_KEY: minioadmin
+  S3_FORCE_PATH_STYLE: 'true'
+
 jobs:
   quality:
     name: Lint, typecheck, unit tests y build
@@ -59,7 +68,28 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Start isolated test storage
+        shell: bash
+        run: |
+          docker run --detach --name ci-minio \
+            --publish 127.0.0.1:9000:9000 \
+            --env MINIO_ROOT_USER="$S3_ACCESS_KEY" \
+            --env MINIO_ROOT_PASSWORD="$S3_SECRET_KEY" \
+            minio/minio:latest server /data
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent "$S3_ENDPOINT/minio/health/ready"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs ci-minio
+          exit 1
       - run: pnpm test:integration
+        env:
+          RUN_MINIO_HARNESS: 'true'
+      - name: Remove isolated test storage
+        if: always()
+        run: docker rm --force ci-minio
 
   e2e:
     name: E2E (Playwright)
@@ -91,4 +121,23 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
+      - name: Start isolated test storage
+        shell: bash
+        run: |
+          docker run --detach --name ci-minio \
+            --publish 127.0.0.1:9000:9000 \
+            --env MINIO_ROOT_USER="$S3_ACCESS_KEY" \
+            --env MINIO_ROOT_PASSWORD="$S3_SECRET_KEY" \
+            minio/minio:latest server /data
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent "$S3_ENDPOINT/minio/health/ready"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs ci-minio
+          exit 1
       - run: pnpm test:e2e
+      - name: Remove isolated test storage
+        if: always()
+        run: docker rm --force ci-minio

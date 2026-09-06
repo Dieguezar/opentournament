@@ -246,6 +246,32 @@ test('audits production and development dependencies in CI', () => {
   assert.doesNotMatch(ciWorkflow, /pnpm audit --prod/u);
 });
 
+for (const jobName of ['integration', 'e2e']) {
+  test(`provisions ready object storage for the ${jobName} CI job`, () => {
+    const globalEnv = ciWorkflow.split('jobs:')[0];
+    for (const key of [
+      'S3_ENDPOINT',
+      'S3_REGION',
+      'S3_BUCKET',
+      'S3_ACCESS_KEY',
+      'S3_SECRET_KEY',
+      'S3_FORCE_PATH_STYLE',
+    ]) {
+      assert.match(globalEnv, new RegExp(`  ${key}: .+`, 'u'));
+    }
+    const job = ciWorkflow.split(`  ${jobName}:`)[1]?.split(/\n  [a-z]+:/u)[0];
+    assert.ok(job, `${jobName} job must exist`);
+    assert.match(job, /docker run --detach --name ci-minio/u);
+    assert.match(job, /127\.0\.0\.1:9000:9000/u);
+    assert.match(job, /minio\/minio.* server \/data/u);
+    assert.match(job, /curl --fail.*\/minio\/health\/ready/u);
+    assert.match(job, /seq 1 30/u);
+    assert.match(job, /exit 1/u);
+    assert.ok(job.indexOf('/minio/health/ready') < job.indexOf('run: pnpm test:'));
+    assert.match(job, /if: always\(\)\s+run: docker rm --force ci-minio/u);
+  });
+}
+
 test('defers toolchain majors without disabling compatible dependency updates', () => {
   for (const dependency of ['typescript', 'eslint', '@eslint/js']) {
     assert.match(
