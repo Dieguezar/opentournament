@@ -250,12 +250,18 @@ test('public OBS overlay converges after invalidation, reconnect, and reload', a
     await expect(canvas).toHaveCSS('width', '1920px');
     await expect(canvas).toHaveCSS('height', '1080px');
     await expect(canvas).toHaveCSS('overflow', 'hidden');
-    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${initialId}`);
+    await expect(canvas.getByRole('img', { name: 'Tournament logo' })).toHaveAttribute(
+      'src',
+      `/api/v1/media/${initialId}`,
+    );
     await expect(page.locator('body')).toHaveCSS('overflow', 'hidden');
     await expect(page.locator('html')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
 
     await page.reload();
-    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${initialId}`);
+    await expect(canvas.getByRole('img', { name: 'Tournament logo' })).toHaveAttribute(
+      'src',
+      `/api/v1/media/${initialId}`,
+    );
     const second = await upload(
       owner,
       `/api/v1/tournaments/${tournament.tournament.id}/appearance/logo`,
@@ -270,9 +276,13 @@ test('public OBS overlay converges after invalidation, reconnect, and reload', a
     );
     expect(third.status()).toBe(201);
     const thirdId = ((await third.json()) as { media: { id: string } }).media.id;
-    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${thirdId}`, {
-      timeout: 15_000,
-    });
+    await expect(canvas.getByRole('img', { name: 'Tournament logo' })).toHaveAttribute(
+      'src',
+      `/api/v1/media/${thirdId}`,
+      {
+        timeout: 15_000,
+      },
+    );
     expect(secondId).not.toBe(thirdId);
 
     await page.context().setOffline(true);
@@ -285,9 +295,13 @@ test('public OBS overlay converges after invalidation, reconnect, and reload', a
     const reconnectId = ((await afterDisconnect.json()) as { media: { id: string } }).media.id;
     await page.context().setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
-    await expect(canvas.locator('img')).toHaveAttribute('src', `/api/v1/media/${reconnectId}`, {
-      timeout: 15_000,
-    });
+    await expect(canvas.getByRole('img', { name: 'Tournament logo' })).toHaveAttribute(
+      'src',
+      `/api/v1/media/${reconnectId}`,
+      {
+        timeout: 15_000,
+      },
+    );
   } finally {
     await owner.api.dispose();
   }

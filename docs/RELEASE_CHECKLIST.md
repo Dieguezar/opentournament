@@ -22,6 +22,14 @@ Implementation and local release preparation are complete. This is **not a publi
 | Object storage | Separate `RUN_MINIO_HARNESS=true` public-media suite: 6 passed, including the skipped storage case, against a temporary MinIO container cleaned afterward. |
 | Static checks and build | `pnpm typecheck`, `pnpm lint`, and `pnpm build` passed. |
 | Interactive checks | Tournament theme/media, profile creation/avatar size, and the transparent 1920×1080 OBS browser view were checked locally during implementation; see [design QA](../design-qa.md). |
+| Full browser suite | 13/13 Chromium E2E tests passed in 32.4 seconds against the isolated production images, including two Playwright/axe WCAG A/AA checks, participant permissions, profile/media revocation, and overlay invalidation/reconnection/reload. |
+| Docker images and fresh install | API/web images built successfully from a clean archive of `78fe6a8`. A new Compose project with fresh PostgreSQL/MinIO volumes reached four healthy services. |
+| Upgrade from 1.1.0 | Started the published 1.1.0 images, backed up the disposable database, then upgraded the same volumes to 1.2.0. Counts and selected identity/state fingerprints remained unchanged for 5 users, 3 tournaments, 20 teams, and 25 matches; new profile/media tables were present. |
+| Dependency audit | `pnpm audit`: zero reported vulnerabilities across 480 dependencies. |
+| Passive security baseline | ZAP: 65 PASS, 0 WARN, 0 FAIL. Existing repository rules retain non-storable responses (10049) as IGNORE and inline-script CSP (10055) as INFO; this is not a claim of zero findings or a full penetration test. |
+| Native OBS and website acceptance | User reports both manual tests passed after their corrections, with no remaining problems. This is user-reported acceptance, separate from automated evidence. |
+
+The Docker test configuration used production images with seeded disposable fixtures and unverified-email access enabled for automated account flows. The isolated web origin used a separate loopback port; no tests were pointed at the user's running application. Browser harness fixes honor `PLAYWRIGHT_BASE_URL` in all API fixtures, select the tournament logo independently of the new brand mark, and exercise desktop identity chips at an explicit 1440px viewport. The initial browser run stopped at a stale 1280px visibility assertion (9 passed); the corrected full suite passed all 13 tests without removing permission assertions or changing production code.
 
 The integration runner serializes test files because they share a database. Profile retirement accepts either queued deletion (`retired`) or completed deletion (`deleted`), while always asserting that public media is inaccessible. No production data reset or migration rollback was performed.
 
@@ -34,9 +42,9 @@ The integration runner serializes test files because they share a database. Prof
 ### Before public publication
 
 - [ ] Explicitly authorize push/tag/release and run hosted CI/security checks on the exact candidate.
-- [ ] Replay the full Playwright/axe suite in an isolated environment; it was not rerun for this local closure.
-- [ ] Recheck the Browser Source in native OBS on the final candidate; current evidence covers browser rendering and HTTP/SSE integration, not a fresh native OBS run.
-- [ ] Validate the release image build and clean self-hosted installation/upgrade on disposable data.
+- [x] Replay the full Playwright/axe suite in an isolated environment.
+- [x] Obtain native OBS and website manual acceptance (confirmed by the user).
+- [x] Validate local release image builds and clean self-hosted installation/upgrade on disposable data.
 - [ ] Publish matching versioned API/web images and only then update the self-hosting guide's published-version examples.
 
 Historical evidence below applies only to v1.0.0 and does not substitute for v1.2.0 publication gates.

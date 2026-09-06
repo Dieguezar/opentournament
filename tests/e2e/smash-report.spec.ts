@@ -14,7 +14,9 @@ interface ApiUser {
 const PASSWORD = 'password-123';
 
 async function registerApiUser(displayName: string): Promise<ApiUser> {
-  const api = await createPlaywrightRequest.newContext({ baseURL: 'http://localhost:3000' });
+  const api = await createPlaywrightRequest.newContext({
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? 'http://localhost:3000',
+  });
   const csrfResponse = await api.get('/api/v1/auth/csrf');
   expect(csrfResponse.ok()).toBe(true);
   const { token: csrfToken } = (await csrfResponse.json()) as { token: string };
