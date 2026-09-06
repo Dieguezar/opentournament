@@ -102,7 +102,7 @@ flowchart LR
 
 ## Estado del proyecto
 
-`v1.2.0` está preparada localmente con personalización de toda la página del torneo, perfiles públicos de jugadores y overlays de OBS con identidad visual. Todavía no está publicada; `v1.1.0` sigue siendo la versión publicada. Consulta la [lista de verificación](docs/RELEASE_CHECKLIST.md) para ver las pruebas del candidato y los requisitos pendientes de publicación. Discord permanece opcional.
+[`v1.2.0` está publicada](https://github.com/Dieguezar/opentournament/releases/tag/v1.2.0) con personalización de toda la página del torneo, perfiles públicos de jugadores y overlays de OBS con identidad visual. Las imágenes de API y web están disponibles para AMD64 y ARM64. Consulta la [guía de instalación](docs/SELF_HOSTING.md) y la [evidencia de verificación](docs/RELEASE_CHECKLIST.md). Discord permanece opcional.
 
 Consultá la [última versión](https://github.com/Dieguezar/opentournament/releases/latest), el [roadmap](docs/ROADMAP.md), el [checklist de release](docs/RELEASE_CHECKLIST.md) y el [registro de decisiones](docs/DECISIONS.md).
 

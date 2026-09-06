@@ -1,8 +1,25 @@
 # OpenTournament release checklist
 
-## v1.2.0 — local candidate (2026-09-05)
+## v1.2.0 — published release (2026-09-05)
 
-Implementation and local release preparation are complete. This is **not a published release**: no push, tag, GitHub release, or image publication is part of this closure.
+[OpenTournament v1.2.0](https://github.com/Dieguezar/opentournament/releases/tag/v1.2.0) is published from `3abb913875f58a1d79e3f5a2c6e130c1fe6affb2`. The annotated tag preserves the validated application; subsequent documentation updates do not move it. API and web images are publicly available for AMD64 and ARM64.
+
+### Hosted release evidence
+
+| Gate | Evidence |
+| --- | --- |
+| CI on the released commit | [Passed](https://github.com/Dieguezar/opentournament/actions/runs/34002464103): lint, types, unit/config tests, build, dependency audit, integration, and browser E2E. |
+| CodeQL on main | [Passed](https://github.com/Dieguezar/opentournament/actions/runs/34002464106). |
+| Clean Compose installation | [Passed](https://github.com/Dieguezar/opentournament/actions/runs/34001969819) on the same released commit. |
+| OWASP ZAP baseline | [Passed](https://github.com/Dieguezar/opentournament/actions/runs/34001970636) on the same released commit. |
+| Container and release publication | [Passed](https://github.com/Dieguezar/opentournament/actions/runs/34002463843): native AMD64/ARM64 builds, multi-architecture manifests, provenance attestations, and stable GitHub release. |
+| Public availability | Anonymous requests returned the stable non-draft release and both image manifests with AMD64/ARM64 entries. |
+| Installation from published images | Using an empty Docker credential configuration, pulled the public `1.2.0` images and started a new isolated Compose project without builds. All four services became healthy; API health, web, and the same-origin CSRF endpoint returned HTTP 200. Production mode, demo data disabled, and unverified accounts disabled. Temporary containers and volumes were removed afterward. |
+
+Immutable `1.2.0` image-index digests:
+
+- API: `sha256:68f594a6455b3ecec689dd6f1fb1ff7e3c2a348db521a4d942c9db6e10350690`
+- Web: `sha256:ebaf713f2fe203aa53fba3e0695cca259d5d2df05ca0e155542d934b83bb70c0`
 
 ### Included scope
 
@@ -41,11 +58,11 @@ The integration runner serializes test files because they share a database. Prof
 
 ### Before public publication
 
-- [ ] Explicitly authorize push/tag/release and run hosted CI/security checks on the exact candidate.
+- [x] Explicitly authorize push/tag/release and run hosted CI/security checks on the exact candidate.
 - [x] Replay the full Playwright/axe suite in an isolated environment.
 - [x] Obtain native OBS and website manual acceptance (confirmed by the user).
 - [x] Validate local release image builds and clean self-hosted installation/upgrade on disposable data.
-- [ ] Publish matching versioned API/web images and only then update the self-hosting guide's published-version examples.
+- [x] Publish matching versioned API/web images and update the self-hosting guide's published-version examples.
 
 Historical evidence below applies only to v1.0.0 and does not substitute for v1.2.0 publication gates.
 

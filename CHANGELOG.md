@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [1.2.0] - 2026-09-05
 
-Local release candidate; no tag, public images, or GitHub release published yet.
+[Release notes and downloads](https://github.com/Dieguezar/opentournament/releases/tag/v1.2.0). API and web container images are available for AMD64 and ARM64.
 
 ### Added
 
@@ -26,6 +26,7 @@ Local release candidate; no tag, public images, or GitHub release published yet.
 - Appearance controls distinguish color saves from immediate media uploads and explain unpublished previews.
 - Integration files sharing a temporary database run serially to avoid concurrent migration races.
 - Profile-revocation coverage accepts completed storage deletion as well as queued retirement and checks that media becomes inaccessible.
+- Hosted integration and browser tests provision isolated MinIO storage with explicit S3 settings, readiness checks, and cleanup.
 
 ## [1.1.0] - 2026-08-27
 

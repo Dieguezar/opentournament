@@ -1,6 +1,6 @@
 # Roadmap
 
-OpenTournament v1.1.0 is published. Phases 0–3 and the original release-readiness work are complete. The bilingual product experience and official visual identity are operational; Discord remains optional and may receive further hardening. Roadmap items are direction, not a promise of delivery.
+OpenTournament v1.2.0 is published. Phases 0–3 and the original release-readiness work are complete. The bilingual product experience, tournament personalization, public player profiles, and OBS overlays are operational; Discord remains optional and may receive further hardening. Roadmap items are direction, not a promise of delivery.
 
 ## Completed foundation
 
@@ -47,9 +47,9 @@ OpenTournament v1.1.0 is published. Phases 0–3 and the original release-readin
 
 ## Current hardening priorities
 
-### v1.2.0 local candidate
+### v1.2.0 delivered
 
-Full-page tournament personalization, public account profiles, same-origin media, and branded public-only OBS overlays are implemented. See [release evidence](RELEASE_CHECKLIST.md) before publication. A custom overlay editor or arbitrary overlay uploads are deferred, not requirements for this release.
+Full-page tournament personalization, public account profiles, same-origin media, and branded public-only OBS overlays are published. See [release evidence](RELEASE_CHECKLIST.md). A custom overlay editor or arbitrary overlay uploads are deferred, not requirements for this release.
 
 1. Keep clean installation, verification delivery, upgrades, backups, and temporary evaluation paths predictable.
 2. Manual NVDA and VoiceOver verification of representative organizer and participant flows.
