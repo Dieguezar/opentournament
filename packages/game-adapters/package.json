@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@opentournament/shared-types": "workspace:*",
-    "zod": "^4.4.3"
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "typescript": "~5.9.3",
